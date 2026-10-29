@@ -1,0 +1,698 @@
+/* Patient chart workspace: banner, identity, sticky note, chart side nav, staff profile (incl. its shared responsive block, which also carries facility-staff rules) — moved verbatim from app.css.
+ * Source: app.css lines 246..750 (mechanical split, no edits).
+ */
+
+
+/* Patient chart: OpenMRS-inspired patient banner and record workspace. */
+.patient-chart {
+  inline-size: auto;
+  max-inline-size: none;
+  margin-block-start: -2rem;
+  margin-inline: -2rem;
+  padding: 0 3rem var(--cds-spacing-09, 4rem) 0;
+}
+
+.patient-chart__main {
+  min-inline-size: 0;
+  padding-inline: 2.5rem 3rem;
+}
+
+.patient-chart__banner {
+  display: block;
+  inline-size: auto;
+  max-inline-size: none;
+  box-sizing: border-box;
+  margin-inline: -2.5rem -3rem;
+  margin-block-end: var(--cds-spacing-06, 1.5rem);
+  background: var(--cds-layer-01, #ffffff);
+  border-block-end: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.clinical-queue-banner {
+  position: sticky;
+  inset-block-start: 3rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-05, 1rem);
+  margin: -2rem -2rem var(--cds-spacing-05, 1rem);
+  padding: var(--cds-spacing-04, 0.75rem) 2rem;
+}
+
+.clinical-queue-banner--consultation {
+  flex-wrap: wrap;
+}
+
+.clinical-queue-banner__identity {
+  display: flex;
+  flex: 1 1 28rem;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+.clinical-queue-banner__avatar {
+  display: grid;
+  flex: none;
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  place-items: center;
+  object-fit: cover;
+}
+
+.clinical-queue-banner__details {
+  min-inline-size: 0;
+}
+
+.clinical-queue-banner__name-row,
+.clinical-queue-banner__meta,
+.clinical-queue-banner__actions,
+.clinical-queue-banner__navigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.clinical-queue-banner__name-row h1 {
+  margin: 0;
+}
+
+.clinical-queue-banner__meta {
+  margin-block-start: var(--cds-spacing-02, 0.25rem);
+}
+
+.clinical-queue-banner__actions {
+  flex: none;
+  justify-content: flex-end;
+}
+
+.clinical-queue-banner__navigation {
+  gap: 0;
+  padding-inline-start: var(--cds-spacing-03, 0.5rem);
+}
+
+.clinical-queue-banner__position {
+  padding-inline: var(--cds-spacing-02, 0.25rem);
+  white-space: nowrap;
+}
+
+.clinical-queue-banner__visit {
+  display: grid;
+  flex: none;
+  min-inline-size: 9rem;
+  justify-items: start;
+  gap: var(--cds-spacing-02, 0.25rem);
+  padding-inline: var(--cds-spacing-05, 1rem);
+}
+
+.clinical-queue-banner--consultation .clinical-queue-banner__actions {
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.patient-sticky-note {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  margin-block: -1rem var(--cds-spacing-06, 1.5rem);
+}
+
+.patient-sticky-note__trigger-row {
+  display: flex;
+  align-items: center;
+  min-block-size: 2.5rem;
+  margin-inline-start: auto;
+}
+
+.patient-sticky-note__icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.patient-sticky-note__badge {
+  position: absolute;
+  inset-block-start: -0.35rem;
+  inset-inline-end: -0.45rem;
+  display: grid;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  place-items: center;
+}
+
+.patient-sticky-note__panel {
+  position: absolute;
+  inset-block-start: 2.125rem;
+  inset-inline-end: 0;
+  z-index: 99;
+  inline-size: 24rem;
+  max-inline-size: calc(100vw - 2rem);
+}
+
+.patient-sticky-note__body {
+  box-sizing: border-box;
+  min-block-size: 8rem;
+  padding: var(--cds-spacing-05, 1rem);
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.patient-sticky-note__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-03, 0.5rem);
+  padding: var(--cds-spacing-03, 0.5rem) var(--cds-spacing-05, 1rem);
+}
+
+.patient-sticky-note__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+  flex: none;
+}
+
+.patient-sticky-note__error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+  padding: var(--cds-spacing-05, 1rem);
+  text-align: center;
+}
+
+.afyanova-quick-actions .patient-sticky-note {
+  display: block;
+  inline-size: 3rem;
+  margin: var(--cds-spacing-03, 0.5rem) 0 0;
+  padding-block-start: var(--cds-spacing-03, 0.5rem);
+}
+
+.afyanova-quick-actions .patient-sticky-note__trigger-row {
+  inline-size: 3rem;
+  min-block-size: 3rem;
+  justify-content: center;
+  margin: 0;
+}
+
+.afyanova-quick-actions .patient-sticky-note__panel {
+  inset-block-start: 0;
+  inset-inline-end: calc(100% + var(--cds-spacing-03, 0.5rem));
+  max-inline-size: calc(100vw - 4rem);
+}
+
+@media (max-width: 36rem) {
+  .afyanova-quick-actions .patient-sticky-note__panel {
+    inline-size: min(24rem, calc(100vw - 1.5rem));
+    max-inline-size: calc(100vw - 4rem);
+  }
+}
+
+.patient-chart__banner-top {
+  display: flex;
+  align-items: stretch;
+}
+
+.patient-chart__identity {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-06, 1.5rem);
+  min-inline-size: 0;
+  padding: var(--cds-spacing-05, 1rem) var(--cds-spacing-06, 1.5rem);
+}
+
+.patient-chart__identity-main {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.patient-chart__photo {
+  display: grid;
+  flex: none;
+  inline-size: 4.5rem;
+  block-size: 4.5rem;
+  place-items: center;
+  object-fit: cover;
+  color: var(--cds-text-secondary, #525252);
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle, #e0e0e0);
+  border-radius: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.patient-chart__identity-copy {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.patient-chart__eyebrow {
+  margin: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.patient-chart__name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-chart__name-row h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.patient-chart__sex {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cds-spacing-02, 0.25rem);
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.875rem;
+}
+
+.patient-chart__identity-meta,
+.patient-chart__contact-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-chart__identity-meta {
+  margin-block-start: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.875rem;
+}
+
+.patient-chart__meta-item {
+  display: inline-flex;
+  align-items: center;
+  min-inline-size: 0;
+}
+
+.patient-chart__meta-item--number {
+  font-variant-numeric: tabular-nums;
+}
+
+.patient-chart__meta-divider {
+  color: var(--cds-text-placeholder, #a8a8a8);
+}
+
+.patient-chart__contact-line {
+  margin-block-start: var(--cds-spacing-02, 0.25rem);
+}
+
+.afyanova-side-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.afyanova-side-nav-item__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.patient-chart__banner-actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  inline-size: 8rem;
+  gap: 0;
+}
+
+.patient-chart__banner-actions .cds--menu-button__container {
+  align-self: flex-end;
+  flex: 1 1 0;
+  min-block-size: 3rem;
+}
+
+.patient-chart__banner-actions .cds--menu-button__trigger {
+  block-size: 100%;
+}
+
+/* Staff banner renders IconMenuButton (three-dots trigger) instead of the
+   patient MenuButton; keep its trigger in the same action column slot. */
+.patient-chart__banner-menu {
+  display: flex;
+  flex: 1 1 0;
+  min-block-size: 3rem;
+}
+
+.patient-chart__banner-menu > div {
+  display: flex;
+  inline-size: 100%;
+}
+
+.patient-chart__banner-menu .cds--btn {
+  flex: 1 1 auto;
+  block-size: 100%;
+  inline-size: 100%;
+}
+
+.patient-chart__details-toggle {
+  flex: 1 1 0;
+  inline-size: 100%;
+  min-block-size: 3rem;
+  white-space: nowrap;
+}
+
+/* Visit badge trigger: plain badge that opens the visit summary popover. */
+.patient-chart__visit-badge {
+  padding: 0;
+}
+
+.patient-chart__visit-summary {
+  padding: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+}
+
+.patient-chart__visit-summary-title {
+  margin: 0 0 var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-chart__visit-summary-list {
+  display: grid;
+  gap: var(--cds-spacing-02, 0.25rem);
+  margin: 0;
+}
+
+.patient-chart__visit-summary-list > div {
+  display: flex;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-chart__visit-summary-list dt {
+  flex: none;
+  min-inline-size: 6rem;
+}
+
+.patient-chart__visit-summary-list dd {
+  margin: 0;
+}
+
+.patient-chart__extra-details {
+  padding: var(--cds-spacing-05, 1rem) var(--cds-spacing-06, 1.5rem);
+  background: var(--cds-layer-01, #f4f4f4);
+  border-block-start: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.patient-chart__extra-details-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+  margin: 0;
+}
+
+.patient-chart__extra-details-list > div {
+  min-inline-size: 0;
+}
+
+.patient-chart__extra-details-list dd {
+  margin: 0.125rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* Grouped banner details: OpenMRS-style sections separated by thin rules.
+   Staff records reuse the patient banner disclosure and only swap the
+   section content. */
+.patient-chart__extra-details--patient,
+.patient-chart__extra-details--staff {
+  padding: 0;
+  border-block-start: 0;
+}
+
+.patient-chart__details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0;
+}
+
+.patient-chart__details-group {
+  min-inline-size: 0;
+  padding: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+  border-block-start: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.patient-chart__details-group:nth-child(odd) {
+  border-inline-end: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.patient-chart__details-group:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  border-inline-end: 0;
+}
+
+.patient-chart__details-group h2 {
+  margin: 0 0 var(--cds-spacing-03, 0.5rem);
+  color: var(--cds-text-primary, #161616);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.3;
+  text-transform: none;
+}
+
+.patient-chart__details-list {
+  display: grid;
+  gap: var(--cds-spacing-03, 0.5rem);
+  margin: 0;
+}
+
+.patient-chart__details-list > div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--cds-spacing-02, 0.25rem) var(--cds-spacing-04, 0.75rem);
+  min-inline-size: 0;
+}
+
+.patient-chart__details-list dt {
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.patient-chart__details-list dd {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.patient-chart__section-content {
+  padding: var(--cds-spacing-05, 1rem) var(--cds-spacing-06, 1.5rem);
+}
+
+.patient-chart__record-title {
+  margin: 0 0 var(--cds-spacing-04, 0.75rem);
+}
+
+.patient-chart__record-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+  margin: 0;
+}
+
+.patient-chart__field {
+  min-inline-size: 0;
+}
+
+.patient-chart__field dd {
+  margin: 0.125rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.patient-chart__record-list {
+  display: grid;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+.patient-chart__record {
+  padding: var(--cds-spacing-05, 1rem);
+}
+
+.patient-chart__record-fields {
+  row-gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-chart__record-action,
+.patient-chart__record-note {
+  display: inline-block;
+  margin-block-start: var(--cds-spacing-04, 0.75rem);
+}
+
+/* Staff profile reuses the chart banner/section styles but has no
+   quick-actions rail — undo the chart's 3rem rail reserve so content
+   uses the full width. */
+.staff-profile {
+  padding-inline-end: 0;
+}
+
+.staff-profile .patient-chart__main {
+  padding-inline: 2.5rem;
+}
+
+.staff-profile .patient-chart__banner {
+  margin-inline: -2.5rem;
+}
+
+@media (max-width: 48rem) {
+  .clinical-queue-banner {
+    padding-inline: 1rem;
+  }
+
+  .patient-chart {
+    margin-inline: -1rem;
+    padding: 0 3rem var(--cds-spacing-07, 2rem) 0;
+  }
+
+  .staff-profile {
+    padding-inline-end: 0;
+  }
+
+  .patient-chart__main {
+    padding-inline: 0.75rem 3rem;
+  }
+
+  .facility-staff__identity {
+    margin-inline: 0 -3rem;
+    padding-inline: 0.75rem 3rem;
+  }
+
+  .facility-staff__section-content {
+    margin-inline-start: 0.75rem;
+  }
+
+  .patient-chart__banner {
+    margin-inline: -0.75rem -3rem;
+  }
+
+  .staff-profile .patient-chart__main {
+    padding-inline: 0.75rem;
+  }
+
+  .staff-profile .patient-chart__banner {
+    margin-inline: -0.75rem;
+  }
+
+  .patient-chart__identity {
+    align-items: flex-start;
+    padding: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+  }
+
+  .patient-chart__identity-main {
+    align-items: flex-start;
+    gap: var(--cds-spacing-03, 0.5rem);
+  }
+
+  .patient-chart__photo {
+    inline-size: 3.75rem;
+    block-size: 3.75rem;
+    font-size: 1rem;
+  }
+
+  .patient-chart__name-row h1 {
+    font-size: 1.5rem;
+  }
+
+  .patient-chart__banner-actions {
+    margin-inline-end: 0;
+  }
+
+  .patient-chart__extra-details {
+    padding-inline: var(--cds-spacing-04, 0.75rem);
+  }
+
+  .patient-chart__details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .patient-chart__details-group:nth-child(odd) {
+    border-inline-end: 0;
+  }
+
+  .patient-chart__details-group:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .patient-chart__extra-details-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .patient-chart__section-content {
+    padding: var(--cds-spacing-04, 0.75rem);
+  }
+
+}
+
+@media (max-width: 36rem) {
+  .clinical-queue-banner {
+    inset-block-start: 3rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .clinical-queue-banner__actions {
+    inline-size: 100%;
+    justify-content: space-between;
+  }
+
+  .clinical-queue-banner__navigation {
+    padding-inline-start: 0;
+  }
+
+  .clinical-queue-banner__avatar {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+  }
+
+  .clinical-queue-banner__visit {
+    min-inline-size: 0;
+    padding-inline: 0;
+  }
+
+  .patient-chart__identity {
+    flex-wrap: wrap;
+  }
+
+  .patient-chart__banner-actions {
+    margin-inline-start: auto;
+  }
+
+  .patient-chart__extra-details-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .patient-chart__details-list > div {
+    display: block;
+  }
+
+  .patient-chart__details-list dd {
+    margin-block-start: 0.125rem;
+  }
+
+  .patient-chart__record-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

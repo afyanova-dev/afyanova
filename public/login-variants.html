@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login variants — AfyaNova</title>
+<link rel="stylesheet" href="build/assets/app-hHQQ3UHw.css">
+<style>
+  body { margin: 0; }
+  .demo-top {
+    position: sticky; top: 0; z-index: 99;
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px clamp(16px, 3vw, 48px);
+    background: #ffffff; border-block-end: 1px solid rgb(0 0 0 / 8%);
+  }
+  .demo-top [role="status"] { font-size: 14px; color: #525252; }
+  .demo-themes { display: flex; gap: 4px; margin-inline-start: auto; }
+  .demo-theme-btn {
+    inline-size: 48px; padding: 4px 0; font-size: 12px;
+    background: #f4f4f4; border: 1px solid #c6c6c6; cursor: pointer;
+  }
+  .demo-theme-btn[data-active="true"] { background: #161616; color: #ffffff; }
+  .demo-label {
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 12px clamp(16px, 3vw, 48px) 4px;
+    font-size: 16px; font-weight: 600;
+  }
+  .demo-label small { font-weight: 400; color: #525252; font-size: 13px; }
+  .demo-frame { margin: 0 clamp(16px, 3vw, 48px) 48px; border: 1px solid rgb(0 0 0 / 10%); }
+  .demo-root { min-block-size: 640px; }
+  .demo-root.cds--white, .demo-root.cds--g10 { color: var(--cds-text-primary); }
+  /* Shared form plumbing for the demo (widths the variants agree on) */
+  .demo-form { display: grid; gap: 1rem; inline-size: min(100%, 24rem); }
+  .demo-form .cds--btn--primary { inline-size: 100%; min-block-size: 3rem; }
+  .demo-apart { display: grid; gap: 20px; margin-block-start: 3rem; }
+  .demo-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .demo-lockup { display: flex; align-items: center; gap: 12px; }
+  .demo-mark {
+    display: grid; place-items: center; flex: none;
+    inline-size: 2.5rem; block-size: 2.5rem;
+    border-radius: var(--afy-radius);
+  }
+  .demo-mark svg { inline-size: 20px; block-size: 20px; }
+  .demo-title { margin: 0; font-size: 42px; font-weight: 300; line-height: 1.19; }
+  .demo-sub { margin: 8px 0 0; font-size: 15px; color: var(--afy-text-secondary); }
+
+  /* B — centered, no container (Carbon centered layout) */
+  .demo-centered { display: flex; align-items: center; justify-content: center; padding: clamp(1rem, 4vw, 3rem) clamp(1rem, 6vw, 6rem); }
+  /* C — tone-on-tone banner, brand in canvas ink */
+  .demo-tender { display: grid; grid-template-columns: minmax(20rem, 30rem) minmax(0, 1fr); min-block-size: 640px; }
+  /* D — centered card */
+  .demo-card {
+    inline-size: min(100%, 28rem); padding: clamp(1.5rem, 5vw, 2.5rem);
+    background: var(--afy-surface); border: 1px solid var(--afy-hairline);
+    box-shadow: var(--afy-elevation-rest);
+  }
+</style>
+</head>
+<body class="h-full">
+
+<header class="demo-top">
+  <strong>AfyaNova — login directions</strong>
+  <div class="demo-themes" role="group" aria-label="Theme">
+    <button class="demo-theme-btn" data-theme="cds--white" data-active="true">white</button>
+    <button class="demo-theme-btn" data-theme="cds--g10">g10</button>
+    <button class="demo-theme-btn" data-theme="cds--g90">g90</button>
+    <button class="demo-theme-btn" data-theme="cds--g100">g100</button>
+  </div>
+  <span role="status">4 directions with a live theme switcher — pick one, I implement it for real.</span>
+</header>
+
+<!-- ===================== A — split screen, inverse banner (current live) ===================== -->
+<p class="demo-label">A — Split screen, inverse banner <small>current live implementation (Carbon split-screen, full-bleed form container)</small></p>
+<div class="demo-frame">
+<div class="demo-root cds--white afyanova-theme-root">
+  <main class="afy-auth" style="min-block-size: 640px">
+    <aside class="afy-auth__brand" style="min-block-size: 640px" aria-label="AfyaNova overview">
+      <div class="afy-auth__brand-lockup">
+        <span class="afy-auth__brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z"/></svg></span>
+        <p class="afy-auth__brand-name">AfyaNova<small class="afy-auth__brand-meta">Clinical operations platform</small></p>
+      </div>
+      <p class="afy-auth__brand-line">One workspace for every status the facility runs on — visits, pharmacy, laboratory, queues and billing.</p>
+    </aside>
+    <div class="afy-auth__stage" style="flex: 1">
+      <div class="afy-auth__shell">
+        <section aria-label="Log in" class="afy-auth__panel">
+          <div class="afyanova-auth-content">
+            <h1 class="demo-title">Log in</h1>
+            <form class="demo-form" style="margin-block-start: 1.5rem">
+              <div class="cds--form-item">
+                <label class="cds--label" for="a-email">Email</label>
+                <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="a-email" type="email"></div></div>
+              </div>
+              <div class="cds--form-item">
+                <label class="cds--label" for="a-pass">Password</label>
+                <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="a-pass" type="password"></div></div>
+              </div>
+              <div class="cds--form-item cds--checkbox-wrapper">
+                <input type="checkbox" id="a-rem" class="cds--checkbox">
+                <label for="a-rem" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Keep me signed in</span></label>
+              </div>
+              <div class="demo-apart">
+                <button class="cds--btn cds--btn--primary" type="button">Log in</button>
+                <div class="demo-row"><a class="cds--link" href="#">Forgot your password?</a><span class="cds--label">v5.0</span></div>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ===================== B — centered, no container (Carbon's centered layout) ===================== -->
+<p class="demo-label">B — Centered, fields on the background <small>Carbon's centered layout: no container at all, brand quiet, canvas carries the tone</small></p>
+<div class="demo-frame">
+<div class="demo-root cds--white afyanova-theme-root" style="background: var(--afy-canvas)">
+  <main class="demo-centered" style="min-block-size: 640px">
+    <div style="inline-size: min(100%, 26rem)">
+      <div class="demo-lockup">
+        <span class="demo-mark" style="background: color-mix(in srgb, var(--cds-link-primary) 12%, transparent); color: var(--cds-link-primary)"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z"/></svg></span>
+        <div style="font-weight: 600">AfyaNova<div style="font-size: 12px; font-weight: 600; opacity: .62; letter-spacing: .32px; text-transform: uppercase">Clinical operations</div></div>
+      </div>
+      <h1 class="demo-title" style="margin-block-start: 2.5rem">Log in</h1>
+      <form class="demo-form" style="margin-block-start: 1.5rem">
+        <div class="cds--form-item">
+          <label class="cds--label" for="b-email">Email</label>
+          <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="b-email" type="email"></div></div>
+        </div>
+        <div class="cds--form-item">
+          <label class="cds--label" for="b-pass">Password</label>
+          <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="b-pass" type="password"></div></div>
+        </div>
+        <div class="cds--form-item cds--checkbox-wrapper">
+          <input type="checkbox" id="b-rem" class="cds--checkbox">
+          <label for="b-rem" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Keep me signed in</span></label>
+        </div>
+        <div class="demo-apart">
+          <button class="cds--btn cds--btn--primary" type="button">Log in</button>
+          <div class="demo-row"><a class="cds--link" href="#">Forgot your password?</a><span class="cds--label">v5.0</span></div>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ===================== C — tone-on-tone split (no dark banner) ===================== -->
+<p class="demo-label">C — Tone-on-tone split <small>banner paints the canvas tone in <em>every</em> theme (no inverse), brand ink stays primary; quietest, most "soft clinical"</small></p>
+<div class="demo-frame">
+<div class="demo-root cds--white afyanova-theme-root">
+  <main class="demo-tender">
+    <aside style="display: flex; flex-direction: column; justify-content: flex-end; gap: var(--afy-space-lg); padding: var(--afy-space-xl); background: var(--afy-canvas); border-inline-end: 1px solid var(--afy-hairline)" aria-label="AfyaNova overview">
+      <div class="demo-lockup">
+        <span class="demo-mark" style="background: color-mix(in srgb, var(--cds-link-primary) 12%, transparent); color: var(--cds-link-primary)"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z"/></svg></span>
+        <div style="font-size: 22px; font-weight: 600; line-height: 1.28">AfyaNova<div style="font-size: 12px; font-weight: 600; opacity: .62; letter-spacing: .32px; text-transform: uppercase">Clinical operations</div></div>
+      </div>
+      <p style="margin: 0; max-inline-size: 24rem; font-size: 16px; line-height: 1.375; color: var(--afy-text-secondary)">One workspace for every status the facility runs on — visits, pharmacy, laboratory, queues and billing.</p>
+    </aside>
+    <div class="afy-auth__stage" style="flex: 1; background: var(--afy-surface)">
+      <div class="afy-auth__shell">
+        <section aria-label="Log in" class="afy-auth__panel">
+          <h1 class="demo-title">Log in</h1>
+          <form class="demo-form" style="margin-block-start: 1.5rem">
+            <div class="cds--form-item">
+              <label class="cds--label" for="c-email">Email</label>
+              <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="c-email" type="email"></div></div>
+            </div>
+            <div class="cds--form-item">
+              <label class="cds--label" for="c-pass">Password</label>
+              <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="c-pass" type="password"></div></div>
+            </div>
+            <div class="cds--form-item cds--checkbox-wrapper">
+              <input type="checkbox" id="c-rem" class="cds--checkbox">
+              <label for="c-rem" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Keep me signed in</span></label>
+            </div>
+            <div class="demo-apart">
+              <button class="cds--btn cds--btn--primary" type="button">Log in</button>
+              <div class="demo-row"><a class="cds--link" href="#">Forgot your password?</a><span class="cds--label">v5.0</span></div>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ===================== D — centered raised card ===================== -->
+<p class="demo-label">D — Centered card <small>floating surface card on the canvas (SaaS-style; a deliberate Carbon deviation, pairs with the centered layout)</small></p>
+<div class="demo-frame">
+<div class="demo-root cds--white afyanova-theme-root" style="background: var(--afy-canvas)">
+  <main class="demo-centered" style="min-block-size: 640px">
+    <div class="demo-card">
+      <div class="demo-lockup">
+        <span class="demo-mark" style="background: color-mix(in srgb, var(--cds-link-primary) 12%, transparent); color: var(--cds-link-primary)"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z"/></svg></span>
+        <div style="font-weight: 600">AfyaNova<div style="font-size: 12px; font-weight: 600; opacity: .62; letter-spacing: .32px; text-transform: uppercase">Clinical operations</div></div>
+      </div>
+      <h1 class="demo-title" style="font-size: 32px; margin-block-start: 2rem">Log in</h1>
+      <form class="demo-form" style="margin-block-start: 1.25rem">
+        <div class="cds--form-item">
+          <label class="cds--label" for="d-email">Email</label>
+          <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="d-email" type="email"></div></div>
+        </div>
+        <div class="cds--form-item">
+          <label class="cds--label" for="d-pass">Password</label>
+          <div class="cds--text-input__field-outer-wrapper"><div class="cds--text-input__field-wrapper"><input class="cds--text-input" id="d-pass" type="password"></div></div>
+        </div>
+        <div class="cds--form-item cds--checkbox-wrapper">
+          <input type="checkbox" id="d-rem" class="cds--checkbox">
+          <label for="d-rem" class="cds--checkbox-label"><span class="cds--checkbox-label-text">Keep me signed in</span></label>
+        </div>
+        <div class="demo-apart" style="margin-block-start: 2rem">
+          <button class="cds--btn cds--btn--primary" type="button">Log in</button>
+          <div class="demo-row"><a class="cds--link" href="#">Forgot your password?</a><span class="cds--label">v5.0</span></div>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+</div>
+
+<script>
+  var buttons = document.querySelectorAll('.demo-theme-btn');
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      buttons.forEach(function (b) { b.dataset.active = String(b === btn); });
+      document.querySelectorAll('.demo-root').forEach(function (root) {
+        root.className = root.className.replace(/cds--(white|g10|g90|g100)/g, '').trim();
+        root.classList.add(btn.dataset.theme);
+      });
+      document.querySelectorAll('.afy-auth__brand, .demo-tender aside, .demo-tender .afy-auth__stage').forEach(function () {});
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Pharmacy\Application\Query;
+
+use App\Domains\Pharmacy\Contracts\Dto\PharmacyOrderSummary;
+use App\Domains\Pharmacy\Domain\Model\PharmacyOrder;
+use App\Domains\Pharmacy\Domain\PharmacyOrderReader;
+use App\Models\User;
+use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Domain\NotFound;
+use Illuminate\Support\Facades\Auth;
+use RuntimeException;
+
+final class SearchPharmacyOrdersHandler
+{
+    public function __construct(
+        private readonly PharmacyOrderReader $reader,
+        private readonly ScopeChecker $scope,
+    ) {}
+
+    /**
+     * @return list<PharmacyOrderSummary>
+     */
+    public function __invoke(SearchPharmacyOrders $query): array
+    {
+        $user = Auth::user();
+        if (! $user instanceof User) {
+            throw new RuntimeException('SearchPharmacyOrders dispatched without an authenticated user (IC §6.1).');
+        }
+
+        if (! $this->scope->hasFacilityPermission($user, $query->facilityId, 'pharmacy.access')) {
+            throw NotFound::aggregate(PharmacyOrder::class, $query->facilityId);
+        }
+
+        return $this->reader->forFacility(
+            $query->facilityId,
+            $query->status !== null ? strtoupper(trim($query->status)) : null,
+        );
+    }
+}

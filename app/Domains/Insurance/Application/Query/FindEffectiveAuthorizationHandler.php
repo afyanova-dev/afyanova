@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Insurance\Application\Query;
+
+use App\Domains\Insurance\Contracts\Dto\AuthorizationSummary;
+use App\Domains\Insurance\Domain\AuthorizationReader;
+
+final class FindEffectiveAuthorizationHandler
+{
+    public function __construct(private readonly AuthorizationReader $reader) {}
+
+    public function __invoke(FindEffectiveAuthorization $query): ?AuthorizationSummary
+    {
+        return $this->reader->findEffective($query->patientId, $query->serviceCategory, $query->onDate);
+    }
+}

@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Billing\Application\Query;
+
+use App\Domains\Billing\Domain\Model\FinancialAccount;
+use App\Shared\Bus\ProtectedQuery;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
+
+/**
+ * Read one Financial Account (20-billing-and-payments-domain.md §7, §300;
+ * ADR-187 D-E). `view` gates on the coarse `billing.access`.
+ */
+#[ProtectedQuery(ability: 'view', subjectType: FinancialAccount::class)]
+final readonly class GetFinancialAccount
+{
+    public function __construct(public string $financialAccountId)
+    {
+        if (! Str::isUuid($financialAccountId)) {
+            throw new InvalidArgumentException('GetFinancialAccount::$financialAccountId must be a UUID (IC §3).');
+        }
+    }
+}

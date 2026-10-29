@@ -1,0 +1,223 @@
+/* Patient registration — moved verbatim from app.css.
+ * Source: app.css lines 3494..3643 (mechanical split, no edits).
+ */
+
+
+/* ---- Patient registration (sectioned, OpenMRS-style) ---- */
+
+.patient-register__header {
+  margin-block-end: var(--cds-spacing-05, 1rem);
+  text-align: center;
+}
+
+.patient-register__header .cds--breadcrumb {
+  justify-content: center;
+}
+
+.patient-register {
+  display: grid;
+  align-content: start;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.patient-register__draft-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-register__photo > p {
+  margin: 0;
+}
+
+.patient-register__fields .cds--radio-button-group--vertical {
+  display: grid;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.patient-register__title {
+  margin: 0;
+}
+
+.patient-register__actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cds-spacing-03, 0.5rem);
+  padding-block: var(--cds-spacing-04, 0.75rem);
+}
+
+.patient-register__sections {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: var(--cds-spacing-07, 2rem);
+  padding-block-end: 30vh;
+}
+
+
+
+.patient-register__note {
+  margin: 0;
+}
+
+.patient-register__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  align-items: start;
+  gap: var(--cds-spacing-06, 1.5rem);
+}
+
+.patient-register__fields {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.patient-register__names {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: var(--cds-spacing-04, 0.75rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patient-register__estimated-dob {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.patient-register__grid {
+  display: grid;
+  align-content: start;
+  gap: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patient-register__span {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+p.patient-register__span {
+  margin: 0;
+}
+
+.patient-register__photo {
+  position: sticky;
+  inset-block-start: 5rem;
+  align-self: start;
+  display: grid;
+  align-content: start;
+  gap: var(--cds-spacing-04, 0.75rem);
+  inline-size: 15rem;
+}
+
+.patient-register__photo-label {
+  inline-size: auto;
+  margin-block-end: 0;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.patient-register__photo-frame {
+  display: grid;
+  inline-size: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle, #e0e0e0);
+  border-radius: 0;
+}
+
+.patient-register__photo-frame--empty {
+  border-color: var(--cds-border-strong, #8d8d8d);
+  border-style: dashed;
+}
+
+.patient-register__photo-image {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.patient-register__photo-empty {
+  display: grid;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: var(--cds-spacing-05, 1rem);
+  place-content: center;
+  justify-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+  color: var(--cds-text-secondary, #525252);
+  text-align: center;
+}
+
+.patient-register__photo-empty svg {
+  color: var(--cds-icon-secondary, #525252);
+}
+
+.patient-register__photo-empty span {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.patient-register__photo-empty small {
+  color: var(--cds-text-placeholder, #a8a8a8);
+  font-size: 0.75rem;
+}
+
+.patient-register__photo-help {
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.patient-register__photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+  inline-size: 100%;
+}
+
+.patient-register__photo-actions .cds--btn {
+  flex: 0 1 auto;
+  inline-size: auto;
+  max-inline-size: 100%;
+  justify-content: center;
+}
+
+.patient-register__photo-actions .cds--btn:not(:only-child) {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding-inline: 0.375rem 2.25rem;
+}
+
+.patient-register__photo-actions .cds--btn:only-child {
+  flex: 1 1 100%;
+  inline-size: 100%;
+}
+
+@media (max-width: 48rem) {
+  .patient-register__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .patient-register__photo {
+    position: static;
+    inline-size: 100%;
+    max-inline-size: 15rem;
+  }
+
+  .patient-register__names,
+  .patient-register__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,135 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "afyanova/v4",
+    "type": "project",
+    "description": "AfyaNova AHS V4 \u2014 domain-driven modular monolith (see IMPLEMENTATION-CONTRACTS.md).",
+    "keywords": [
+        "afyanova",
+        "healthcare",
+        "laravel",
+        "modular-monolith"
+    ],
+    "license": "proprietary",
+    "require": {
+        "php": "^8.5",
+        "dompdf/dompdf": "^3.1",
+        "inertiajs/inertia-laravel": "^3.3",
+        "laravel/fortify": "^1.39",
+        "laravel/framework": "^13.17",
+        "laravel/reverb": "^1.11",
+        "laravel/tinker": "^3.0",
+        "phpoffice/phpspreadsheet": "^5.10",
+        "predis/predis": "^3.0",
+        "tightenco/ziggy": "^2.4"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.0",
+        "laravel/boost": "^2.10",
+        "laravel/pail": "^1.2.5",
+        "laravel/pint": "^1.27",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-arch": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "phpunit/phpunit": "^12.5.12",
+        "spatie/laravel-typescript-transformer": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "App\\Domains\\": "app/Domains/",
+            "App\\Platform\\": "app/Platform/",
+            "App\\Shared\\": "app/Shared/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        },
+        "files": [
+            "tests/Support/rls.php",
+            "tests/Support/security.php",
+            "tests/Support/clinical.php",
+            "tests/Support/bedWard.php",
+            "tests/Support/theatre.php",
+            "tests/Support/careCoordination.php",
+            "tests/Support/laboratory.php",
+            "tests/Support/radiology.php",
+            "tests/Support/inventory.php",
+            "tests/Support/procurement.php",
+            "tests/Support/pharmacy.php",
+            "tests/Support/billing.php",
+            "tests/Support/insurance.php",
+            "tests/Support/hr.php",
+            "tests/Support/scheduling.php",
+            "tests/Support/queueing.php",
+            "tests/Support/notifications.php",
+            "tests/Support/documents.php",
+            "tests/Support/integration.php",
+            "tests/Support/reporting.php"
+        ]
+    },
+    "scripts": {
+        "setup": [
+            "composer install",
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan key:generate",
+            "@php artisan migrate --force",
+            "npm install",
+            "npm run build"
+        ],
+        "dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan dev"
+        ],
+        "test": [
+            "@php artisan config:clear --ansi",
+            "@php vendor/bin/pest"
+        ],
+        "conform": [
+            "vendor/bin/pint --test",
+            "vendor/bin/phpstan analyse --no-progress",
+            "@php artisan typescript:transform --quiet",
+            "git diff --exit-code -- resources/js/shared/types/generated.ts || (echo 'generated.ts is stale \u2014 run: php artisan typescript:transform' && exit 1)",
+            "vendor/bin/pest --group=arch",
+            "vendor/bin/pest --exclude-group=arch",
+            "@php artisan afyanova:conformance",
+            "npm run lint --silent",
+            "npm run types --silent",
+            "npm run test --silent"
+        ],
+        "conform:e2e": [
+            "npm run test:e2e"
+        ],
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-update-cmd": [
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+        ],
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

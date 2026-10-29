@@ -1,0 +1,395 @@
+/* Platform administration (tenants, governed onboarding) — moved verbatim from app.css.
+ * Source: app.css lines 2703..2914 (mechanical split, no edits), except:
+ *  - overview-link-list / overview-context-badge rules moved to the
+ *    .afy-link-list and .afy-eyebrow foundation patterns (phase 2);
+ *  - dead rule for .afyanova-page__header (no longer emitted) removed.
+ */
+
+
+/* ---- Platform administration (tenant registry and governed onboarding) ---- */
+
+.platform-admin {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.platform-admin__eyebrow {
+  display: inline-block;
+  margin: 0 0 var(--cds-spacing-02, 0.25rem);
+}
+
+.platform-admin__section {
+  margin-block-start: var(--cds-spacing-07, 2rem);
+}
+
+.platform-admin__section-heading,
+.platform-admin__tenant-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cds-spacing-05, 1rem);
+  flex-wrap: wrap;
+}
+
+.platform-admin__section-heading {
+  margin-block-end: var(--cds-spacing-04, 0.75rem);
+}
+
+.platform-admin__section-heading h2,
+.platform-admin__tenant-card-header h2 {
+  margin: 0;
+}
+
+.platform-admin__section-heading p {
+  margin-block: 0;
+}
+
+/* Tabs (tenant/facility detail): panels sit close under the tab bar; the
+   section top margin is dropped for the first block in each panel. */
+.platform-admin .cds--tab-content {
+  padding-block: var(--afy-space-md) 0;
+}
+
+.platform-admin .cds--tab-content > .platform-admin__section {
+  margin-block-start: 0;
+}
+
+/* Governance/policy note under a section heading — secondary, capped
+   measure, same slot as facility-staff__create-note. */
+.platform-admin__section-note {
+  margin: 0 0 var(--afy-space-sm);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+  max-inline-size: 64rem;
+}
+
+.platform-admin__empty {
+  padding: var(--cds-spacing-05, 1rem);
+}
+
+.platform-admin__tenant-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr));
+  gap: var(--afy-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-admin__tenant-card {
+  padding: var(--afy-space-lg);
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  box-shadow: var(--afy-elevation-rest);
+  transition:
+    box-shadow var(--afy-duration-interaction, 120ms) var(--afy-easing, ease),
+    translate var(--afy-duration-interaction, 120ms) var(--afy-easing, ease);
+}
+
+.platform-admin__tenant-card:hover {
+  box-shadow: var(--afy-elevation-hover);
+  translate: 0 -2px;
+}
+
+.platform-admin__tenant-slug {
+  margin-block: var(--afy-space-2xs) 0;
+  color: var(--afy-text-secondary);
+  font-size: 0.75rem;
+  letter-spacing: 0.32px;
+}
+
+.platform-admin__audit-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--cds-spacing-05, 1rem);
+  align-items: end;
+  margin-block: var(--cds-spacing-05, 1rem);
+}
+
+.platform-admin__super-admin-request,
+.platform-admin__super-admin-review {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+  inline-size: 100%;
+}
+
+.platform-admin__tenant-card-header {
+  align-items: center;
+}
+
+.platform-admin__tenant-card-header p {
+  margin-block: var(--cds-spacing-02, 0.25rem) 0;
+}
+
+.platform-admin__tenant-metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-05, 1rem);
+  flex-wrap: wrap;
+  margin-block: var(--cds-spacing-05, 1rem);
+}
+
+.platform-admin__tenant-card footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-block-start: var(--cds-spacing-03, 0.5rem);
+}
+
+/* Tenant onboarding — one organized form whose sections stack in a
+   single fields column inside the create dock. */
+.platform-admin--create {
+  inline-size: 100%;
+}
+
+.platform-admin__wizard-fields {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: 2rem;
+}
+
+.platform-admin__wizard-section {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--afy-space-md);
+}
+
+.platform-admin__create-heading h2 {
+  margin: 0;
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+}
+
+.platform-admin__form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: var(--afy-space-md);
+}
+
+.platform-admin__form-grid--three {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  margin-block-start: var(--afy-space-md);
+}
+
+.platform-admin__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--afy-space-sm);
+  margin-block-start: var(--afy-space-md);
+}
+
+.platform-admin__facility-panel {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.platform-admin__admin-list {
+  display: grid;
+  gap: var(--cds-spacing-04, 0.75rem);
+  margin-block: var(--cds-spacing-05, 1rem);
+}
+
+.platform-admin__admin-card {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(20rem, 2fr);
+  align-items: start;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.platform-admin__admin-card h3,
+.platform-admin__admin-card p {
+  margin-block: 0 var(--cds-spacing-03, 0.5rem);
+}
+
+.platform-admin__admin-card form {
+  display: grid;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+@media (max-width: 48rem) {
+  .platform-admin__admin-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Registry row expansion: explains the row — what is flagged, where the
+   tenant sits in onboarding, and the configured structure as deep links. */
+.platform-admin__tenant-expansion {
+  padding-block: var(--afy-space-sm);
+}
+
+.platform-admin__expansion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--afy-space-lg);
+}
+
+.platform-admin__expansion-title {
+  margin: 0 0 var(--afy-space-sm);
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-01-line-height, 1.28572);
+}
+
+.platform-admin__expansion-flag {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  border-inline-start: 2px solid var(--cds-support-error, #da1e28);
+  padding-inline-start: var(--afy-space-sm);
+}
+
+.platform-admin__expansion-flag p {
+  margin: 0;
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+}
+
+.platform-admin__expansion-action {
+  align-self: start;
+  color: var(--afy-link);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+}
+
+.platform-admin__expansion-clear {
+  display: flex;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  margin: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+}
+
+.platform-admin__expansion-clear svg {
+  flex: none;
+  fill: var(--afy-status-positive);
+}
+
+.platform-admin__expansion-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--afy-space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-admin__expansion-steps li {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius-pill);
+  font-size: 0.75rem;
+  color: var(--afy-text-secondary);
+  transition: border-color var(--afy-duration-fast) var(--afy-easing),
+    color var(--afy-duration-fast) var(--afy-easing);
+}
+
+.platform-admin__expansion-steps li[data-state='done']::before {
+  content: '✓';
+  margin-inline-end: 0.25rem;
+  color: var(--afy-status-positive);
+}
+
+.platform-admin__expansion-steps li[data-state='current'] {
+  border-color: var(--afy-text-primary);
+  color: var(--afy-text-primary);
+  font-weight: 600;
+}
+
+.platform-admin__expansion-structure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem var(--afy-space-2xs);
+  margin: var(--afy-space-md) 0 0;
+  padding-block-start: var(--afy-space-xs);
+  border-block-start: 1px solid var(--afy-hairline);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+}
+
+.platform-admin__expansion-structure > span:first-child {
+  color: var(--afy-text-secondary);
+  font-size: 0.75rem;
+}
+
+.platform-admin__expansion-missing {
+  color: var(--afy-text-secondary);
+}
+
+/* Management dock: hairline-separated blocks instead of nested card tiles.
+   Every top-level block is a sibling; the divider row carries the rhythm. */
+.platform-admin__access-flow > * + * {
+  border-block-start: 1px solid var(--afy-hairline);
+  padding-block-start: var(--afy-space-md);
+  margin-block-start: var(--afy-space-md);
+}
+
+.platform-admin__access-stack {
+  display: grid;
+  gap: var(--afy-space-md);
+}
+
+.platform-admin__access-form {
+  display: grid;
+  gap: var(--afy-space-sm);
+}
+
+.platform-admin__access-form + .platform-admin__access-form {
+  border-block-start: 1px solid var(--afy-hairline);
+  padding-block-start: var(--afy-space-md);
+}
+
+.platform-admin__access-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs) var(--afy-space-sm);
+}
+
+.platform-admin__access-person strong {
+  font-weight: 600;
+}
+
+.platform-admin__access-person span {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+}
+
+.platform-admin__flat-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform-admin__flat-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-sm);
+  padding-block: var(--afy-space-xs);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.platform-admin__flat-list li:first-child {
+  border-block-start: 0;
+}
+
+.platform-admin__flat-list li > div {
+  display: grid;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+.platform-admin__flat-list li strong {
+  font-weight: 600;
+}
+
+.platform-admin__flat-list li span {
+  color: var(--afy-text-secondary);
+  font-size: 0.75rem;
+}

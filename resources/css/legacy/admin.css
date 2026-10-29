@@ -1,0 +1,720 @@
+/* Admin workspace (organization, role promotions, staff invite) — moved verbatim from app.css.
+ * Source: app.css lines 2154..2697 (mechanical split, no edits), except:
+ *  - dead rule for .afyanova-page__header (no longer emitted) removed.
+ */
+
+
+/* Staff invite workspace: grouped Account / Roles / Justification sections
+   with a patient-style identity block on top. */
+.staff-invite__section {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+  margin-block-start: var(--cds-spacing-06, 1.5rem);
+}
+
+.staff-invite__section > h3 {
+  margin: 0;
+}
+
+.staff-invite__note {
+  margin: 0;
+}
+
+.admin-facility-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization {
+  min-inline-size: 0;
+}
+
+.admin-organization__statistics {
+  margin-block-end: var(--cds-spacing-07, 2rem);
+}
+
+.admin-organization__facilities-section {
+  margin-block-start: var(--cds-spacing-07, 2rem);
+}
+
+.admin-role-promotions {
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__page-head {
+  margin-block-end: 1.5rem;
+}
+
+.admin-role-promotions__page-head h1 {
+  margin: 0;
+}
+
+.admin-role-promotions__page-head-description {
+  max-inline-size: 64rem;
+  margin-block: var(--cds-spacing-03, 0.5rem) 0;
+}
+
+.admin-role-promotions .cds--tabs {
+  min-inline-size: 0;
+}
+
+.admin-role-promotions .cds--tab-content {
+  padding: var(--cds-spacing-05, 1rem) 0;
+}
+
+.admin-role-promotions__tab-actions,
+.admin-role-promotions__tab-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-05, 1rem);
+  margin-block-end: var(--cds-spacing-06, 1.5rem);
+  padding: var(--cds-spacing-05, 1rem);
+}
+
+.admin-role-promotions__tab-actions > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.admin-role-promotions__tab-actions h2,
+.admin-role-promotions__tab-content h2 {
+  margin: 0;
+}
+
+.admin-role-promotions__tab-actions p,
+.admin-role-promotions__tab-content p {
+  margin-block: var(--cds-spacing-02, 0.25rem) 0;
+}
+
+.admin-role-promotions__tab-content > div {
+  display: grid;
+  justify-items: start;
+  gap: var(--cds-spacing-03, 0.5rem);
+  max-inline-size: 48rem;
+}
+
+.admin-role-promotions__requests {
+  margin-block-start: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-role-promotions__table-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-04, 0.75rem);
+  inline-size: 100%;
+}
+
+.admin-role-promotions__request-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.admin-role-promotions__panel-intro {
+  margin: 0;
+}
+
+.admin-role-promotions__empty-tab {
+  margin: var(--cds-spacing-05, 1rem) 0;
+}
+
+/* Review access request panel — one open hierarchy rather than nested
+   cards: request summary, justification, low-priority audit IDs, then a
+   clearly separated rejection path. Hairlines divide the sections. */
+.admin-role-promotions__review {
+  display: grid;
+  gap: 0;
+}
+
+.admin-role-promotions__review-summary {
+  display: grid;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__review-summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--afy-space-sm);
+}
+
+.admin-role-promotions__review-heading {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__review-heading .afy-eyebrow {
+  margin: 0;
+}
+
+.admin-role-promotions__review-title {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-03-font-size, 1.25rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-03-line-height, 1.4);
+  letter-spacing: var(--cds-heading-03-letter-spacing, 0);
+  overflow-wrap: anywhere;
+}
+
+.admin-role-promotions__review-target {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  overflow-wrap: anywhere;
+}
+
+.admin-role-promotions__review-target strong {
+  font-weight: 600;
+}
+
+.admin-role-promotions__review-summary-head > .cds--tag {
+  flex: none;
+  margin: 0;
+}
+
+.admin-role-promotions__review-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--afy-space-xs) var(--afy-space-lg);
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__review-metadata > div {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__review-metadata dt {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 400;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.admin-role-promotions__review-metadata dd {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  overflow-wrap: anywhere;
+}
+
+.admin-role-promotions__review-fact-note {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.admin-role-promotions__review-notice {
+  margin-block-start: var(--afy-space-sm);
+}
+
+.admin-role-promotions__review-notice .cds--inline-notification {
+  margin: 0;
+}
+
+.admin-role-promotions__review-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--afy-space-xs);
+  margin: var(--afy-space-sm) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+}
+
+.admin-role-promotions__review-hint svg {
+  flex: none;
+  margin-block-start: var(--cds-spacing-01, 0.125rem);
+  color: var(--afy-text-helper);
+}
+
+.admin-role-promotions__review-section,
+.admin-role-promotions__technical-details,
+.admin-role-promotions__review-decision {
+  margin-block-start: var(--afy-space-sm);
+  padding-block-start: var(--afy-space-sm);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.admin-role-promotions__review-section {
+  display: grid;
+  gap: var(--afy-space-xs);
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__review-section-title {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-01-line-height, 1.28572);
+}
+
+.admin-role-promotions__review-reason {
+  margin: 0;
+  padding-inline-start: var(--afy-space-sm);
+  border-inline-start: var(--afy-space-2xs) solid var(--afy-border-strong);
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.admin-role-promotions__review-reason p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-role-promotions__technical-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-sm);
+  padding-block: var(--afy-space-2xs);
+  color: var(--afy-text-primary);
+  cursor: pointer;
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  list-style: none;
+}
+
+.admin-role-promotions__technical-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-role-promotions__technical-summary::after {
+  flex: none;
+  content: '+';
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 400;
+}
+
+.admin-role-promotions__technical-details[open] .admin-role-promotions__technical-summary::after {
+  content: '−';
+}
+
+.admin-role-promotions__technical-summary:focus-visible {
+  outline: var(--afy-space-2xs) solid var(--afy-focus);
+  outline-offset: calc(var(--afy-space-2xs) * -1);
+}
+
+.admin-role-promotions__technical-summary-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--afy-space-2xs) var(--afy-space-xs);
+  min-inline-size: 0;
+}
+
+.admin-role-promotions__technical-hint {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 400;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.admin-role-promotions__technical-hint::before {
+  content: '·';
+  margin-inline-end: var(--afy-space-2xs);
+}
+
+.admin-role-promotions__identifier-list {
+  display: grid;
+  gap: 0;
+  padding-block-start: var(--afy-space-xs);
+}
+
+.admin-role-promotions__identifier-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-sm);
+  padding-block: var(--afy-space-xs);
+}
+
+.admin-role-promotions__identifier-row + .admin-role-promotions__identifier-row {
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.admin-role-promotions__identifier-row > span {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-role-promotions__identifier-row code {
+  overflow-wrap: anywhere;
+  font-size: var(--cds-code-01-font-size, 0.75rem);
+}
+
+.admin-role-promotions__identifier-list p {
+  margin: var(--afy-space-xs) 0 0;
+}
+
+.admin-role-promotions__review-decision {
+  display: grid;
+  gap: var(--afy-space-sm);
+  border-block-start-color: color-mix(in srgb, var(--afy-status-negative) 30%, var(--afy-border));
+}
+
+.admin-role-promotions__review-decision-heading {
+  display: grid;
+  gap: var(--afy-space-2xs);
+}
+
+.admin-role-promotions__review-decision-title {
+  margin: 0;
+  color: var(--cds-text-error, #da1e28);
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-01-line-height, 1.28572);
+}
+
+.admin-role-promotions__review-decision-note {
+  margin: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+}
+
+.admin-role-promotions__review-decision > .cds--btn {
+  justify-self: start;
+}
+
+@media (max-width: 42rem) {
+  .admin-role-promotions__review-summary-head {
+    flex-wrap: wrap;
+  }
+
+  .admin-role-promotions__review-summary-head > .cds--tag {
+    margin-inline-start: auto;
+  }
+}
+
+.admin-organization-panel {
+  display: grid;
+  gap: var(--cds-spacing-06, 1.5rem);
+}
+
+.admin-organization-panel__context {
+  margin: 0;
+}
+
+.admin-organization-panel__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-organization-panel__facts > div {
+  display: grid;
+  gap: var(--cds-spacing-02, 0.25rem);
+  padding: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization-panel__section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-04, 0.75rem);
+  margin-block-end: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization-panel__section-header h3,
+.admin-organization-panel__section-header p {
+  margin: 0;
+}
+
+.admin-organization-panel__section-header p {
+  margin-block-start: var(--cds-spacing-02, 0.25rem);
+}
+
+.admin-organization-panel__structure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.admin-organization-panel__empty {
+  padding: var(--cds-spacing-05, 1rem);
+}
+
+.admin-organization-panel__empty strong {
+  display: block;
+}
+
+.admin-organization-panel__empty p {
+  margin-block: var(--cds-spacing-02, 0.25rem) var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization-panel__record-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-02, 0.25rem);
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+}
+
+.admin-organization__stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1.5rem;
+  margin: 0 0 1rem;
+  padding: 0.625rem 0;
+}
+
+.admin-organization__stat-strip > div {
+  display: grid;
+  gap: 0.125rem;
+  min-inline-size: 4.5rem;
+}
+
+.admin-organization__stat-strip dd {
+  margin: 0;
+}
+
+.admin-organization__locations-panel {
+  display: grid;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization__location-browser {
+  display: grid;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization__location-browser-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.admin-organization__location-browser > .cds--search {
+  max-inline-size: none;
+}
+
+.admin-organization__location-tree {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-organization__location-tree .cds--tree-node__label {
+  padding-block: var(--cds-spacing-03, 0.5rem);
+  padding-inline-end: 0;
+}
+
+.admin-organization__tree-label {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--cds-spacing-02, 0.25rem) var(--cds-spacing-03, 0.5rem);
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+
+.admin-organization__location-tree .cds--tree-node__label__details {
+  display: flex;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.admin-organization__location-tree .cds--tree-node__label__text {
+  display: flex;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+
+.admin-organization__tree-label strong {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-organization__tree-label small {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-organization__tree-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  min-inline-size: 0;
+  pointer-events: none;
+}
+
+.admin-organization__location-tree .cds--tree-node__label:hover .admin-organization__tree-actions,
+.admin-organization__location-tree .cds--tree-node__label:focus-within .admin-organization__tree-actions {
+  pointer-events: auto;
+}
+
+@media (any-hover: none) {
+  .admin-organization__tree-actions {
+    pointer-events: auto;
+  }
+}
+
+.admin-organization__tree-button-set {
+  display: flex;
+  flex: 0 0 auto;
+  inline-size: max-content;
+  flex-wrap: nowrap;
+}
+
+.admin-organization__tree-button-set .cds--btn {
+  flex: 0 0 auto !important;
+  inline-size: auto !important;
+  max-inline-size: none !important;
+  min-inline-size: 0;
+  padding-inline: var(--cds-spacing-03, 0.5rem);
+  white-space: nowrap;
+}
+
+.admin-organization__facility-directory .cds--data-table td:last-child {
+  min-inline-size: 16rem;
+}
+
+.admin-organization__row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--afy-space-2xs);
+}
+
+.admin-organization__facility-directory .cds--data-table td:nth-child(4) {
+  min-inline-size: 14rem;
+}
+
+.admin-organization__panel-intro {
+  margin-block: 0 var(--cds-spacing-05, 1rem);
+}
+
+.admin-organization-panel__form {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.admin-organization-panel__form > p:first-child {
+  margin: 0;
+}
+
+.admin-organization__panel-intro {
+  margin-block: 0 var(--cds-spacing-05, 1rem);
+}
+
+.admin-organization__panel-form {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.admin-organization__services {
+  margin-block-start: 0;
+}
+
+.admin-organization__services > p {
+  margin: 0;
+}
+
+.admin-organization__services-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-organization__services-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-04, 0.75rem);
+  padding-block: var(--cds-spacing-04, 0.75rem);
+}
+
+.admin-organization__services-list li > div:first-child {
+  display: grid;
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  gap: var(--cds-spacing-01, 0.125rem);
+}
+
+.admin-organization__services-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-02, 0.25rem);
+  margin-inline-start: auto;
+  flex: none;
+}
+
+@media (max-width: 35.99rem) {
+  .admin-organization-panel__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Admin → Procurement limits.
+   A facility directory table plus a docked per-facility editor, matching the
+   organization page's rhythm (statistics strip, table, side panel). */
+.admin-procurement-limits {
+  min-inline-size: 0;
+}
+
+.admin-procurement-limits__statistics {
+  margin-block-end: var(--cds-spacing-07, 2rem);
+}
+
+.admin-procurement-limits__facilities-section {
+  margin-block-start: var(--cds-spacing-07, 2rem);
+}
+
+.admin-procurement-limits__directory .cds--data-table td:last-child {
+  min-inline-size: 10rem;
+}
+
+.admin-procurement-limits__panel-intro {
+  margin-block: 0 var(--cds-spacing-05, 1rem);
+}
+
+.admin-procurement-limits__panel-form {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.admin-procurement-limits__departments {
+  margin-block-start: var(--cds-spacing-06, 1.5rem);
+}
+
+.admin-procurement-limits__departments h3 {
+  margin: 0 0 var(--cds-spacing-03, 0.5rem);
+}
+
+.admin-procurement-limits__departments ul {
+  margin: 0;
+  padding-inline-start: var(--cds-spacing-05, 1rem);
+}

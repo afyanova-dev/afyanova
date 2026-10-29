@@ -1,0 +1,118 @@
+/* Service queues / procedure work — moved verbatim from app.css.
+ * Source: app.css lines 2955..3059 (mechanical split, no edits).
+ */
+
+
+.service-queues__overview {
+  margin-block-end: var(--cds-spacing-07, 2rem);
+}
+
+.service-queues__overview-accordion .cds--accordion__content {
+  padding-inline: 0;
+}
+
+.service-queues__overview-accordion .cds--data-table-container,
+.service-queues__overview-accordion .cds--data-table-content,
+.service-queues__overview-accordion .cds--data-table {
+  inline-size: 100%;
+}
+
+.procedure-work__material-line {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: var(--cds-spacing-03, 0.5rem);
+  margin-block: var(--cds-spacing-03, 0.5rem);
+}
+
+.service-queues__flow {
+  display: grid;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.service-queues__flow-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  align-items: end;
+  gap: var(--cds-spacing-05, 1rem);
+}
+
+.service-queues__flow-heading > div {
+  min-inline-size: 0;
+}
+
+.service-queues__flow-heading h2 {
+  margin: 0;
+}
+
+.service-queues__flow-heading p {
+  margin: var(--cds-spacing-02, 0.25rem) 0 0;
+}
+
+.service-queues__flow-heading .cds--select {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.service-queues__tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.service-queues__tab-list {
+  min-inline-size: 0;
+  overflow-x: auto;
+}
+
+.service-queues__data-note {
+  margin: 0;
+}
+
+.service-queues__tabs .cds--tab-content {
+  padding-inline: 0;
+}
+
+.service-queues__patient-name,
+.service-queues__patient-number {
+  display: block;
+}
+
+.service-queues__row-actions {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-02, 0.25rem);
+}
+
+.service-queues__action-column {
+  width: 1%;
+  white-space: nowrap;
+  text-align: start;
+}
+
+.cds--data-table th.service-queues__action-column .cds--table-header-label {
+  justify-content: flex-start;
+  text-align: start;
+}
+
+.service-queues__action-error {
+  margin-block-start: var(--cds-spacing-03, 0.5rem);
+}
+
+.service-queues__routing-alert {
+  inline-size: 100%;
+  max-inline-size: none;
+  margin-block-end: var(--cds-spacing-03, 0.5rem);
+}
+
+@media (max-width: 48rem) {
+  .service-queues__flow-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .procedure-work__material-line {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

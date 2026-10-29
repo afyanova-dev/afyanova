@@ -1,0 +1,41 @@
+/* Afyanova application stylesheet.
+ *
+ * Import order == cascade order:
+ *   1. Carbon styles — the design system's own styles, source of truth.
+ *   2. tokens.css   — semantic --afy-* custom properties, every value
+ *                     bridged to a Carbon token.
+ *   3. legacy/      — workspace styles split verbatim from the former
+ *                     single app.css (2026-10 archive); see
+ *                     frontend-foundation-design-system.md for the split
+ *                     map. Migrated domain-by-domain onto the foundation.
+ *   4. foundation.css — .afy-* page scaffold and design-system patterns;
+ *                     new pages and migrations should target these.
+ *
+ * Rules of engagement:
+ *   - Carbon owns component visuals; overrides of .cds--* are only allowed
+ *     next to documented Carbon limitations (see foundation doc §Override policy).
+ *   - No raw colors/spacing in app CSS: use --cds-* or --afy-* tokens.
+ *   - Workspace CSS is written per-domain in legacy/<domain>.css until the
+ *     domain migrates to foundation patterns.
+ */
+@import '@carbon/styles/css/styles.css';
+@import './tokens.css';
+
+/* Legacy split files: verbatim moves from the former app.css. */
+@import './legacy/global-scaffold.css';
+@import './legacy/auth.css';
+@import './legacy/patient-chart.css';
+@import './legacy/pharmacy.css';
+@import './legacy/nurse-station.css';
+@import './legacy/front-desk.css';
+@import './legacy/admin.css';
+@import './legacy/procurement.css';
+@import './legacy/platform-admin.css';
+@import './legacy/service-queues.css';
+@import './legacy/appointments.css';
+@import './legacy/patient-registration.css';
+@import './legacy/hr-staff.css';
+@import './legacy/app-shell.css';
+
+/* Foundation layer: page scaffold + .afy-* design-system patterns. */
+@import './foundation.css';

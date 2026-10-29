@@ -1,0 +1,395 @@
+/* UI shell: header, workspace nav, switcher, search, docked panels, quick-actions rail, flash/toast sinks, workspace sheet motion — moved verbatim from app.css.
+ * Source: app.css lines 237..3868 (mechanical split, no edits).
+ */
+
+
+
+/* Header must paint above the sidenav: Carbon pins both at z-index 8000
+   and DOM order then puts the sidenav over header children — including the
+   patient quick-search dropdown, which extends into the sidenav region.
+   Breaks: dropdown (and header menus) render beneath the sidenav. */
+.cds--header {
+  z-index: 8001;
+}
+
+.cds--side-nav.afyanova-chart-side-nav {
+  box-sizing: border-box;
+}
+
+/* Space above the first chart section (Patient Summary) equals one menu
+   item height (2rem) instead of Carbon's default 1rem. */
+.cds--side-nav.afyanova-chart-side-nav .cds--side-nav__items {
+  padding-block-start: 2rem;
+}
+
+@media (min-width: 66rem) {
+  .cds--side-nav.afyanova-chart-side-nav,
+  .cds--side-nav.afyanova-chart-side-nav.cds--side-nav--expanded,
+  .cds--side-nav.afyanova-chart-side-nav.cds--side-nav--fixed {
+    inline-size: 15rem;
+    max-inline-size: 15rem;
+  }
+
+  .cds--side-nav.afyanova-chart-side-nav.cds--side-nav--expanded ~ .cds--content {
+    margin-inline-start: 15rem;
+  }
+}
+
+/* App-menu workspace links: icon + label in a row so the Switcher scans
+   like the rail. Carbon owns the link padding — this only aligns content. */
+.afyanova-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.afyanova-switcher-item__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+/* Header composition: Carbon owns these components; the rules below only
+   distribute header space (global utilities never crowd the app menu).
+   If the header layout breaks after a Carbon upgrade, start here. */
+.cds--header__nav.afyanova-workspace-navigation {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.cds--header__global {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+/* Account menu must fill header height for Carbon's popover alignment.
+   Breaks: menu detaches from the header bar. */
+.cds--overflow-menu__wrapper {
+  align-self: stretch;
+}
+
+.cds--overflow-menu__wrapper .cds--popover-container,
+.cds--overflow-menu__wrapper .cds--tooltip-trigger__wrapper {
+  block-size: 100%;
+}
+
+.afyanova-profile-menu {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.afyanova-profile-menu > .cds--btn--icon-only {
+  block-size: 100%;
+  inline-size: 3rem;
+}
+
+.afyanova-workspace-mobile-menu {
+  display: none;
+}
+
+/* Mobile search action: quick-search input is hidden below desktop, so the
+   utility icon takes over (focuses the browse-page search when present).
+   Hidden on desktop where the inline input is the fast path. */
+.afyanova-search-mobile-action {
+  display: none;
+}
+
+.afyanova-facility-switcher {
+  display: flex;
+  align-items: center;
+  inline-size: min(13rem, 28vw);
+  min-inline-size: 0;
+  padding-inline: var(--cds-spacing-03, 0.5rem);
+}
+
+/* Single-facility viewers (nothing to switch): static name in header text,
+   never an interactive control. */
+.afyanova-facility-name {
+  display: flex;
+  align-items: center;
+  max-inline-size: min(13rem, 28vw);
+  padding-inline: var(--cds-spacing-03, 0.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Global header quick searches (patients, people, platform registry):
+   ExpandableSearch collapsed to an icon until needed. Expanded width capped
+   so facility/account/Switcher never crowd. Results share one popover surface
+   below the header. Breaks: search crowds the header, or results float
+   transparently over page content. */
+.afyanova-header-search {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+}
+
+.afyanova-header-search .cds--search--expandable.cds--search--expanded {
+  inline-size: min(24rem, 42vw);
+}
+
+.afyanova-header-search .cds--search--expandable:not(.cds--search--expanded) {
+  inline-size: 3rem;
+}
+
+/* One shared popover surface for every header search (patients, people, and
+   platform registry). This is what keeps the result rows from floating
+   transparently over the page. */
+.afyanova-header-search__results {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline: 0;
+  z-index: 9000;
+  max-block-size: 24rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--cds-text-primary, #161616);
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle, #e0e0e0);
+  border-block-start: 0;
+  box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 20%);
+}
+
+.afyanova-header-search__message {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.875rem;
+}
+
+.afyanova-header-search__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.afyanova-header-search__list > li + li {
+  border-block-start: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.afyanova-header-search__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: 0.625rem 1rem;
+  color: var(--cds-text-primary, #161616);
+  text-decoration: none;
+}
+
+.afyanova-header-search__link:hover,
+.afyanova-header-search__list > li[aria-selected='true'] .afyanova-header-search__link {
+  background: var(--cds-layer-hover-01, #e8e8e8);
+}
+
+.afyanova-header-search__link:focus-visible {
+  outline: 2px solid var(--cds-focus, #0f62fe);
+  outline-offset: -2px;
+}
+
+.afyanova-header-search__identity {
+  display: grid;
+  flex: 1;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+.afyanova-header-search__identity strong,
+.afyanova-header-search__identity small,
+.afyanova-header-search__identity > span > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.afyanova-header-search__identity strong {
+  color: var(--cds-text-primary, #161616);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.afyanova-header-search__identity small,
+.afyanova-header-search__identity > span > span {
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.afyanova-header-search__photo {
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: 50%;
+}
+
+span.afyanova-header-search__photo {
+  display: grid;
+  place-items: center;
+  color: var(--cds-text-primary, #161616);
+  background: var(--cds-layer-02, #e0e0e0);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+img.afyanova-header-search__photo {
+  object-fit: cover;
+}
+
+@media (max-width: 65.99rem) {
+  /* Mobile header: Carbon collapses header nav — force the workspace
+     container visible and swap inline links for the menu. */
+  .cds--header__nav.afyanova-workspace-navigation {
+    display: block !important;
+    padding-inline-start: 0;
+  }
+
+  .cds--header__nav.afyanova-workspace-navigation::before {
+    display: none;
+  }
+
+  .afyanova-workspace-link {
+    display: none;
+  }
+
+  .afyanova-workspace-mobile-menu {
+    display: list-item;
+  }
+
+  .afyanova-workspace-mobile-menu .cds--header__menu-title {
+    max-inline-size: 7rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .afyanova-facility-switcher {
+    inline-size: min(10rem, 32vw);
+    padding-inline: 0;
+  }
+
+  /* Below desktop the sidenav is an overlay, so Carbon's content offset
+     must be zeroed. Breaks: content sits indented with no visible sidenav. */
+  .cds--side-nav ~ .cds--content {
+    margin-inline-start: 0;
+  }
+}
+
+@media (min-width: 66rem) {
+  .afyanova-workspace-mobile-menu {
+    display: none;
+  }
+}
+
+/* Right workspace sheet: slide in like the UI shell sidenav (Carbon
+   productive motion). Panel mounts only when open, so this covers enter;
+   close unmounts. Respects reduced motion. */
+.afy-dock .afyanova-pharmacy-create-patient.cds--btn {
+  display: flex;
+  inline-size: 100% !important;
+  width: 100% !important;
+  max-inline-size: none;
+  max-width: none;
+  justify-content: center;
+}
+
+.afyanova-flash-messages {
+  position: fixed;
+  inset-block-end: 1rem;
+  inset-inline-end: 1rem;
+  z-index: 10000;
+  display: grid;
+  gap: 0.5rem;
+  inline-size: min(28rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.afyanova-flash-notification.cds--toast-notification {
+  inline-size: 100%;
+  max-inline-size: none;
+  margin: 0;
+  pointer-events: auto;
+}
+
+.afyanova-flash-item {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+  pointer-events: auto;
+}
+
+.afyanova-flash-details {
+  margin-inline-start: 3rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--afy-text-primary);
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  font-size: 0.8125rem;
+}
+
+.afyanova-flash-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.afyanova-flash-details p {
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.afyanova-page .cds--inline-notification {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+/* Right icon rail must paint above its workspace panel (panel z-index 7000).
+   The rail stays visible via offsetInlineEnd, but its left-aligned tooltips
+   extend over the panel — without this they slide behind the open panel.
+   Full-height layer surface with flush, stacked 3rem buttons. */
+.afyanova-quick-actions {
+  position: fixed;
+  inset-block: 3rem 0;
+  inset-inline-end: 0;
+  inline-size: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  z-index: 7010;
+  background: var(--cds-layer-01, #ffffff);
+  border-inline-start: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.afyanova-quick-actions .cds--btn--icon-only {
+  inline-size: 3rem;
+  block-size: 3rem;
+}
+
+.afyanova-quick-actions .cds--popover,
+.afyanova-quick-actions .cds--tooltip {
+  z-index: 7010;
+}
+
+/* Full-width alert inside table containers: Carbon caps inline
+   notifications at 832px — this opts one alert out to span its parent. */
+.afyanova-full-alert {
+  margin-block-start: var(--cds-spacing-04, 0.75rem);
+}
+
+.afyanova-full-alert .cds--inline-notification {
+  max-inline-size: none;
+  inline-size: 100%;
+}
+
+@keyframes afyanova-workspace-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}

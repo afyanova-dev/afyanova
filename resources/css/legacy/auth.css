@@ -1,0 +1,302 @@
+/* Authentication screens (login, MFA setup) — moved verbatim from app.css.
+ * Source: app.css lines 26..231 (mechanical split, no edits).
+ * 2026-10-18: the auth page shell moved to the foundation (.afy-auth,
+ * Carbon login pattern); inner content classes still live here.
+ */
+
+/* Inner composition shared by every auth screen: heading, forms, steps. */
+.afyanova-auth-content h1 {
+  margin: 0;
+}
+
+.afyanova-auth-content h1 + p,
+.afyanova-auth-step > p:last-child {
+  margin-block: 0.5rem 1.25rem;
+}
+
+.afyanova-auth-content form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  margin-block-start: var(--afy-space-md);
+}
+
+.afyanova-auth-content form > div[style] {
+  margin-block: 0 !important;
+}
+
+.afyanova-auth-content .cds--checkbox-wrapper {
+  margin-block: 0.25rem;
+}
+
+.afyanova-auth-content form .cds--btn {
+  inline-size: 100%;
+  max-inline-size: none;
+  min-block-size: 3rem;
+}
+
+/* Standalone auth actions (verify email) match form buttons. */
+.afyanova-auth-content > .cds--btn {
+  inline-size: 100%;
+  max-inline-size: none;
+  min-block-size: 3rem;
+}
+
+.afyanova-auth-notices:empty {
+  display: none;
+}
+
+.afyanova-auth-notices:not(:empty) {
+  margin-block-end: 1.25rem;
+}
+
+.afyanova-auth-step {
+  margin-block-end: 1.5rem;
+}
+
+.afyanova-auth-step__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0 0.75rem;
+}
+
+.afyanova-auth-step__label::before {
+  content: none;
+}
+
+/* 2FA method tiles (Carbon RadioTile): title + caption hierarchy inside
+   the tile content. */
+.afyanova-auth-tile__text {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  font-weight: 600;
+}
+
+.afyanova-auth-tile__hint {
+  color: var(--afy-text-secondary);
+  font-weight: 400;
+}
+
+.afyanova-auth-setup {
+  inline-size: min(100%, 36rem);
+}
+
+.afy-auth__panel:has(.afyanova-auth-setup) {
+  padding-block: 2rem;
+}
+
+/* Intro screen: what you will need, before the setup starts. */
+.afyanova-auth-setup__requirements {
+  display: grid;
+  gap: var(--afy-space-sm);
+  margin-block: 0 0 var(--afy-space-lg);
+  padding: var(--afy-space-md) var(--afy-space-lg);
+  list-style: none;
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  background: var(--afy-surface);
+}
+
+.afyanova-auth-setup__requirements li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--afy-space-sm);
+}
+
+.afyanova-auth-setup__requirement-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin-block-start: 0.125rem;
+  color: var(--afy-text-secondary);
+}
+
+.afyanova-auth-setup__requirements li > span:last-child {
+  color: var(--afy-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* Stepper: compact horizontal progress across the three setup stages. */
+.afyanova-auth-setup__stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin-block: 0 var(--afy-space-lg);
+  padding: 0;
+  list-style: none;
+}
+
+.afyanova-auth-setup__stepper li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  min-inline-size: 0;
+  color: var(--afy-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.afyanova-auth-setup__stepper li + li::before {
+  content: "";
+  flex: 0 0 auto;
+  inline-size: 1.25rem;
+  block-size: 1px;
+  background: var(--afy-hairline);
+}
+
+.afyanova-auth-setup__stepper li[data-state='current'] {
+  color: var(--afy-text-primary);
+}
+
+.afyanova-auth-setup__step-badge {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border: 1px solid var(--afy-border);
+  border-radius: 50%;
+  background: var(--afy-surface-field);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.afyanova-auth-setup__stepper li[data-state='current'] .afyanova-auth-setup__step-badge {
+  border-color: transparent;
+  background: var(--afy-surface-inverse);
+  color: var(--afy-text-on-color);
+}
+
+.afyanova-auth-setup__step-badge[data-state='complete'] {
+  border-color: transparent;
+  background: var(--afy-status-positive);
+  color: var(--afy-text-on-color);
+}
+
+/* Step 1 — QR figure on a raised surface next to the instructions. */
+.afyanova-auth-setup__qr,
+.afyanova-auth-setup__codes {
+  margin-block: var(--afy-space-md);
+  padding: var(--afy-space-lg);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  background: var(--afy-surface);
+  box-shadow: var(--afy-elevation-rest);
+}
+
+.afyanova-auth-setup__qr {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.afyanova-auth-setup__qr-figure {
+  display: grid;
+  flex: none;
+  place-items: center;
+  padding: var(--afy-space-xs);
+  inline-size: 10.5rem;
+  block-size: 10.5rem;
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  background: var(--afy-surface-field);
+}
+
+.afyanova-auth-setup__qr-figure img {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.afyanova-auth-setup__qr-loading {
+  inline-size: 100%;
+}
+
+.afyanova-auth-setup__qr h2,
+.afyanova-auth-setup__codes h2 {
+  margin: 0;
+}
+
+.afyanova-auth-setup__qr p {
+  margin-block: 0.5rem 0;
+}
+
+.afyanova-auth-setup__qr .cds--snippet {
+  margin-block-start: var(--afy-space-sm);
+}
+
+/* Step 2 — recovery codes: header with actions, then a code chip grid. */
+.afyanova-auth-setup__codes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs) var(--afy-space-sm);
+  margin-block-end: var(--afy-space-sm);
+}
+
+.afyanova-auth-setup__codes-actions {
+  display: inline-flex;
+  gap: var(--afy-space-2xs);
+}
+
+.afyanova-auth-setup__codes ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--afy-space-2xs);
+  margin: var(--afy-space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.afyanova-auth-setup__codes li {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  background: var(--afy-surface-field);
+  font-family: var(--cds-code-01-font-family, 'SF Mono', Menlo, Consolas, monospace);
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.afyanova-auth-setup__acknowledgement {
+  margin-block: var(--afy-space-md);
+}
+
+@media (max-width: 760px) {
+  .afyanova-auth-setup__qr {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .afyanova-auth-setup__stepper li:last-child {
+    min-inline-size: 0;
+  }
+
+  .afyanova-auth-setup__step-label {
+    /* Keep the stepper compact on narrow cards: hide the third hint word. */
+    max-inline-size: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 420px) {
+  .afyanova-auth-setup__codes ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .afyanova-auth-setup__stepper {
+    justify-content: space-between;
+  }
+
+  .afyanova-auth-setup__step-label {
+    display: none;
+  }
+}

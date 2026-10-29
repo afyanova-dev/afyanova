@@ -1,0 +1,40 @@
+/* Global document scaffold (html/body/#app, theme root, skip link) — moved
+ * verbatim from app.css, then extended to keep the canvas painted.
+ * Source: app.css lines 2..22.
+ */
+
+
+/* Carbon owns visual styling; app rules below preserve layout and responsiveness. */
+html,
+body,
+#app {
+  min-block-size: 100%;
+}
+
+/* The workspace canvas lives on `.cds--content`, but that box only paints
+ * its own height. Without a root-level canvas, short pages expose Carbon's
+ * theme background below the content — visibly white in the white theme,
+ * even though the workspace itself is gray. Paint the root as the canvas so
+ * the backdrop always fills the viewport.
+ *
+ * `flow-root` keeps the content's 3rem top margin inside the root instead of
+ * collapsing it into <body>; the fixed header is out of flow, so the root
+ * needs the full viewport height. */
+.afyanova-theme-root {
+  display: flow-root;
+  min-block-size: 100dvh;
+  background-color: var(--afy-canvas);
+}
+
+/* Skip link for screen readers / keyboard. */
+.afyanova-skip-link {
+  position: absolute;
+  inset-block-start: -1000px;
+  inset-inline-start: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+}
+
+.afyanova-skip-link:focus {
+  inset-block-start: 1rem;
+}

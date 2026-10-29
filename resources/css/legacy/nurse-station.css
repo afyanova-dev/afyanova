@@ -1,0 +1,43 @@
+/* Nurse station — moved verbatim from app.css.
+ * Source: app.css lines 1411..1444 (mechanical split, no edits).
+ */
+
+
+.nurse-station-status-notification.cds--inline-notification {
+  inline-size: 100%;
+  max-inline-size: none;
+  margin-block-end: 1rem;
+}
+
+.nurse-station-status-notification .cds--inline-notification__text-wrapper {
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.nurse-station-status-notification .cds--inline-notification__subtitle {
+  min-inline-size: 0;
+}
+
+.nurse-station-vitals__measurements {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.625rem 0.75rem;
+}
+
+.nurse-station-vitals__value {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 48rem) {
+  .nurse-station-status-notification .cds--inline-notification__text-wrapper {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 36rem) {
+  .nurse-station-vitals__measurements {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

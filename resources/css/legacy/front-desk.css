@@ -1,0 +1,187 @@
+/* Front desk (Today board, roster) — moved verbatim from app.css.
+ * Source: app.css lines 1450..3845 (mechanical split, no edits).
+ */
+
+
+.front-desk-queue-destination.cds--inline-notification {
+  min-block-size: 0;
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+
+.front-desk-queue-destination .cds--inline-notification__details {
+  margin-inline: 0.5rem;
+}
+
+.front-desk-queue-destination .cds--inline-notification__icon {
+  margin-block-start: 0.5rem;
+}
+
+.front-desk-queue-destination .cds--inline-notification__text-wrapper {
+  padding-block: 0.5rem;
+}
+
+/* ---- Front Desk (Today board) ---- */
+
+.front-desk-board {
+  display: grid;
+  align-content: start;
+  gap: var(--cds-spacing-05, 1rem);
+  min-inline-size: 0;
+}
+
+.front-desk-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.front-desk-week {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-04, 0.75rem);
+}
+
+.front-desk-week ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-02, 0.25rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.front-desk-week__day {
+  display: inline-flex;
+  min-block-size: 2.5rem;
+  align-items: center;
+  padding-inline: var(--cds-spacing-03, 0.5rem);
+}
+
+.front-desk-week__today {
+  display: inline-flex;
+  min-block-size: 2.5rem;
+  align-items: center;
+  margin-inline-start: auto;
+  padding-inline: var(--cds-spacing-04, 0.75rem);
+}
+
+.front-desk-board__restricted {
+  margin: 0;
+}
+
+.front-desk-roster__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-04, 0.75rem);
+  inline-size: 100%;
+}
+
+.front-desk-roster__summary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.front-desk-roster__table .cds--data-table-content {
+  overflow-x: auto;
+}
+
+.front-desk-roster__table table {
+  inline-size: 100%;
+}
+
+.front-desk-roster__table thead th {
+  white-space: nowrap;
+}
+
+.front-desk-roster__table th:last-child,
+.front-desk-roster__table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: start;
+}
+
+.front-desk-roster__table td {
+  vertical-align: middle;
+}
+
+.front-desk-roster__table time {
+  white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+  .front-desk-roster__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .front-desk-roster__summary {
+    justify-content: flex-start;
+  }
+}
+
+.front-desk-row__patient {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.front-desk-row__patient-text {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.front-desk-row__meta {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Front-desk visit summary peek (roster rows): plain trigger. The panel
+   portals to the body with fixed positioning so it never stretches the
+   table's scroll region into a horizontal scrollbar. */
+.front-desk-visit-summary__anchor {
+  display: inline;
+}
+
+.front-desk-visit-summary__trigger {
+  padding: 0;
+  text-align: start;
+}
+
+.front-desk-visit-summary__panel {
+  position: fixed;
+  z-index: 9000;
+  inline-size: max-content;
+  max-inline-size: 20rem;
+  padding: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
+}
+
+.front-desk-visit-summary__title {
+  margin: 0 0 var(--cds-spacing-03, 0.5rem);
+}
+
+.front-desk-visit-summary__list {
+  display: grid;
+  gap: var(--cds-spacing-02, 0.25rem);
+  margin: 0;
+}
+
+.front-desk-visit-summary__list > div {
+  display: flex;
+  gap: var(--cds-spacing-03, 0.5rem);
+}
+
+.front-desk-visit-summary__list dt {
+  flex: none;
+  min-inline-size: 6rem;
+}
+
+.front-desk-visit-summary__list dd {
+  margin: 0;
+}

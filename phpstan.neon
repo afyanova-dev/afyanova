@@ -1,0 +1,42 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/pestphp/pest/phpstan-pest-extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - app
+        - config
+        - database
+        - routes
+    excludePaths:
+        - bootstrap/cache/*
+    # tests/ is analysed by pest --group=arch structurally; keep phpstan on app code.
+
+    # Domain migrations live in each module (IC §10) — Larastan defaults to
+    # database/migrations only, so list them for model-property inference.
+    databaseMigrationsPath:
+        - database/migrations
+        - app/Domains/Organization/Database/Migrations
+        - app/Domains/Identity/Database/Migrations
+        - app/Domains/Authentication/Database/Migrations
+        - app/Domains/Patient/Database/Migrations
+        - app/Domains/Encounter/Database/Migrations
+        - app/Domains/Clinical/Database/Migrations
+        - app/Domains/BedWard/Database/Migrations
+        - app/Domains/Theatre/Database/Migrations
+        - app/Domains/CareCoordination/Database/Migrations
+        - app/Domains/Laboratory/Database/Migrations
+        - app/Domains/Radiology/Database/Migrations
+        - app/Domains/Inventory/Database/Migrations
+        - app/Domains/Procurement/Database/Migrations
+        - app/Domains/Pharmacy/Database/Migrations
+        - app/Domains/Billing/Database/Migrations
+        - app/Domains/Insurance/Database/Migrations
+        - app/Domains/HR/Database/Migrations
+        - app/Domains/Scheduling/Database/Migrations
+        - app/Platform/Queueing/Database/Migrations
+        - app/Platform/Notifications/Database/Migrations
+        - app/Platform/Documents/Database/Migrations
+        - app/Platform/Integration/Database/Migrations
+        - app/Platform/Reporting/Database/Migrations

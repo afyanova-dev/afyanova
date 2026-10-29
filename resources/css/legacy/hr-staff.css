@@ -1,0 +1,648 @@
+/* HR / facility staff workspace — moved verbatim from app.css.
+ * Source: app.css lines 3877..4286 (mechanical split, no edits).
+ */
+
+.facility-staff__filter-popover {
+  width: min(24rem, calc(100vw - 2rem));
+  padding: var(--afy-space-md);
+  border-radius: var(--afy-radius);
+}
+
+.facility-staff__filter-heading {
+  margin-block-end: var(--afy-space-md);
+}
+
+.facility-staff__filter-heading h2 {
+  margin: 0 0 var(--afy-space-2xs);
+  font-size: var(--cds-heading-compact-01-font-size, 1rem);
+}
+
+.facility-staff__filter-heading p {
+  margin: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-helper-text-01-font-size, 0.75rem);
+}
+
+.facility-staff__filter-fields {
+  display: grid;
+  gap: var(--afy-space-sm);
+}
+
+.facility-staff__filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--afy-space-xs);
+  margin-block-start: var(--afy-space-md);
+}
+
+.facility-staff__active-filters {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+}
+
+.facility-staff__identity {
+  margin-inline: 0 -3rem;
+  margin-block-end: 1.5rem;
+  padding: 1.25rem 3rem 1.25rem 2.5rem;
+}
+
+.facility-staff__section-content {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.facility-staff a,
+.facility-staff a:hover,
+.facility-staff a:focus,
+.facility-staff a:active,
+.hr-staff-profile a,
+.hr-staff-profile a:hover,
+.hr-staff-profile a:focus,
+.hr-staff-profile a:active {
+  text-decoration: none !important;
+}
+
+.facility-staff__profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.facility-staff__profile-grid div {
+  min-width: 0;
+}
+
+.facility-staff__profile-grid dd {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.facility-staff__identity .facility-staff__section-heading {
+  justify-content: flex-start;
+}
+
+.facility-staff__identity .facility-staff__section-heading > :last-child {
+  margin-inline-start: auto;
+}
+
+.facility-staff__section-content {
+  display: grid;
+  min-inline-size: 0;
+  gap: 1rem;
+}
+
+.facility-staff__profile-photo {
+  width: 4rem;
+  height: 4rem;
+  flex: none;
+  object-fit: cover;
+}
+
+.facility-staff__photo-field {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.facility-staff__photo-preview {
+  width: 7rem;
+  height: 7rem;
+  object-fit: cover;
+}
+
+.facility-staff__photo-empty {
+  display: grid;
+  width: 7rem;
+  height: 7rem;
+  place-items: center;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.facility-staff__photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.facility-staff__lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-block-start: 1rem;
+}
+
+.facility-staff__lifecycle-actions details {
+  min-width: min(100%, 22rem);
+}
+
+.facility-staff__lifecycle-blockers {
+  margin-block: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.facility-staff__lifecycle-blockers ul {
+  margin-block: 0.5rem 0;
+}
+
+.facility-staff__section,
+.facility-staff__form-section {
+  padding: 1.25rem;
+}
+
+.facility-staff__section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1rem;
+}
+
+.facility-staff__section-heading h2,
+.facility-staff__form-section h2 {
+  margin: 0;
+}
+
+.facility-staff__eyebrow {
+  margin: 0 0 0.25rem;
+}
+
+.facility-staff__user-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facility-staff__user-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+}
+
+.facility-staff__user-list li > div {
+  display: grid;
+  min-inline-size: 0;
+  gap: 0.25rem;
+}
+
+.facility-staff__user-list small {
+  overflow-wrap: anywhere;
+}
+
+.facility-staff__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  margin-block-start: 1.25rem;
+}
+
+.facility-staff__form-wide {
+  grid-column: 1 / -1;
+}
+
+.facility-staff__form-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.facility-staff__create {
+  display: grid;
+  min-inline-size: 0;
+  gap: 1rem;
+}
+
+.facility-staff__create-form {
+  min-inline-size: 0;
+}
+
+.facility-staff__create-layout {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.facility-staff__create-fields {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: 1.75rem;
+}
+
+/* Photo frame mirrors patient-register__photo so create flows share the same
+ * empty-state language, format hint and upload actions. */
+.facility-staff__create-photo {
+  position: sticky;
+  inset-block-start: 5rem;
+  align-self: start;
+  display: grid;
+  align-content: start;
+  gap: var(--cds-spacing-04, 0.75rem);
+  inline-size: 15rem;
+}
+
+.facility-staff__create-photo-label {
+  inline-size: auto;
+  margin-block-end: 0;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.facility-staff__create-photo-frame {
+  display: grid;
+  inline-size: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle, #e0e0e0);
+  border-radius: 0;
+}
+
+.facility-staff__create-photo-frame--empty {
+  border-color: var(--cds-border-strong, #8d8d8d);
+  border-style: dashed;
+}
+
+.facility-staff__create-photo-image {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.facility-staff__create-photo-empty {
+  display: grid;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: var(--cds-spacing-05, 1rem);
+  place-content: center;
+  justify-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+  color: var(--cds-text-secondary, #525252);
+  text-align: center;
+}
+
+.facility-staff__create-photo-empty svg {
+  color: var(--cds-icon-secondary, #525252);
+}
+
+.facility-staff__create-photo-empty span {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.facility-staff__create-photo-empty small {
+  color: var(--cds-text-placeholder, #a8a8a8);
+  font-size: 0.75rem;
+}
+
+.facility-staff__create-photo-help {
+  margin: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.facility-staff__create-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cds-spacing-03, 0.5rem);
+  inline-size: 100%;
+}
+
+.facility-staff__create-photo-actions .cds--btn {
+  flex: 0 1 auto;
+  inline-size: auto;
+  max-inline-size: 100%;
+  justify-content: center;
+}
+
+.facility-staff__create-photo-actions .cds--btn:not(:only-child) {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding-inline: 0.375rem 2.25rem;
+}
+
+.facility-staff__create-photo-actions .cds--btn:only-child {
+  flex: 1 1 100%;
+  inline-size: 100%;
+}
+
+.facility-staff__create-photo-meta {
+  color: var(--cds-text-helper, #6f6f6f);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.facility-staff__create-photo-error {
+  margin: 0;
+  color: var(--cds-text-error, #da1e28);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.facility-staff__create-section {
+  display: grid;
+  min-inline-size: 0;
+  gap: 1rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.facility-staff__create-section:first-of-type {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+
+.facility-staff__create-heading {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.facility-staff__create-heading h2 {
+  margin: 0;
+  font-size: var(--cds-heading-03-font-size, 1.25rem);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.facility-staff__create-note {
+  max-inline-size: 64rem;
+  margin: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.facility-staff__create-help {
+  margin: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.facility-staff__create-names {
+  display: grid;
+  min-inline-size: 0;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.facility-staff__create-grid {
+  display: grid;
+  min-inline-size: 0;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.facility-staff__create-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.facility-staff__create-form .cds--date-picker,
+.facility-staff__create-form .cds--date-picker-container,
+.facility-staff__create-form .cds--date-picker-input__wrapper {
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.facility-staff__create-form .cds--date-picker.cds--date-picker--single .cds--date-picker__input {
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.facility-staff__create-form .cds--date-picker-input__wrapper > span {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.facility-staff__create-wide {
+  grid-column: 1 / -1;
+}
+
+.facility-staff__create-roles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  margin-block-start: 0.5rem;
+}
+
+.facility-staff__create-roles .cds--checkbox-wrapper {
+  margin-block-end: 0;
+  white-space: nowrap;
+}
+
+/* Keep the footer aligned to the fields column and pinned to the viewport
+ * while the form scrolls. The photo column and gap sit to its right. At
+ * <=48rem the photo moves above the footer and the bar spans the page. */
+.facility-staff__create-actions {
+  position: sticky;
+  z-index: 2;
+  inset-block-end: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cds-spacing-03, 0.5rem);
+  margin-block-start: 1rem;
+  margin-inline-end: calc(15rem + 1.5rem);
+  padding-block: 0.75rem;
+  background-color: var(--afy-canvas);
+  border-block-start: 1px solid var(--cds-border-subtle, #e0e0e0);
+}
+
+.facility-staff__create-actions .cds--btn {
+  white-space: nowrap;
+}
+
+.facility-staff__reason {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 32rem;
+  margin-block: 1rem;
+}
+
+.facility-staff__assignment-tables {
+  display: grid;
+  gap: 2rem;
+}
+
+.facility-staff__assignment-table {
+  min-inline-size: 0;
+}
+
+.facility-staff__assignment-table > p {
+  margin-block: 0 1rem;
+}
+
+.facility-staff__assignment-table > .cds--text-input__field-wrapper {
+  max-inline-size: 32rem;
+  margin-block-end: 1rem;
+}
+
+.facility-staff__table-primary-cell {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.facility-staff__access-request-details {
+  display: grid;
+}
+
+.facility-staff__access-request-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+
+.facility-staff__access-request-summary {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.facility-staff__access-request-detail + .facility-staff__access-request-detail {
+  border-block-start: 1px solid var(--cds-border-subtle-01);
+}
+
+.facility-staff__table-actions,
+.facility-staff__link-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.facility-staff__assignment-table .cds--select,
+.facility-staff__assignment-table .cds--text-input__field-wrapper {
+  min-inline-size: 10rem;
+}
+
+.hr-position-manager .cds--tab-content {
+  padding: 1rem 0 0;
+}
+
+.hr-position-manager__panel-intro {
+  margin-block: 0 1.5rem;
+}
+
+.hr-position-manager__form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 75rem) {
+  .hr-position-manager__tables {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.facility-staff__actions,
+.facility-staff__action-form,
+.facility-staff__employment-details {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 14rem;
+}
+
+.facility-staff__employment-details {
+  margin-block-start: 0.75rem;
+  padding: 0.75rem;
+}
+
+.facility-staff__person-edit {
+  padding: 1rem;
+}
+
+.facility-staff__link-form {
+  min-width: 20rem;
+}
+
+.facility-staff__link-form .cds--text-input-wrapper {
+  flex: 1;
+}
+
+@media (max-width: 75rem) {
+  .facility-staff__create-grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 56rem) {
+  .facility-staff__create-names {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48rem) {
+  .facility-staff__section,
+  .facility-staff__form-section {
+    padding: 1rem;
+  }
+
+  .facility-staff__create-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .facility-staff__create-photo {
+    position: static;
+    inline-size: 100%;
+    max-inline-size: 15rem;
+  }
+
+  .facility-staff__create-names,
+  .facility-staff__create-grid,
+  .facility-staff__create-grid--three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .facility-staff__create-wide {
+    grid-column: auto;
+  }
+
+  .facility-staff__create-actions {
+    margin-inline-end: 0;
+    padding-inline: 0;
+  }
+
+  .facility-staff__link-form {
+    min-width: 16rem;
+  }
+}
+
+.facility-staff__onboarding-table .cds--data-table tbody tr {
+  block-size: auto;
+}
+
+.facility-staff__onboarding-table .cds--data-table tbody td {
+  padding-block: var(--afy-space-xs);
+}
+
+.facility-staff__onboarding-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  margin-block-end: var(--afy-space-sm);
+}
+
+.facility-staff__onboarding-waiting {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}

@@ -1,0 +1,1932 @@
+/* Afyanova UI foundation — page scaffold and shared patterns (.afy-*).
+ *
+ * Import order (see app.css): after tokens and the legacy split files, so
+ * afy- patterns co-exist with — and eventually replace — workspace styles.
+ *
+ * Conventions:
+ *   - Visual values come from --cds-* / --afy-* tokens only. This file must
+ *     never contain a raw color, font-size, or spacing literal outside the
+ *     var() fallbacks.
+ *   - Structure (.afy-page, .afy-section) is layout-only and theme-neutral,
+ *     so it cannot clash with any Carbon theme (white/g10/g90/g100).
+ *   - Prefix: .afy-* for design-system patterns; workspace-specific styles
+ *     keep their own prefixes until they are migrated here (phase 2).
+ *
+ * When adding a pattern: build it on Carbon components first (Tile, Tabs,
+ * StructuredList …) and use this layer only when the pattern is genuinely
+ * app-level — page scaffold, cards, toolbars, status indicators.
+ */
+
+/* ------------------------------------------------------------------ *
+ * Page scaffold
+ * ------------------------------------------------------------------ */
+
+/* Content canvas — the workspace paints the soft gray backdrop so raised
+   surfaces (cards, stat tiles, tables, link panels) read as floating
+   white panels in light themes. Dark themes re-map the canvas to Carbon's
+   background so the same rules keep working (see tokens.css). */
+.cds--content {
+  background-color: var(--afy-canvas);
+}
+
+/* Visually hidden, screen-reader available — captions and icon-only column
+   headers keep their accessible name without painting a label. */
+.afy-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Shell chrome frame. Carbon renders `.cds--side-nav` (and the header)
+   in `--cds-background` with no separator, with the same `--cds-background`
+   behind the workspace canvas — in every theme except white the rail, the
+   content and the header merge into one flat field (documented Carbon
+   limitation in shell theming). The rail therefore paints one step off
+   the canvas per theme (--afy-rail) and gets a hairline edge; the header
+   gets the matching hairline to close the chrome frame. Text/link colors
+   stay Carbon's (rail surface remains a Carbon layer tone). */
+.cds--side-nav {
+  background-color: var(--afy-rail);
+  border-inline-end: 1px solid var(--afy-hairline);
+}
+
+.cds--header {
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.afy-page {
+  min-inline-size: 0;
+}
+
+/* Title row aligned to Carbon's flexible grid pattern: heading + badge on
+   the left, page actions on the right, wrapping on narrow viewports. */
+.afy-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--afy-space-sm) var(--afy-space-md);
+  margin-block-end: var(--afy-space-lg);
+}
+
+.afy-page__heading {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+/* h1 sits at Carbon's heading-05 scale with a confident weight to anchor
+   the page like a 2026-era product header. */
+.afy-page__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  margin: 0;
+  font-size: var(--cds-heading-05-font-size, 2rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-05-line-height, 1.25);
+  letter-spacing: var(--cds-heading-05-letter-spacing, 0);
+  color: var(--afy-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.afy-page__description {
+  margin: 0;
+  max-inline-size: 64rem;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.afy-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  margin-inline-start: auto;
+}
+
+/* Content column: one vertical rhythm for stacked sections. Use section
+   wrappers (.afy-section) inside it; their own margin is zeroed below. */
+.afy-page__content {
+  display: grid;
+  gap: var(--afy-space-lg);
+  min-inline-size: 0;
+}
+
+/* Carbon inline notifications ship a fixed library max-width (18rem; 38rem
+   for the low-contrast variant). Inside the app shell's content region they
+   span the full page width like every other page block (documented Carbon
+   limitation fix — see governance §5). Fixed toast overlays keep their own
+   layout: only inline notifications are stretched. */
+.cds--content .cds--inline-notification {
+  max-inline-size: none;
+  inline-size: 100%;
+}
+
+/* Same for the pages that use one of the local content wrappers directly. */
+.afy-page__content .cds--toast-notification {
+  max-inline-size: none;
+  inline-size: 100%;
+}
+
+/* The content column owns vertical rhythm: patterns that carry their own
+   flow margin (below) are reset inside it. */
+.afy-page__content > .afy-section,
+.afy-page__content > .afy-stats,
+.afy-page__content > .afy-link-list {
+  margin-block: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Sections
+ * ------------------------------------------------------------------ */
+
+.afy-section {
+  min-inline-size: 0;
+}
+
+.afy-page__content > .afy-section {
+  margin: 0;
+}
+
+.afy-section__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs);
+  margin: 0 0 var(--afy-space-sm);
+}
+
+.afy-section__title {
+  margin: 0;
+  font-size: var(--cds-heading-03-font-size, 1.25rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-03-line-height, 1.4);
+  letter-spacing: var(--cds-heading-03-letter-spacing, 0);
+  color: var(--afy-text-primary);
+}
+
+/* Small eyebrow/overline text — above section titles and as the plain
+   badge slot in page headers. */
+.afy-eyebrow,
+.afy-section__eyebrow {
+  display: inline-block;
+  margin: 0 0 var(--afy-space-2xs);
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 600);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+}
+
+.afy-section__description {
+  margin: var(--afy-space-2xs) 0 var(--afy-space-md);
+  max-inline-size: 64rem;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+/* ------------------------------------------------------------------ *
+ * Cards — raised panels on the soft canvas ("soft clinical" expression:
+ * white/raised surface, hairline edge, diffuse elevation, rounded 8px).
+ * (Prefer Carbon <Tile> when the surface alone is enough; use .afy-card
+ * when composite content needs consistent padding and headings.)
+ * ------------------------------------------------------------------ */
+
+.afy-card {
+  min-inline-size: 0;
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  box-shadow: var(--afy-elevation-rest);
+  padding: var(--afy-space-lg);
+}
+
+/* Selectable cards (choice banks, summary cards that drill in). The
+   expression layer hover: quiet tint, deeper diffuse shadow, and a 2px
+   lift on Carbon's productive tile easing. */
+.afy-card--selectable {
+  display: block;
+  cursor: pointer;
+  color: inherit;
+  transition:
+    background var(--afy-duration-interaction) var(--afy-easing),
+    box-shadow var(--afy-duration-interaction) var(--afy-easing),
+    translate var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.afy-card--selectable:hover {
+  background: var(--afy-surface-interactive);
+  box-shadow: var(--afy-elevation-hover);
+  translate: 0 -2px;
+}
+
+.afy-card--selectable:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+/* Pressed and selected states settle back onto the panel. */
+.afy-card--selectable:active {
+  background: var(--afy-surface);
+  box-shadow: var(--afy-elevation-rest);
+  translate: 0 0;
+}
+
+.afy-card--selected {
+  background: var(--afy-surface);
+  box-shadow: var(--afy-elevation-rest);
+  /* Selection is the Carbon focus-blue ring (inset, like a Tile). */
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+/* Standalone cards (outside .afy-page__content) keep a flow margin for
+   legacy usage; the content-column reset drops it when wrapped. */
+.afy-card--flow {
+  margin-block-end: var(--afy-space-md);
+}
+
+.afy-card__title {
+  margin: 0;
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: var(--cds-heading-compact-02-font-weight, 600);
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+  color: var(--afy-text-primary);
+}
+
+.afy-card__description {
+  margin: var(--afy-space-2xs) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+/* Action row at the bottom of a card (empty states, summary actions). */
+.afy-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  margin-block-start: var(--afy-space-sm);
+}
+
+/* Metric rows inside cards use Carbon's primary-led contrast:
+   label (label-01 helper text) above value (heading compact-02). */
+.afy-card__metrics {
+  display: grid;
+  gap: var(--afy-space-sm);
+  margin: 0;
+  padding: 0;
+}
+
+.afy-card__metric {
+  display: grid;
+  gap: var(--afy-space-2xs);
+}
+
+.afy-card__metric dd {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Toolbar — filter/action rows above tables and lists.
+ * ------------------------------------------------------------------ */
+
+.afy-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--afy-space-xs) var(--afy-space-md);
+  margin-block-end: var(--afy-space-md);
+}
+
+.afy-toolbar > * {
+  min-inline-size: 0;
+}
+
+.afy-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--afy-space-xs);
+  margin-inline-start: auto;
+}
+
+/* ------------------------------------------------------------------ *
+ * Motion guardrail — foundation interactions respect vestibular
+ * preferences; Carbon components handle their own motion.
+ * ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .afy-card--selectable,
+  .afy-card--selectable:hover,
+  .afy-card--selected,
+  .afy-card--selectable:active,
+  .afy-stat--linked,
+  .afy-stat--linked:hover,
+  .afy-stat--selected,
+  .afy-link-list__end svg {
+    translate: none;
+    box-shadow: none;
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Status chips — quiet tinted chips: dot carries the Carbon support
+ * color, the chip background is that color at low tint over the raised
+ * surface, and the ink is the support color deepened (light themes) or
+ * lightened (dark) via color-mix with the theme's primary text. Use
+ * Carbon <Tag> instead when statuses are filterable/removable.
+ * ------------------------------------------------------------------ */
+
+.afy-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  padding: 0.1875rem 0.5625rem;
+  border-radius: var(--afy-radius-pill);
+  background: var(--afy-surface-accent);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 600);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: 0.32px;
+  overflow: hidden;
+  /* Leftover Carbon-component chips should not gain a double ring. */
+  box-shadow: none;
+}
+
+.afy-status::before {
+  content: '';
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* A neutral chip without a status dot reads best for counts/badges
+   rather than states. */
+.afy-status--plain::before {
+  display: none;
+}
+
+/* Tinted status expressions (ink + tint derived from tokens only). */
+.afy-status--positive {
+  color: color-mix(in srgb, var(--afy-status-positive) 62%, var(--afy-text-primary));
+  background: color-mix(in srgb, var(--afy-status-positive) 14%, var(--afy-surface));
+}
+
+.afy-status--caution {
+  color: color-mix(in srgb, var(--afy-status-caution) 58%, var(--afy-text-primary));
+  background: color-mix(in srgb, var(--afy-status-caution) 20%, var(--afy-surface));
+}
+
+.afy-status--negative {
+  color: color-mix(in srgb, var(--afy-status-negative) 62%, var(--afy-text-primary));
+  background: color-mix(in srgb, var(--afy-status-negative) 12%, var(--afy-surface));
+}
+
+.afy-status--information {
+  color: color-mix(in srgb, var(--afy-status-information) 62%, var(--afy-text-primary));
+  background: color-mix(in srgb, var(--afy-status-information) 12%, var(--afy-surface));
+}
+
+/* Browsers without color-mix fall back to Carbon's layer accent with the
+   raw support ink (previous expression). */
+@supports not (background: color-mix(in srgb, red 50%, white)) {
+  .afy-status--positive {
+    color: var(--afy-status-positive);
+  }
+  .afy-status--caution {
+    color: var(--afy-text-secondary);
+  }
+  .afy-status--negative {
+    color: var(--afy-status-negative);
+  }
+  .afy-status--information {
+    color: var(--afy-status-information);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Keyline list — compact rows of label/value pairs for detail panels
+ * and summaries (Carbon's StructuredList visuals without the table).
+ * ------------------------------------------------------------------ */
+
+.afy-facts {
+  display: grid;
+  gap: var(--afy-space-xs);
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.afy-facts__item {
+  display: grid;
+  grid-template-columns: minmax(9rem, max-content) minmax(0, 1fr);
+  gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.afy-facts__item dt {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+}
+
+.afy-facts__item dd {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 42rem) {
+  .afy-facts__item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--afy-space-2xs);
+  }
+}
+
+/* Inline variant — several label/value pairs share one line. For detail
+   panels with many short facts (receipt summaries), this keeps one short
+   block instead of one row per fact. */
+.afy-facts--inline {
+  gap: var(--afy-space-2xs);
+}
+
+.afy-facts--inline .afy-facts__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--afy-space-2xs) var(--afy-space-md);
+}
+
+.afy-facts--inline .afy-facts__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.afy-facts--inline .afy-facts__item dt::after {
+  content: ':';
+}
+
+/* ------------------------------------------------------------------ *
+ * Statistics — KPI tiles: raised panels with large tabular numerals,
+ * optional icon slot and trend delta. KPI numbers sit one scale step
+ * above the heading (heading-04 at weight 600) for dashboard presence.
+ * ------------------------------------------------------------------ */
+
+.afy-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--afy-space-sm);
+  margin: 0 0 var(--afy-space-lg);
+  min-inline-size: 0;
+}
+
+.afy-stat {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+  padding: var(--afy-space-sm) var(--afy-space-md);
+  background: var(--afy-surface);
+  border: none;
+  border-bottom: 1px solid var(--afy-hairline);
+  border-top: 3px solid var(--afy-link);
+  box-shadow: var(--afy-elevation-rest);
+  color: var(--afy-text-primary);
+}
+
+/* Top-accent border tones — differentiate KPI cards from workspace tiles.
+   Modern EMR language: each metric family carries its own accent color. */
+.afy-stat--border-positive { border-top-color: var(--afy-status-positive); }
+.afy-stat--border-caution { border-top-color: var(--afy-status-caution); }
+.afy-stat--border-negative { border-top-color: var(--afy-status-negative); }
+.afy-stat--border-information { border-top-color: var(--afy-status-information); }
+
+/* Optional icon slot (20px Carbon icon above the label) */
+/* Compact top row: 16px glyph + uppercase label in one short band. */
+.afy-stat__top {
+  display: flex;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+/* Compact icon row: glyph sits left of the label so the tile reads in one
+   short band instead of a tall stack. */
+.afy-stat__icon {
+  margin: 0;
+  color: var(--afy-text-helper);
+}
+
+.afy-stat__icon svg {
+  display: block;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.afy-stat__label {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 600);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: 0.32px;
+  overflow-wrap: anywhere;
+}
+
+.afy-stat__value {
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-03-font-size, 1.25rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-03-line-height, 1.4);
+  letter-spacing: 0;
+  /* Data UI requires stable digits: counts align across columns and
+     never jitter while polling. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Trend slot next to the value (e.g. "+3 today") */
+.afy-stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 600);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: 0.32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.afy-stat__delta svg {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  flex: none;
+}
+
+.afy-stat__delta--positive {
+  color: var(--afy-status-positive);
+}
+
+.afy-stat__delta--negative {
+  color: var(--afy-status-negative);
+}
+
+.afy-stat__delta--information {
+  color: var(--afy-status-information);
+}
+
+.afy-stat__detail {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  overflow-wrap: anywhere;
+}
+
+.afy-stat__action {
+  margin-block-start: var(--afy-space-2xs);
+  color: var(--afy-link);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 600);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: 0.32px;
+}
+
+/* Linked cards are anchors: hover expresses with the shared interactive
+   language (quiet tint + shadow + 2px lift) and Carbon's focus outline. */
+.afy-stat--linked {
+  text-decoration: none;
+  transition:
+    background var(--afy-duration-interaction) var(--afy-easing),
+    box-shadow var(--afy-duration-interaction) var(--afy-easing),
+    translate var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.afy-stat--linked:hover {
+  background: var(--afy-surface-interactive);
+  box-shadow: var(--afy-elevation-hover);
+  translate: 0 -2px;
+  color: var(--afy-text-primary);
+}
+
+.afy-stat--linked:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+/* Selected stat: the panel stays raised and gains the focus-blue ring. */
+.afy-stat--selected {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+/* Connected KPI band: one shared surface with hairline dividers, so the
+   metrics read as a single summary strip rather than five detached cards.
+   The top accents stay per-card to keep status meaning. Wide screens only;
+   below 75rem it falls back to the standard card grid. */
+.afy-stats--connected {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-template-columns: none;
+  gap: 1px;
+  overflow: hidden;
+  background: var(--afy-border);
+  border: 1px solid var(--afy-border);
+  border-radius: var(--afy-radius);
+  box-shadow: var(--afy-elevation-rest);
+}
+
+.afy-stats--connected .afy-stat {
+  padding: var(--afy-space-md);
+  border-bottom: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.afy-stats--connected .afy-stat--linked {
+  transition:
+    background var(--afy-duration-interaction) var(--afy-easing),
+    box-shadow var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.afy-stats--connected .afy-stat--linked:hover {
+  translate: 0 0;
+  box-shadow: inset 0 -2px 0 var(--afy-link);
+}
+
+/* Keep the current filter legible inside the band without a full ring that
+   would cut through the shared dividers. Keyboard focus still gets the ring. */
+.afy-stats--connected .afy-stat--selected,
+.afy-stats--connected .afy-stat--selected:hover {
+  outline: none;
+  background: var(--afy-surface-interactive);
+  box-shadow: inset 0 -3px 0 var(--afy-focus);
+}
+
+.afy-stats--connected .afy-stat--selected:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+@media (max-width: 75rem) {
+  .afy-stats--connected {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: var(--afy-space-sm);
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .afy-stats--connected .afy-stat {
+    padding: var(--afy-space-sm) var(--afy-space-md);
+    border-bottom: 1px solid var(--afy-hairline);
+    box-shadow: var(--afy-elevation-rest);
+  }
+
+  .afy-stats--connected .afy-stat--linked:hover {
+    translate: 0 -2px;
+    box-shadow: var(--afy-elevation-hover);
+  }
+}
+
+/* Dashboard summaries stay compact so the role's workspaces remain visible
+   without scrolling past oversized KPI or queue cards. */
+/* The connected band owns its 1px divider gap; only detached dashboard
+   cards use the tighter compact gap. */
+.dashboard__stats {
+  margin-block-end: 0;
+}
+
+.dashboard__stats:not(.afy-stats--connected) {
+  gap: var(--afy-space-xs);
+}
+
+.dashboard__stats .afy-stat {
+  gap: var(--afy-space-2xs);
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border-top-width: 2px;
+  box-shadow: none;
+}
+
+.dashboard__stats .afy-stat__value {
+  font-size: var(--cds-heading-04-font-size, 1.75rem);
+  line-height: var(--cds-heading-04-line-height, 1.25);
+}
+
+.dashboard__stats .afy-stat__action {
+  margin-block-start: 0;
+}
+
+.dashboard__queue-list {
+  display: grid;
+  gap: var(--afy-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard__queue {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--afy-space-sm);
+  min-block-size: 3.75rem;
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border: 1px solid var(--afy-hairline);
+  border-inline-start: 3px solid var(--afy-status-information);
+  background: var(--afy-surface);
+  color: var(--afy-text-primary);
+  text-decoration: none;
+  transition:
+    background var(--afy-duration-interaction) var(--afy-easing),
+    box-shadow var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.dashboard__queue--positive {
+  border-inline-start-color: var(--afy-status-positive);
+}
+
+.dashboard__queue--caution {
+  border-inline-start-color: var(--afy-status-caution);
+}
+
+.dashboard__queue--negative {
+  border-inline-start-color: var(--afy-status-negative);
+}
+
+.dashboard__queue--information {
+  border-inline-start-color: var(--afy-status-information);
+}
+
+.dashboard__queue:hover {
+  background: var(--afy-surface-interactive);
+  box-shadow: var(--afy-elevation-rest);
+  color: var(--afy-text-primary);
+}
+
+.dashboard__queue:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+.dashboard__queue-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  background: var(--afy-surface-interactive);
+  color: var(--afy-text-secondary);
+}
+
+.dashboard__queue-icon svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.dashboard__queue-main {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.dashboard__queue-title {
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+}
+
+.dashboard__queue-detail {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.dashboard__queue-count {
+  display: grid;
+  place-items: center;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.25rem;
+  padding-inline: var(--afy-space-xs);
+  background: var(--afy-surface-interactive);
+  font-size: var(--cds-heading-03-font-size, 1.25rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard__queue-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  color: var(--afy-link);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ *
+ * Table panels — raised surface wrapping Carbon data tables so grids
+ * float on the canvas like every other 2026 workspace panel. The Carbon
+ * table internals keep their own borders; the wrapper owns the frame.
+ * ------------------------------------------------------------------ */
+
+.afy-table {
+  min-inline-size: 0;
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  box-shadow: var(--afy-elevation-rest);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ *
+ * Rows — a raised panel of two-slot rows (leading text, trailing
+ * action) for lists that are not links (pending approvals, summary
+ * rows). The link-list panel styles are shared; add `.afy-card--flow`
+ * in flow layouts when the wrapper above does not own the spacing.
+ * ------------------------------------------------------------------ */
+
+/* Icon medallion for row surfaces (link rows, pending rows): one
+   link-tinted square at the product radius; the glyph color follows the
+   theme's link-primary, so it flips correctly in dark themes. */
+.afy-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: var(--afy-radius);
+  background: color-mix(in srgb, var(--cds-link-primary, #0f62fe) 12%, transparent);
+  color: var(--cds-link-primary, #0f62fe);
+}
+
+.afy-icon svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.afy-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.afy-rows > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-sm);
+  padding: var(--afy-space-md) var(--afy-space-lg);
+  min-inline-size: 0;
+}
+
+.afy-rows__main {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.afy-rows > li + li {
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+/* Session rows — device identity on the left, revoke action on the right.
+   The row surface and dividers come from .afy-rows; these classes only
+   arrange the device agent and activity metadata. */
+.afy-session-list__identity {
+  display: flex;
+  flex: 1 1 24rem;
+  align-items: flex-start;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.afy-session-list__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+}
+
+.afy-session-list__agent {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+  overflow-wrap: anywhere;
+}
+
+.afy-session-list__meta {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.afy-session-list__action {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 42rem) {
+  .afy-session-list > li {
+    align-items: flex-start;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Filter popover — checkbox-filter popovers (Carbon Popover + Layer).
+ * ------------------------------------------------------------------ */
+
+.afy-filter-popover {
+  min-inline-size: 15rem;
+  padding: var(--afy-space-md);
+  border-radius: var(--afy-radius);
+}
+
+.afy-filter-popover__options {
+  display: grid;
+  gap: var(--afy-space-xs);
+  margin: 0 0 var(--afy-space-md);
+  padding: 0;
+  border: 0;
+}
+
+.afy-filter-popover__options legend {
+  margin-block-end: var(--afy-space-2xs);
+}
+
+.afy-filter-popover__options p {
+  margin: 0;
+}
+
+.afy-filter-popover__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--afy-space-xs);
+}
+
+/* ------------------------------------------------------------------ *
+ * Link list — overview rows that drill into workspaces (dashboard,
+ * admin, platform-admin landing pages). The whole list is a raised
+ * panel; rows are separated by hairlines and take the quiet canvas tint
+ * on hover.
+ * ------------------------------------------------------------------ */
+
+.afy-link-list {
+  min-inline-size: 0;
+  margin-block-start: var(--afy-space-xl);
+}
+
+.afy-link-list__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--afy-space-md);
+  margin-block-end: var(--afy-space-sm);
+}
+
+/* The header's text block (eyebrow optional above the title). */
+.afy-link-list__heading {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.afy-link-list__title {
+  margin: 0;
+  font-size: var(--cds-heading-03-font-size, 1.25rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-03-line-height, 1.4);
+  color: var(--afy-text-primary);
+}
+
+.afy-link-list__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.afy-link-list__items,
+.afy-rows {
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  box-shadow: var(--afy-elevation-rest);
+  overflow: hidden;
+}
+
+.afy-link-list__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-md);
+  padding: var(--afy-space-md) var(--afy-space-lg);
+  color: var(--afy-text-primary);
+  text-decoration: none;
+  background: var(--afy-surface);
+  transition:
+    background var(--afy-duration-fast) var(--afy-easing),
+    color var(--afy-duration-fast) var(--afy-easing);
+}
+
+/* ClickableTile tiles — ensure each tile has a surface background so they
+   never read as transparent on the canvas. No border, no elevation at rest
+   — just surface color against the canvas. Modern hover: lift, soft
+   elevation, and a subtle tint via token-driven color-mix. */
+.afy-link-list--tiles .cds--tile--clickable {
+  background: var(--afy-surface);
+  border: none;
+  transition:
+    transform var(--afy-duration-interaction) var(--afy-easing),
+    box-shadow var(--afy-duration-interaction) var(--afy-easing),
+    background-color var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.afy-link-list--tiles .cds--tile--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--afy-elevation-hover);
+  background-color: var(--afy-surface-interactive);
+}
+
+.afy-link-list--tiles .cds--tile--clickable:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+/* Row-drill affordance: the trailing icon nudge mirrors Carbon's standard
+   productive easing. */
+.afy-link-list__end svg {
+  transition: translate var(--afy-duration-fast) var(--afy-easing);
+}
+
+.afy-link-list__link:hover .afy-link-list__end svg {
+  translate: 2px 0;
+}
+
+.afy-link-list__link:hover {
+  background: var(--afy-surface-interactive);
+}
+
+.afy-link-list__link:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: -2px;
+}
+
+.afy-link-list__label {
+  display: grid;
+  min-inline-size: 0;
+  font-size: var(--cds-body-02-font-size, 1rem);
+  font-weight: 600;
+  line-height: var(--cds-body-02-line-height, 1.375);
+}
+
+.afy-link-list__description {
+  display: block;
+  margin-block-start: var(--afy-space-2xs);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  font-weight: 400;
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+/* Pending-access tiles keep the workspace tile shell but are deliberately
+   non-navigable. Carbon's disabled state removes the href; we suppress the
+   launcher hover lift and keep the trailing tag readable. */
+.afy-link-list--tiles .afy-link-list__tile--pending {
+  --afy-pending-badge-space: calc(var(--afy-space-2xl) * 2 + var(--afy-space-xl));
+  padding-inline-end: var(--afy-pending-badge-space);
+  color: var(--afy-text-secondary);
+}
+
+.afy-link-list--tiles .afy-link-list__tile--pending:hover {
+  transform: none;
+  box-shadow: none;
+  padding-inline-end: var(--afy-pending-badge-space);
+  background-color: var(--afy-surface);
+  color: var(--afy-text-secondary);
+}
+
+.afy-link-list__tile-title {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.afy-link-list__tile-description {
+  display: block;
+  margin-block-start: var(--afy-space-2xs);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  overflow-wrap: anywhere;
+}
+
+.afy-link-list__tile-status {
+  position: absolute;
+  inset-block-end: var(--afy-space-sm);
+  inset-inline-end: var(--afy-space-sm);
+}
+
+/* The end-of-row state chip / arrow slot. */
+.afy-link-list__end {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  color: var(--afy-link);
+}
+
+@media (max-width: 42rem) {
+  .afy-link-list__link {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.afy-link-list__empty {
+  margin: 0;
+  padding: var(--afy-space-md) var(--afy-space-lg);
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+  box-shadow: var(--afy-elevation-rest);
+}
+
+/* ------------------------------------------------------------------ *
+ * Overview links — tile grid (default): two columns with space between
+ * each Carbon ClickableTile. Respects user theme spacing tokens.
+ * ------------------------------------------------------------------ */
+
+.afy-link-list--tiles .afy-link-list__items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--afy-space-md);
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.afy-link-list--tiles .afy-link-list__items > li {
+  margin: 0;
+  list-style: none;
+}
+
+.afy-link-list--tiles .afy-link-list__items > li > .cds--tile--clickable {
+  display: block;
+  block-size: 100%;
+  inline-size: 100%;
+}
+
+@media (max-width: 42rem) {
+  .afy-link-list--tiles .afy-link-list__items {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard__queue {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--afy-space-xs);
+  }
+
+  .dashboard__queue-action {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+}
+
+/* ------------------------------------------------------------------ *
+ * Docked panels — shared edge-docked drawer shell (components/panels/
+ * DockedPanel). Carbon <Layer> supplies the surface tone; this layer
+ * adds the chrome: hairline frame, the strongest foundation elevation,
+ * a hairline seam under the header, generous padding, an action bar
+ * with a seam, and a productive slide-in on the docked edge.
+ * ------------------------------------------------------------------ */
+
+.afy-dock {
+  position: fixed;
+  z-index: var(--afy-z-panel);
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--afy-hairline);
+  box-shadow: var(--afy-elevation-panel);
+}
+
+.afy-dock__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs);
+  padding: var(--afy-space-md) var(--afy-space-md) var(--afy-space-md) var(--afy-space-lg);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.afy-dock__heading-group {
+  min-inline-size: 0;
+}
+
+.afy-dock__title {
+  margin: 0;
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+  color: var(--afy-text-primary);
+}
+
+.afy-dock__description {
+  margin-block-start: var(--afy-space-2xs);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.afy-dock__header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+}
+
+.afy-dock__body,
+.afy-dock__form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-block-size: 0;
+}
+
+.afy-dock__content {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--afy-space-lg);
+}
+
+/* Action bars follow Carbon's modal footer: the buttons ARE the footer.
+   The container carries no padding — buttons run flush to the panel's
+   inline-start, inline-end and block-end edges — and are 4rem tall like a
+   modal, with the button slabs themselves separating content from actions. */
+.afy-dock__actions {
+  display: flex;
+}
+
+.afy-dock__actions > * {
+  flex: 1 1 50%;
+  max-inline-size: none;
+}
+
+.afy-dock__actions > .cds--btn {
+  block-size: 4rem;
+  padding-block: 0.875rem 2rem;
+}
+
+.afy-dock__actions > .cds--btn:not(:first-child):not(:focus) {
+  box-shadow: -0.0625rem 0 0 0 var(--cds-button-separator, #e0e0e0);
+}
+
+.afy-dock__form-actions > .cds--btn {
+  flex: 1 1 50%;
+  block-size: 4rem;
+  max-inline-size: none;
+  padding-block: 0.875rem 2rem;
+}
+
+/* Entrance motion: the panel slides from the edge it docks to, at
+   Carbon's slow productive duration. */
+@keyframes afy-dock-in-side {
+  from {
+    opacity: 0;
+    translate: var(--afy-dock-from, 100%) 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes afy-dock-in-block {
+  from {
+    opacity: 0;
+    translate: 0 var(--afy-dock-from, 100%);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.afy-dock--right,
+.afy-dock--left,
+.afy-dock--top,
+.afy-dock--bottom {
+  animation-fill-mode: backwards; /* panels start correct when SSR */
+}
+
+.afy-dock--right {
+  --afy-dock-from: 100%;
+  animation: afy-dock-in-side var(--afy-duration-slow) var(--afy-easing);
+}
+
+.afy-dock--left {
+  --afy-dock-from: -100%;
+  animation: afy-dock-in-side var(--afy-duration-slow) var(--afy-easing);
+}
+
+.afy-dock--bottom {
+  --afy-dock-from: 100%;
+  animation: afy-dock-in-block var(--afy-duration-slow) var(--afy-easing);
+}
+
+.afy-dock--top {
+  --afy-dock-from: -100%;
+  animation: afy-dock-in-block var(--afy-duration-slow) var(--afy-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .afy-dock--right,
+  .afy-dock--left,
+  .afy-dock--top,
+  .afy-dock--bottom {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Auth — Carbon's centered login layout rendered as a raised card.
+ * Direction chosen from the login-variants demo (2026-10-18): one canvas
+ * stage carries a token-drawn texture (faint hairline grid + a quiet
+ * link-primary glow), one surface card floats on it with an entrance
+ * motion. Pattern reference: carbondesignsystem.com — patterns/login.
+ * Inner content classes stay with the auth workspace (legacy/auth.css).
+ * ------------------------------------------------------------------ */
+
+/* Stage = the app canvas. No texture — the stage gets depth from a
+   token-drawn mesh wash: two quiet link-primary glows in opposite
+   corners. Zero assets, correct in every theme. */
+.afy-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 100dvh;
+  padding: clamp(1rem, 4vw, 3rem);
+  background-color: var(--afy-canvas);
+  background-image:
+    radial-gradient(
+      44rem 30rem at 16% 10%,
+      color-mix(in srgb, var(--cds-link-primary) 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      54rem 36rem at 86% 92%,
+      color-mix(in srgb, var(--cds-link-primary) 7%, transparent),
+      transparent 72%
+    );
+  background-size: 100% 100%, 100% 100%;
+}
+
+.afy-auth__shell {
+  inline-size: min(100%, 28rem);
+}
+
+/* MFA setup / recovery-code screens run wider than the sign-in panel. */
+.afy-auth__shell:has(.afyanova-auth-setup) {
+  inline-size: min(100%, 38rem);
+}
+
+/* The card: Carbon's own surface chrome (hairline + rest elevation),
+   square product radius, productive entrance from Token standpoint. */
+.afy-auth__panel {
+  padding: var(--afy-space-lg);
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  box-shadow: var(--afy-elevation-rest);
+  animation: afy-card-in var(--afy-duration-slow) var(--afy-easing) backwards;
+}
+
+@keyframes afy-card-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .afy-auth__panel {
+    animation: none;
+  }
+}
+
+/* Brand lockup (canvas tone now rides on the card). */
+.afy-auth__brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--afy-space-md);
+}
+
+.afy-auth__brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--afy-radius);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.afy-auth__brand-name {
+  margin: 0;
+  font-weight: 600;
+  line-height: var(--cds-heading-02-line-height, 1.29);
+  display: grid;
+  gap: var(--afy-space-2xs);
+}
+
+.afy-auth__brand-meta {
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 600);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+  color: var(--afy-text-secondary);
+}
+
+/* On the card the lockup gets card spacing. */
+.afy-auth__panel .afy-auth__brand-lockup {
+  margin-block-end: var(--afy-space-md);
+}
+
+/* Field helper actions (forgot password): right-aligned directly under
+   the field they recover; the form's gap is pulled back a hair so the
+   link reads as a caption of that field, not a section. */
+.afy-auth__field-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block: calc(var(--afy-space-2xs) * -1) 0;
+}
+
+/* Post-CTA secondary navigation (back to log in, continue) — left
+   aligned under the form, Carbon link typography. */
+.afy-auth__nav {
+  margin: var(--afy-space-sm) 0 0;
+}
+
+.afy-auth__panel .afy-auth__brand-mark {
+  color: var(--cds-link-primary, #0f62fe);
+}
+
+.afy-auth__panel .afy-auth__brand-name {
+  font-size: var(--cds-heading-02-font-size, 1.25rem);
+}
+
+/* ------------------------------------------------------------------ *
+ * Form alerts — block spacing for form-level InlineNotifications.
+ * ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ *
+ * Goods receipt workbench — Receive delivery.
+ *
+ * A compact two-part canvas: delivery details on top, then the open PO
+ * line picker and the receipt lines it feeds. Open lines read as quiet
+ * list rows (item, remaining quantity, one action) instead of a dense
+ * table; the receipt table stays compact with small controls.
+ * ------------------------------------------------------------------ */
+
+.afy-grn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--afy-space-md);
+}
+
+.afy-grn__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.afy-grn__section + .afy-grn__section {
+  padding-block-start: var(--afy-space-md);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.afy-grn__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs) var(--afy-space-md);
+}
+
+.afy-grn__section-title {
+  margin: 0;
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-01-line-height, 1.42857);
+  color: var(--afy-text-primary);
+}
+
+.afy-grn__section-meta {
+  margin: var(--afy-space-2xs) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.afy-grn__muted {
+  color: var(--afy-text-helper);
+  font-weight: 400;
+}
+
+.afy-grn__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--afy-space-sm);
+  align-items: start;
+}
+
+.afy-grn__fields--notes {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.afy-grn__add-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--afy-space-xs);
+}
+
+.afy-grn__add-item-field {
+  flex: 1 1 18rem;
+  min-inline-size: 0;
+}
+
+.afy-grn__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--afy-space-xs);
+}
+
+.afy-grn__filter {
+  inline-size: 12rem;
+  max-inline-size: 100%;
+}
+
+.afy-grn__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs) var(--afy-space-sm);
+  margin: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  font-variant-numeric: tabular-nums;
+}
+
+.afy-grn__stat {
+  padding-inline-start: var(--afy-space-sm);
+  border-inline-start: 1px solid var(--afy-hairline);
+}
+
+.afy-grn__stat--accepted {
+  color: var(--afy-status-positive);
+}
+
+.afy-grn__stat--rejected {
+  color: var(--afy-text-secondary);
+}
+
+/* Open PO lines — one quiet row per deliverable line. */
+.afy-grn__open-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-block-size: 15rem;
+  overflow-y: auto;
+  background: var(--afy-surface);
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+}
+
+.afy-grn__open-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--afy-space-sm);
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.afy-grn__open-line:last-child {
+  border-block-end: 0;
+}
+
+.afy-grn__open-line:hover {
+  background: var(--afy-surface-interactive);
+}
+
+.afy-grn__open-line--added {
+  background: color-mix(in srgb, var(--afy-status-positive) 7%, transparent);
+}
+
+.afy-grn__open-line--skeleton:hover {
+  background: transparent;
+}
+
+.afy-grn__open-line--skeleton .cds--skeleton__text {
+  margin-block-end: var(--afy-space-2xs);
+}
+
+.afy-grn__open-line--skeleton .cds--skeleton__text:last-child {
+  margin-block-end: 0;
+}
+
+.afy-grn__skeleton-qty {
+  inline-size: 3.75rem;
+  block-size: 1.25rem;
+}
+
+.afy-grn__skeleton-action {
+  inline-size: 3.25rem;
+  block-size: 2rem;
+}
+
+.afy-grn__po-field {
+  position: relative;
+}
+
+.afy-grn__po-field--loading > .cds--list-box__wrapper {
+  opacity: 0;
+}
+
+.afy-grn__po-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.afy-grn__po-skeleton .cds--select.cds--skeleton {
+  inline-size: 100%;
+}
+
+.afy-grn__open-line-main {
+  display: grid;
+  gap: 0.0625rem;
+  min-inline-size: 0;
+}
+
+.afy-grn__open-line-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--afy-space-xs);
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.afy-grn__open-line-number {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 400;
+}
+
+.afy-grn__open-line-name {
+  overflow: hidden;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.afy-grn__open-line-meta {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: 1.3;
+}
+
+.afy-grn__open-line-qty {
+  min-inline-size: 4.5rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.afy-grn__open-line-qty strong {
+  display: block;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: 1.2;
+}
+
+.afy-grn__open-line-qty span {
+  display: block;
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: 1.3;
+}
+
+/* Receipt lines — compact editable grid. */
+.afy-grn__table-wrap {
+  overflow-x: auto;
+  border-radius: var(--afy-radius);
+}
+
+.afy-grn__table {
+  inline-size: 100%;
+}
+
+.afy-grn__table th {
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border-block-end: 1px solid var(--afy-border);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.32px;
+  text-align: start;
+  white-space: nowrap;
+}
+
+.afy-grn__table td {
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border-block-end: 1px solid var(--afy-hairline);
+  vertical-align: top;
+}
+
+.afy-grn__table tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.afy-grn__table tbody tr:hover {
+  background: var(--afy-surface-interactive);
+}
+
+.afy-grn__item-cell {
+  min-inline-size: 13rem;
+}
+
+.afy-grn__quantity-cell {
+  min-inline-size: 9rem;
+}
+
+.afy-grn__rejected-cell {
+  min-inline-size: 8rem;
+}
+
+.afy-grn__accepted-cell {
+  min-inline-size: 6rem;
+}
+
+.afy-grn__accepted-cell strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.afy-grn__meta-cell {
+  min-inline-size: 7.5rem;
+}
+
+.afy-grn__condition-cell {
+  min-inline-size: 9rem;
+}
+
+.afy-grn__remove-cell {
+  inline-size: 1%;
+  white-space: nowrap;
+}
+
+.afy-grn__line-item {
+  display: grid;
+  gap: 0.0625rem;
+  min-inline-size: 0;
+}
+
+.afy-grn__line-item strong {
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: 1.3;
+}
+
+.afy-grn__line-item span {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: 1.3;
+}
+
+.afy-grn__line-item .afy-grn__line-po {
+  color: var(--afy-text-helper);
+}
+
+.afy-grn__hint {
+  margin-block-start: var(--afy-space-2xs);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.afy-grn__field-error {
+  margin-block-start: var(--afy-space-2xs);
+  color: var(--cds-text-error, #da1e28);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: 1.3;
+}
+
+.afy-grn__substitute {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  margin-block-start: var(--afy-space-2xs);
+  max-inline-size: 13rem;
+}
+
+.afy-grn__rejection-reason {
+  margin-block-start: var(--afy-space-2xs);
+}
+
+.afy-grn__details {
+  padding-block-start: var(--afy-space-sm);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.afy-grn__details summary {
+  cursor: pointer;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.afy-grn__details summary::marker {
+  color: var(--afy-text-helper);
+}
+
+.afy-grn__details-fields {
+  margin-block-start: var(--afy-space-sm);
+}
+
+.afy-grn__empty {
+  margin: 0;
+  padding: var(--afy-space-md);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.afy-grn__empty--boxed {
+  background: var(--afy-surface);
+  border: 1px dashed var(--afy-border);
+  border-radius: var(--afy-radius);
+}
+
+.afy-grn__link {
+  margin: 0;
+}
+
+.afy-grn__modal-hint {
+  margin: 0 0 var(--afy-space-sm);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------ *
+ * Form alerts — block spacing for form-level InlineNotifications.
+ * ------------------------------------------------------------------ */
+
+.afy-form-errors {
+  margin-block-end: var(--afy-space-md);
+}

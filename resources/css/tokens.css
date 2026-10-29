@@ -1,0 +1,187 @@
+/* Afyanova UI foundation — semantic design tokens.
+ *
+ * Every --afy-* value must originate from a Carbon token, so all four themes
+ * (white / g10 / g90 / g100) stay in sync automatically. Components in the
+ * foundation and workspace styles must consume --afy-* (or --cds-*) tokens —
+ * never raw hex/literal values.
+ *
+ * Chosen expression ("soft clinical", see frontend-foundation-design-system.md):
+ * Carbon owns structure — spacing rhythm, IBM Plex type scale, support colors,
+ * focus ring, interaction states. The expression layer humanizes surfaces:
+ * a soft gray canvas with raised (white) cards, rounded corners, and diffuse
+ * hairline+shadow elevation. This inverts Carbon's white-theme layering
+ * direction, so canvas/surface/hairline/elevation aliases are re-mapped per
+ * theme below (dark themes naturally raise surfaces already).
+ *
+ * Note: tokens are defined on :root, so --cds-* references resolve against
+ * the theme class on <html> (see CarbonThemeProvider). They do not re-resolve
+ * inside nested Carbon <Layer> contexts; afy- components are not layered and
+ * should stay that way.
+ */
+:root {
+  /* ------------------------------------------------------------------
+   * Spacing rhythm — carbon 2x grid steps used by foundation patterns.
+   * ------------------------------------------------------------------ */
+  --afy-space-2xs: var(--cds-spacing-02, 0.25rem);
+  --afy-space-xs: var(--cds-spacing-03, 0.5rem);
+  --afy-space-sm: var(--cds-spacing-04, 0.75rem);
+  --afy-space-md: var(--cds-spacing-05, 1rem);
+  --afy-space-lg: var(--cds-spacing-06, 1.5rem);
+  --afy-space-xl: var(--cds-spacing-07, 2rem);
+  --afy-space-2xl: var(--cds-spacing-08, 2.5rem);
+
+  /* ------------------------------------------------------------------
+   * Surfaces — the two-tier expression. `canvas` is the workspace
+   * backdrop; `surface` is the raised card/panel color painted on it.
+   * White theme maps (layer gray → canvas, background white → surface);
+   * every other theme re-maps in the override block at the bottom.
+   * ------------------------------------------------------------------ */
+  --afy-canvas: var(--cds-layer, #f4f4f4);
+  --afy-surface: var(--cds-background, #ffffff);
+  --afy-surface-interactive: color-mix(
+    in srgb,
+    var(--afy-canvas) 55%,
+    var(--afy-surface)
+  );
+
+  /* Shell chrome — the rail must sit one step off the canvas in every
+     theme (Carbon ships `.cds--side-nav` and content in the same
+     background color, which merges them). Remapped per theme below. */
+  --afy-rail: var(--cds-background, #ffffff);
+
+  /* Compatibility aliases — Carbon layer semantics for the few patterns
+   * that must follow the raw layer stack (fields, inverse chips). */
+  --afy-surface-hover: var(--cds-layer-hover, #e8e8e8);
+  --afy-surface-selected: var(--cds-layer-selected, #e0e0e0);
+  --afy-surface-selected-hover: var(--cds-layer-selected-hover, #d1d1d1);
+  --afy-surface-accent: var(--cds-layer-accent-01, #e0e0e0);
+  --afy-surface-field: var(--cds-field-01, #f4f4f4);
+  --afy-surface-inverse: var(--cds-background-inverse, #393939);
+  --afy-surface-page: var(--afy-canvas);
+
+  /* ------------------------------------------------------------------
+   * Borders — hairlines are half-tone keylines (light tint of ink),
+   * softer than Carbon's border-subtle so raised panels feel calm.
+   * ------------------------------------------------------------------ */
+  --afy-hairline: rgb(0 0 0 / 8%);
+  --afy-border: var(--cds-border-subtle, #e0e0e0);
+  --afy-border-strong: var(--cds-border-strong, #8d8d8d);
+  --afy-focus: var(--cds-focus, #0f62fe);
+
+  /* ------------------------------------------------------------------
+   * Text
+   * ------------------------------------------------------------------ */
+  --afy-text-primary: var(--cds-text-primary, #161616);
+  --afy-text-secondary: var(--cds-text-secondary, #525252);
+  --afy-text-helper: var(--cds-text-helper, #6f6f6f);
+  --afy-text-placeholder: var(--cds-text-placeholder, #a8a8a8);
+  --afy-text-on-color: var(--cds-text-on-color, #ffffff);
+  --afy-link: var(--cds-link-primary, #0f62fe);
+
+  /* ------------------------------------------------------------------
+   * Status — carbon support colors for non-interactive indicators
+   * (status chips, dots, deltas). Text/dot on tinted chips derive the
+   * readable ink via color-mix (see foundation pills); raw support
+   * colors stay reserved for dots and deltas.
+   * ------------------------------------------------------------------ */
+  --afy-status-positive: var(--cds-support-success, #24a148);
+  --afy-status-caution: var(--cds-support-warning, #f1c21b);
+  --afy-status-negative: var(--cds-support-error, #da1e28);
+  --afy-status-information: var(--cds-support-info, #0043ce);
+
+  /* ------------------------------------------------------------------
+   * Radius — Carbon product radius only. Carbon surfaces are square
+   * (2px corners on tile-like elements, 4px on the largest); interactive
+   * pills/badges use 100px. No softening beyond Carbon.
+   * ------------------------------------------------------------------ */
+  --afy-radius: 2px;
+  --afy-radius-lg: 4px;
+  --afy-radius-pill: 100px;
+
+  /* ------------------------------------------------------------------
+   * Elevation — diffuse two-stage shadows paired with the hairline, so
+   * flat design still reads as raised. Dark themes drop the shadows
+   * (see override block) because their surfaces elevate by lightness.
+   * ------------------------------------------------------------------ */
+  --afy-elevation-rest:
+    0 1px 2px rgb(0 0 0 / 4%),
+    0 2px 8px rgb(0 0 0 / 6%);
+  --afy-elevation-hover:
+    0 2px 4px rgb(0 0 0 / 5%),
+    0 10px 28px -8px rgb(0 0 0 / 18%);
+  --afy-elevation-panel:
+    0 4px 10px rgb(0 0 0 / 6%),
+    0 16px 44px -6px rgb(0 0 0 / 20%);
+
+  /* Legacy Carbon drop-shadow primitives (SCSS-only upstream) — kept for
+   * any pattern that must mirror product dialogs exactly. */
+  --afy-shadow-1: 0 1px 2px rgb(0 0 0 / 20%);
+  --afy-shadow-2: 0 2px 6px rgb(0 0 0 / 20%);
+  --afy-shadow-3: 0 4px 12px rgb(0 0 0 / 20%);
+
+  /* ------------------------------------------------------------------
+   * Motion — copied from Carbon motion primitives (durations + standard
+   * productive easing). Interaction duration matches the Carbon tile
+   * transition (150ms) for hover/selected expression on afy- surfaces.
+   * ------------------------------------------------------------------ */
+  --afy-duration-fast: 70ms;
+  --afy-duration-moderate: 110ms;
+  --afy-duration-interaction: 150ms;
+  --afy-duration-slow: 240ms;
+  --afy-easing: cubic-bezier(0.2, 0, 0.38, 0.9);
+
+  /* ------------------------------------------------------------------
+   * Stacking registry — the layer plan the app already uses; documented
+   * here so new floating UI picks the next free slot above the Carbon
+   * shell (both header and sidenav are pinned at 8000).
+   *   7000 docked panels / quick-actions rail
+   *   8000 carbon shell (header + sidenav)
+   *   8001 raised header (paints above the sidenav; see legacy/app-shell)
+   *   9000 fixed portals (visit-summary sheet)
+   * ------------------------------------------------------------------ */
+  --afy-z-panel: 7000;
+  --afy-z-shell: 8000;
+  --afy-z-header: 8001;
+  --afy-z-sheet: 9000;
+}
+
+/* Theme re-mapping for the two-tier expression.
+ *
+ * .cds--g10: background #f4f4f4 / layer #ffffff → gray canvas, white cards.
+ * .cds--g90: background #262626 / layer #393939 → near-black canvas, raised layer.
+ * .cds--g100: background #161616 / layer #262626 → deepest canvas, raised layer.
+ * (.cds--white needs no re-map: defaults above already give gray canvas /
+ * white cards.)
+ */
+.cds--g10,
+.cds--g90,
+.cds--g100 {
+  --afy-canvas: var(--cds-background, #161616);
+  --afy-surface: var(--cds-layer, #262626);
+  --afy-surface-interactive: color-mix(
+    in srgb,
+    var(--afy-canvas) 55%,
+    var(--afy-surface)
+  );
+}
+
+/* Rail chrome per theme. g10 flips to Carbon's own inverse: white rail on
+ * the gray canvas (mirrors the white theme). Dark themes raise the rail
+ * one layer above the canvas (like dark-code-editor chrome). */
+.cds--g10 {
+  --afy-rail: var(--cds-layer-01, #ffffff);
+}
+
+/* Dark themes elevate by surface lightness instead of shadows. */
+.cds--g90,
+.cds--g100 {
+  --afy-hairline: rgb(255 255 255 / 10%);
+  --afy-elevation-rest: none;
+  --afy-elevation-hover: none;
+  --afy-elevation-panel: none;
+  /* Rail a step DARKER than the canvas (editor-chrome convention). There
+     is no darker-than-canvas Carbon neutral in dark themes, so the rail
+     derives from the canvas itself: 75% canvas + 25% black — stays on the
+     same tone ramp (g90 → #1d1d1d, g100 → #101010). */
+  --afy-rail: color-mix(in srgb, var(--cds-background) 75%, #000000);
+}

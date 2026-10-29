@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Clinical\Application\Query;
+
+use App\Domains\Clinical\Contracts\Dto\PrescribingDecisionSummary;
+use App\Domains\Clinical\Domain\Model\PrescribingDecision;
+use App\Domains\Clinical\Domain\PrescribingDecisionReader;
+use App\Models\User;
+use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Domain\NotFound;
+use Illuminate\Support\Facades\Auth;
+use RuntimeException;
+
+final class GetPrescribingDecisionHandler
+{
+    public function __construct(
+        private readonly PrescribingDecisionReader $reader,
+        private readonly ScopeChecker $scope,
+    ) {}
+
+    public function __invoke(GetPrescribingDecision $query): PrescribingDecisionSummary
+    {
+        $summary = $this->reader->summary($query->prescribingDecisionId);
+
+        $user = Auth::user();
+        if (! $user instanceof User) {
+            throw new RuntimeException('GetPrescribingDecision dispatched without an authenticated user (IC §6.1/§6.2).');
+        }
+
+        if (! in_array(
+            'clinical.prescribing.read',
+            $this->scope->effectivePermissions($user, $summary->facilityId),
+            true,
+        )) {
+            throw NotFound::aggregate(PrescribingDecision::class, $query->prescribingDecisionId);
+        }
+
+        return $summary;
+    }
+}

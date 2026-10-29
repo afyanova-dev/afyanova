@@ -1,0 +1,284 @@
+//@version=5
+indicator("Synthetic Vol Structure - H1 Bias / M15 Map", shorttitle="SVS H1/M15", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// === Logic from spec ===
+// Bias/Trend: H1 + H4 (HH/HL vs LH/LL + EMA50/200 filter)
+// Structure/Map: M15 (fractal swings, close-based, displacement, wick-vs-close)
+// Entry context: M5/M1 retest after M15 CHoCH/BOS
+// Best used on M15 chart. H1/H4 pulled via request.security. M5/M1 used only for retest timing, not bias.
+
+// ---------- Inputs ----------
+biasTF      = input.timeframe("60", "Bias TF (H1)")
+majorTF     = input.timeframe("240", "Major TF (H4)")
+structTF    = input.timeframe("15", "Structure TF (M15)")
+swingLen    = input.int(2, "Swing left/right bars", minval=2, maxval=5, tooltip="Fractal: 2 = faster, 3 = fewer fake swings. Use 3 for V75/V100.")
+dispLen     = input.int(5, "Displacement lookback", minval=3, maxval=10)
+dispMult    = input.float(1.3, "Displacement multiplier", minval=1.0, maxval=3.0, step=0.1, tooltip="Break candle range must be > avg range * this. Filters slow grinds.")
+atrLen      = input.int(14, "ATR length (retest tolerance)")
+useCloseSwings  = input.bool(true, "Swing levels from CLOSE (ignore 1-tick wick spikes)", tooltip="True = pivots on close. Recommended for synthetics.")
+useDisplacement = input.bool(true, "Require displacement for BOS/CHoCH")
+useFollowThrough = input.bool(true, "Require 1-bar follow-through (close holds beyond level)")
+retestBars  = input.int(5, "Retest window after BOS/CHoCH (bars)", minval=2, maxval=20)
+showSwings  = input.bool(true, "Show swing lines")
+showBOS     = input.bool(true, "Show BOS")
+showCHOCH   = input.bool(true, "Show CHoCH / Shift")
+showSweeps  = input.bool(true, "Show liquidity sweeps")
+showEntries = input.bool(true, "Show retest entries")
+showTable   = input.bool(true, "Show dashboard")
+
+// ---------- HTF data (bias) ----------
+// Compute pivots + EMA in HTF context to avoid step-line distortion.
+hPh = request.security(syminfo.tickerid, biasTF, ta.pivothigh(useCloseSwings ? close : high, swingLen, swingLen), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+hPl = request.security(syminfo.tickerid, biasTF, ta.pivotlow(useCloseSwings ? close : low, swingLen, swingLen), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+hClose = request.security(syminfo.tickerid, biasTF, close, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+hEma50 = request.security(syminfo.tickerid, biasTF, ta.ema(close, 50), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+hEma200 = request.security(syminfo.tickerid, biasTF, ta.ema(close, 200), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+
+mPh = request.security(syminfo.tickerid, majorTF, ta.pivothigh(useCloseSwings ? close : high, swingLen, swingLen), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+mPl = request.security(syminfo.tickerid, majorTF, ta.pivotlow(useCloseSwings ? close : low, swingLen, swingLen), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+mClose = request.security(syminfo.tickerid, majorTF, close, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+
+var float hSwingH = na
+var float hSwingL = na
+var float hPrevH = na
+var float hPrevL = na
+if not na(hPh)
+    hPrevH := hSwingH
+    hSwingH := hPh
+if not na(hPl)
+    hPrevL := hSwingL
+    hSwingL := hPl
+
+var float mSwingH = na
+var float mSwingL = na
+var float mPrevH = na
+var float mPrevL = na
+if not na(mPh)
+    mPrevH := mSwingH
+    mSwingH := mPh
+if not na(mPl)
+    mPrevL := mSwingL
+    mSwingL := mPl
+
+htfTrend() =>
+    up = not na(hSwingH) and not na(hPrevH) and not na(hSwingL) and not na(hPrevL) and hSwingH > hPrevH and hSwingL > hPrevL
+    dn = not na(hSwingH) and not na(hPrevH) and not na(hSwingL) and not na(hPrevL) and hSwingH < hPrevH and hSwingL < hPrevL
+    up ? 1 : dn ? -1 : 0
+
+mtfTrend() =>
+    up = not na(mSwingH) and not na(mPrevH) and not na(mSwingL) and not na(mPrevL) and mSwingH > mPrevH and mSwingL > mPrevL
+    dn = not na(mSwingH) and not na(mPrevH) and not na(mSwingL) and not na(mPrevL) and mSwingH < mPrevH and mSwingL < mPrevL
+    up ? 1 : dn ? -1 : 0
+
+hTrend = htfTrend()
+mTrend = mtfTrend()
+emaBull = not na(hClose) and not na(hEma50) and not na(hEma200) and hClose > hEma50 and hEma50 > hEma200
+emaBear = not na(hClose) and not na(hEma50) and not na(hEma200) and hClose < hEma50 and hEma50 < hEma200
+
+// Final HTF bias: structure + EMA confluence
+biasDir = hTrend == 1 and not emaBear ? 1 : hTrend == -1 and not emaBull ? -1 : 0
+biasText = biasDir == 1 ? "BULLISH" : biasDir == -1 ? "BEARISH" : "NEUTRAL"
+bgcolor(biasDir == 1 ? color.new(color.green, 93) : biasDir == -1 ? color.new(color.red, 93) : na, title="H1 bias background")
+
+// ---------- Structure data (M15) ----------
+isStructChart = timeframe.period == structTF
+secH = request.security(syminfo.tickerid, structTF, high, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+secL = request.security(syminfo.tickerid, structTF, low, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+secO = request.security(syminfo.tickerid, structTF, open, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+secC = request.security(syminfo.tickerid, structTF, close, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+
+sH = isStructChart ? high : secH
+sL = isStructChart ? low : secL
+sO = isStructChart ? open : secO
+sC = isStructChart ? close : secC
+sSrcH = useCloseSwings ? sC : sH
+sSrcL = useCloseSwings ? sC : sL
+
+ph = ta.pivothigh(sSrcH, swingLen, swingLen)
+pl = ta.pivotlow(sSrcL, swingLen, swingLen)
+
+var float swingH = na
+var float swingL = na
+var float prevSH = na
+var float prevSL = na
+var int pivotBarH = na
+var int pivotBarL = na
+
+if not na(ph)
+    prevSH := swingH
+    swingH := ph
+    pivotBarH := bar_index[swingLen]
+if not na(pl)
+    prevSL := swingL
+    swingL := pl
+    pivotBarL := bar_index[swingLen]
+
+var int structTrend = 0
+
+// Displacement: range > avg * mult + close in top/bottom 40% + body direction
+sRange = sH - sL
+avgRange = ta.sma(sRange, dispLen)
+bodyUp = sRange > 0 ? (sC - sL) / sRange : 0
+bodyDn = sRange > 0 ? (sH - sC) / sRange : 0
+dispUp = sRange > avgRange * dispMult and bodyUp > 0.6 and sC > sO
+dispDn = sRange > avgRange * dispMult and bodyDn > 0.6 and sC < sO
+
+// Manual ATR on structure series for retest tolerance
+tr = math.max(sH - sL, math.max(math.abs(sH - sC[1]), math.abs(sL - sC[1])))
+sAtr = ta.rma(tr, atrLen)
+
+// Raw breaks: BODY CLOSE beyond level (wick pierce alone does not trigger)
+// sC[1] filter = first close outside only, prevents re-firing every bar while above level
+bullBreakRaw = not na(swingH) and not na(swingH[1]) and sC > swingH and sC[1] <= swingH[1] and (not useDisplacement or dispUp)
+bearBreakRaw = not na(swingL) and not na(swingL[1]) and sC < swingL and sC[1] >= swingL[1] and (not useDisplacement or dispDn)
+
+// Pending + follow-through: must still hold beyond level on next bar
+var int pendingDir = 0
+var float pendingLvl = na
+var int pendingAge = 0
+
+if bullBreakRaw and pendingDir != 1
+    pendingDir := 1
+    pendingLvl := swingH
+    pendingAge := 0
+else if bearBreakRaw and pendingDir != -1
+    pendingDir := -1
+    pendingLvl := swingL
+    pendingAge := 0
+else if pendingDir != 0
+    pendingAge += 1
+    if pendingAge > 2
+        pendingDir := 0
+        pendingLvl := na
+        pendingAge := 0
+
+bullConfirmed = pendingDir == 1 and not na(pendingLvl) and pendingAge == 1 and sC > pendingLvl
+bearConfirmed = pendingDir == -1 and not na(pendingLvl) and pendingAge == 1 and sC < pendingLvl
+// If follow-through disabled, confirm immediately
+bullFire = useFollowThrough ? bullConfirmed : bullBreakRaw
+bearFire = useFollowThrough ? bearConfirmed : bearBreakRaw
+
+bullBOS = bullFire and structTrend == 1
+bearBOS = bearFire and structTrend == -1
+bullCHOCH = bullFire and structTrend == -1
+bearCHOCH = bearFire and structTrend == 1
+// First break when trend unknown counts as BOS and sets trend
+bullFirst = bullFire and structTrend == 0
+bearFirst = bearFire and structTrend == 0
+
+if bullFire
+    structTrend := 1
+    pendingDir := 0
+    pendingLvl := na
+    pendingAge := 0
+if bearFire
+    structTrend := -1
+    pendingDir := 0
+    pendingLvl := na
+    pendingAge := 0
+
+// Liquidity sweeps: wick beyond + CLOSE back inside (fake BOS)
+bullSweep = not na(swingL) and sL < swingL and sC > swingL and sC < swingL + sAtr * 0.5
+bearSweep = not na(swingH) and sH > swingH and sC < swingH and sC > swingH - sAtr * 0.5
+
+// Retest entries: after BOS/CHoCH, price taps broken level and holds (M5/M1 timing on M15 chart)
+var float longLvl = na
+var int longAge = 0
+var float shortLvl = na
+var int shortAge = 0
+
+if bullFire
+    longLvl := pendingLvl
+    // pendingLvl already reset above, so use swingH at fire time: use close level
+    longLvl := swingH
+    longAge := 0
+if bearFire
+    shortLvl := swingL
+    shortAge := 0
+
+longAge += 1
+shortAge += 1
+
+touchedLong = not na(longLvl) and longAge <= retestBars and longAge >= 1 and sL <= longLvl + sAtr * 0.1 and sC > longLvl
+touchedShort = not na(shortLvl) and shortAge <= retestBars and shortAge >= 1 and sH >= shortLvl - sAtr * 0.1 and sC < shortLvl
+// Only with HTF bias agreement
+longEntry = touchedLong and biasDir != -1
+shortEntry = touchedShort and biasDir != 1
+if longEntry
+    longAge := 999
+if shortEntry
+    shortAge := 999
+
+// ---------- Drawings ----------
+var line[] hLines = array.new_line()
+var line[] lLines = array.new_line()
+
+drawSwing(pivotBar, lvl, isHigh) =>
+    if showSwings and not na(pivotBar) and not na(lvl)
+        ln = line.new(x1=pivotBar, y1=lvl, x2=bar_index, y2=lvl, xloc=xloc.bar_index, extend=extend.right, color=isHigh ? color.new(color.blue, 20) : color.new(color.orange, 20), style=line.style_dashed, width=1)
+        if isHigh
+            array.push(hLines, ln)
+            if array.size(hLines) > 8
+                line.delete(array.shift(hLines))
+        else
+            array.push(lLines, ln)
+            if array.size(lLines) > 8
+                line.delete(array.shift(lLines))
+
+if not na(ph)
+    drawSwing(pivotBarH, swingH, true)
+if not na(pl)
+    drawSwing(pivotBarL, swingL, false)
+
+if showBOS and (bullBOS or bullFirst)
+    label.new(bar_index, sL, "BOS", style=label.style_label_up, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+if showBOS and (bearBOS or bearFirst)
+    label.new(bar_index, sH, "BOS", style=label.style_label_down, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+if showCHOCH and bullCHOCH
+    label.new(bar_index, sL, "CHoCH", style=label.style_label_up, color=color.new(color.teal, 0), textcolor=color.white, size=size.small)
+if showCHOCH and bearCHOCH
+    label.new(bar_index, sH, "CHoCH", style=label.style_label_down, color=color.new(color.purple, 0), textcolor=color.white, size=size.small)
+if showSweeps and bullSweep
+    label.new(bar_index, sL, "Sweep", style=label.style_label_up, color=color.new(color.gray, 0), textcolor=color.white, size=size.tiny)
+if showSweeps and bearSweep
+    label.new(bar_index, sH, "Sweep", style=label.style_label_down, color=color.new(color.gray, 0), textcolor=color.white, size=size.tiny)
+if showEntries and longEntry
+    label.new(bar_index, sL, "Long retest", style=label.style_diamond, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+if showEntries and shortEntry
+    label.new(bar_index, sH, "Short retest", style=label.style_diamond, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
+// HTF EMA plots (from HTF, plotted on chart)
+plot(hEma50, "H1 EMA50", color.new(color.blue, 0))
+plot(hEma200, "H1 EMA200", color.new(color.red, 0))
+
+// ---------- Dashboard ----------
+hT = hTrend == 1 ? "HH/HL UP" : hTrend == -1 ? "LH/LL DOWN" : "—"
+mT = mTrend == 1 ? "HH/HL UP" : mTrend == -1 ? "LH/LL DOWN" : "—"
+sT = structTrend == 1 ? "UP" : structTrend == -1 ? "DOWN" : "—"
+emaT = emaBull ? "Price>EMA50>EMA200" : emaBear ? "Price<EMA50<EMA200" : "No confluence"
+warnTF = not (timeframe.period == "1" or timeframe.period == "5" or timeframe.period == structTF or timeframe.period == biasTF or timeframe.period == majorTF) ? "Use M15 (map) / M5-M1 (entry) / H1-H4 (bias) only. " : ""
+
+var table dash = table.new(position.top_right, 2, 7, bgcolor=color.new(color.black, 10))
+if showTable and barstate.islast
+    table.cell(dash, 0, 0, "H1 Bias", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(dash, 1, 0, biasText + " | " + hT, text_color=color.white, bgcolor=biasDir == 1 ? color.new(color.green, 0) : biasDir == -1 ? color.new(color.red, 0) : color.gray)
+    table.cell(dash, 0, 1, "H4 Major", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(dash, 1, 1, mT, text_color=color.white, bgcolor=color.gray)
+    table.cell(dash, 0, 2, "H1 EMA", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(dash, 1, 2, emaT, text_color=color.white, bgcolor=color.gray)
+    table.cell(dash, 0, 3, "M15 Struct", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(dash, 1, 3, sT, text_color=color.white, bgcolor=color.gray)
+    table.cell(dash, 0, 4, "Last swing H/L", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(dash, 1, 4, str.tostring(swingH, format.mintick) + " / " + str.tostring(swingL, format.mintick), text_color=color.white, bgcolor=color.gray)
+    table.cell(dash, 0, 5, "Note", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(dash, 1, 5, (isStructChart ? "On M15 map. " : "M15 via security (lags 1 bar). Best on M15. ") + warnTF, text_color=color.white, bgcolor=color.new(color.orange, 60))
+
+// ---------- Alerts ----------
+alertcondition(bullBOS or bullFirst, "Bullish BOS", "Bullish BOS: close + displacement + hold")
+alertcondition(bearBOS or bearFirst, "Bearish BOS", "Bearish BOS: close + displacement + hold")
+alertcondition(bullCHOCH, "Bullish CHoCH Shift", "Bullish Market Shift (CHoCH)")
+alertcondition(bearCHOCH, "Bearish CHoCH Shift", "Bearish Market Shift (CHoCH)")
+alertcondition(bullSweep, "Sweep of lows", "Liquidity sweep of lows (fake break)")
+alertcondition(bearSweep, "Sweep of highs", "Liquidity sweep of highs (fake break)")
+alertcondition(longEntry, "Long retest", "Long retest of broken M15 level")
+alertcondition(shortEntry, "Short retest", "Short retest of broken M15 level")
