@@ -352,28 +352,33 @@ export default function FacilityStaffIndex({
                           </PopoverContent>
                         </Popover>
                       </Layer>
-                      {activeFilterCount > 0 ? (
-                        <div className="facility-staff__active-filters" aria-label="Active staff filters">
-                          {activeFilters.map((filter) => (
-                            <DismissibleTag
-                              key={filter.key}
-                              size="sm"
-                              type="blue"
-                              text={`${filter.label}: ${filter.value}`}
-                              title={`Remove ${filter.label.toLocaleLowerCase()} filter`}
-                              onClose={() => clearFilter(filter.key)}
-                            />
-                          ))}
-                          <Button kind="ghost" size="sm" type="button" onClick={() => {
-                            setFilters({ department: '', unit: '', position: '' });
-                            resetFilters();
-                          }}>
-                            Clear all
-                          </Button>
-                        </div>
-                      ) : null}
                     </>
                   )}
+                  headerActions={activeFilterCount > 0 ? (
+                    <div className="facility-staff__active-filters" aria-label="Active staff filters">
+                      {activeFilters.map((filter) => (
+                        <DismissibleTag
+                          key={filter.key}
+                          size="sm"
+                          type="blue"
+                          text={`${filter.label}: ${filter.value}`}
+                          title={`Remove ${filter.label.toLocaleLowerCase()} filter`}
+                          onClose={() => clearFilter(filter.key)}
+                        />
+                      ))}
+                      <Button
+                        kind="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                          setFilters({ department: '', unit: '', position: '' });
+                          resetFilters();
+                        }}
+                      >
+                        Clear all
+                      </Button>
+                    </div>
+                  ) : null}
                 />
                 {pagination.total > pagination.perPage ? (
                   <Pagination

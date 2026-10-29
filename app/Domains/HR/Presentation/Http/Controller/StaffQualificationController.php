@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Domains\HR\Presentation\Http\Controller;
 
 use App\Domains\HR\Application\FacilityStaffDirectoryService;
+use App\Domains\HR\Application\StaffQualificationService;
 use App\Models\User;
 use App\Shared\Audit\AuditLogger;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class StaffQualificationController
@@ -22,28 +21,29 @@ final class StaffQualificationController
         TenantContext $context,
         ScopeChecker $scopeChecker,
         FacilityStaffDirectoryService $directory,
+        StaffQualificationService $qualifications,
         AuditLogger $audit,
         string $staff,
     ): RedirectResponse {
-        $actor = $this->authorizeStaffQualificationManagement($request, $context, $scopeChecker, $directory, $staff);
+        $actor = $this->authorizeStaffQualificationManagement(
+            $request,
+            $context,
+            $scopeChecker,
+            $directory,
+            $qualifications,
+            $staff,
+        );
         $validated = $request->validate($this->rules());
-        $verified = $validated['verification_status'] === 'VERIFIED';
-        $qualificationId = (string) Str::uuid7();
-
-        DB::table('hr_qualifications')->insert([
-            'id' => $qualificationId,
-            'tenant_id' => $context->tenantId(),
-            'staff_id' => $staff,
-            'award' => $validated['award'],
-            'field_of_study' => $validated['field_of_study'],
-            'institution' => $validated['institution'],
-            'completion_year' => $validated['completion_year'] ?? null,
-            'verification_status' => $validated['verification_status'],
-            'verified_by' => $verified ? (string) $actor->getKey() : null,
-            'verified_at' => $verified ? now() : null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $qualificationId = $qualifications->create(
+            tenantId: $context->tenantId(),
+            staffId: $staff,
+            actorId: (string) $actor->getKey(),
+            award: $validated['award'],
+            fieldOfStudy: $validated['field_of_study'],
+            institution: $validated['institution'],
+            completionYear: isset($validated['completion_year']) ? (int) $validated['completion_year'] : null,
+            verificationStatus: $validated['verification_status'],
+        );
 
         $audit->recordFor(
             tenantId: $context->tenantId(),
@@ -63,30 +63,31 @@ final class StaffQualificationController
         TenantContext $context,
         ScopeChecker $scopeChecker,
         FacilityStaffDirectoryService $directory,
+        StaffQualificationService $qualifications,
         AuditLogger $audit,
         string $staff,
         string $qualification,
     ): RedirectResponse {
-        $actor = $this->authorizeStaffQualificationManagement($request, $context, $scopeChecker, $directory, $staff);
+        $actor = $this->authorizeStaffQualificationManagement(
+            $request,
+            $context,
+            $scopeChecker,
+            $directory,
+            $qualifications,
+            $staff,
+        );
         $validated = $request->validate($this->rules());
-        $verified = $validated['verification_status'] === 'VERIFIED';
-
-        $updated = DB::table('hr_qualifications')
-            ->where('tenant_id', $context->tenantId())
-            ->where('staff_id', $staff)
-            ->where('id', $qualification)
-            ->update([
-                'award' => $validated['award'],
-                'field_of_study' => $validated['field_of_study'],
-                'institution' => $validated['institution'],
-                'completion_year' => $validated['completion_year'] ?? null,
-                'verification_status' => $validated['verification_status'],
-                'verified_by' => $verified ? (string) $actor->getKey() : null,
-                'verified_at' => $verified ? now() : null,
-                'version' => DB::raw('version + 1'),
-                'updated_at' => now(),
-            ]);
-        abort_unless($updated === 1, 404);
+        abort_unless($qualifications->update(
+            tenantId: $context->tenantId(),
+            staffId: $staff,
+            qualificationId: $qualification,
+            actorId: (string) $actor->getKey(),
+            award: $validated['award'],
+            fieldOfStudy: $validated['field_of_study'],
+            institution: $validated['institution'],
+            completionYear: isset($validated['completion_year']) ? (int) $validated['completion_year'] : null,
+            verificationStatus: $validated['verification_status'],
+        ), 404);
 
         $audit->recordFor(
             tenantId: $context->tenantId(),
@@ -120,6 +121,7 @@ final class StaffQualificationController
         TenantContext $context,
         ScopeChecker $scopeChecker,
         FacilityStaffDirectoryService $directory,
+        StaffQualificationService $qualifications,
         string $staff,
     ): User {
         $actor = $request->user();
@@ -132,10 +134,7 @@ final class StaffQualificationController
             403,
         );
         abort_unless(
-            DB::table('hr_staff')
-                ->where('tenant_id', $context->tenantId())
-                ->where('id', $staff)
-                ->exists(),
+            $qualifications->staffExists($context->tenantId(), $staff),
             404,
         );
         abort_unless(

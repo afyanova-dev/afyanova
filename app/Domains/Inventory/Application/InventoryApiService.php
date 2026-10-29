@@ -9,6 +9,7 @@ use App\Domains\Inventory\Application\Command\ReserveStock;
 use App\Domains\Inventory\Application\Command\ReverseConsumption;
 use App\Domains\Inventory\Application\Query\GetAvailableStock;
 use App\Domains\Inventory\Application\Query\GetStockLocation;
+use App\Domains\Inventory\Application\Query\GetStockLocations;
 use App\Domains\Inventory\Contracts\Dto\AvailableStockSummary;
 use App\Domains\Inventory\Contracts\Dto\InventoryItemRef;
 use App\Domains\Inventory\Contracts\Dto\ItemSummary;
@@ -61,6 +62,11 @@ final class InventoryApiService implements InventoryApi
         );
     }
 
+    public function getItemSummaries(?string $itemType = null, ?bool $active = null): array
+    {
+        return $this->items->list($itemType, $active);
+    }
+
     private function toRef(ItemSummary $item): InventoryItemRef
     {
         return new InventoryItemRef(
@@ -100,6 +106,14 @@ final class InventoryApiService implements InventoryApi
         $summary = $this->queryBus->dispatch(new GetAvailableStock($itemId, $facilityId));
 
         return $summary;
+    }
+
+    public function getStockLocationSummaries(string $facilityId, ?bool $active = null): array
+    {
+        /** @var list<StockLocationSummary> $summaries */
+        $summaries = $this->queryBus->dispatch(new GetStockLocations($facilityId, $active));
+
+        return $summaries;
     }
 
     public function reserveStock(

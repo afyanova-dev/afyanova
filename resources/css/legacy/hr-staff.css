@@ -37,10 +37,21 @@
 
 .facility-staff__active-filters {
   display: flex;
-  flex: 1 0 100%;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--afy-space-2xs);
+}
+
+/* Carbon tags cap at 13rem and wrap long labels. Applied filters need to
+ * read at a glance, so let each tag grow to fit its full label. */
+.facility-staff__active-filters .cds--tag,
+.facility-staff__active-filters .cds--tag .cds--interactive--tag-children {
+  max-inline-size: none;
+}
+
+.facility-staff__active-filters .cds--tag {
+  flex: 0 0 auto;
 }
 
 .facility-staff__identity {

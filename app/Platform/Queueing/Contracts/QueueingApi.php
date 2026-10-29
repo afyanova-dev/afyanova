@@ -103,4 +103,6 @@ interface QueueingApi
     public function procedureQueueConfigured(string $facilityId, string $definitionId): bool;
 
     public function procedureQueueId(string $facilityId, string $definitionId): ?string;
+
+    public function serviceCapabilityRequiresOrderProvenance(?string $serviceCapability): bool;
 }

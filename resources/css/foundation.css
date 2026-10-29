@@ -861,6 +861,26 @@
   overflow: hidden;
 }
 
+/* Optional actions in the table title header (applied filter chips and the
+   like). Carbon's decorator slot keeps them on the right of the title and
+   wraps them onto their own line on narrow viewports without overflowing
+   the table. The right padding is removed so the actions line up flush with
+   the table edge, matching the toolbar buttons above. */
+.afyanova-data-table .cds--data-table-header__with-decorator {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs) var(--afy-space-md);
+  padding-inline-end: 0;
+}
+
+.afyanova-data-table .cds--data-table-header__decorator {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+  min-inline-size: 0;
+}
+
 /* ------------------------------------------------------------------ *
  * Rows — a raised panel of two-slot rows (leading text, trailing
  * action) for lists that are not links (pending approvals, summary

@@ -44,6 +44,7 @@ use App\Platform\Queueing\Contracts\DTO\QueueWaitMetricsDto;
 use App\Platform\Queueing\Contracts\DTO\RecallTicketDto;
 use App\Platform\Queueing\Contracts\DTO\TransferQueueDto;
 use App\Platform\Queueing\Contracts\QueueingApi;
+use App\Platform\Queueing\Domain\Enum\ServiceCapability;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
@@ -349,5 +350,10 @@ final readonly class QueueingApiService implements QueueingApi
             ->value('qms_procedure_queue_mappings.queue_id');
 
         return is_string($mapping) ? $mapping : null;
+    }
+
+    public function serviceCapabilityRequiresOrderProvenance(?string $serviceCapability): bool
+    {
+        return ServiceCapability::tryFrom((string) $serviceCapability)?->requiresOrderProvenance() ?? false;
     }
 }

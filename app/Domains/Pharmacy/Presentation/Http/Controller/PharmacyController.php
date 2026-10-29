@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Pharmacy\Presentation\Http\Controller;
 
-use App\Domains\Clinical\Application\Query\GetPatientAllergies;
+use App\Domains\Clinical\Contracts\ClinicalApi;
 use App\Domains\Clinical\Contracts\Dto\AllergySummary;
 use App\Domains\Patient\Contracts\Dto\PatientSearchResult;
 use App\Domains\Patient\Contracts\PatientApi;
@@ -13,7 +13,6 @@ use App\Domains\Pharmacy\Domain\ValueObject\PrescriptionStatus;
 use App\Domains\Pharmacy\Presentation\Http\DTO\RxPatientResult;
 use App\Domains\Pharmacy\Presentation\Http\Presenter\PharmacyPresenter;
 use App\Models\User;
-use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -27,7 +26,7 @@ final class PharmacyController
     public function __invoke(
         Request $request,
         TenantContext $context,
-        QueryBus $queryBus,
+        ClinicalApi $clinicalApi,
         PharmacyPresenter $presenter,
         PatientApi $patientApi,
     ): Response {
@@ -105,7 +104,7 @@ final class PharmacyController
                 $transcribeAllergiesAvailable = true;
                 try {
                     /** @var list<AllergySummary> $als */
-                    $als = $queryBus->dispatch(new GetPatientAllergies($patientId, 'ACTIVE', null));
+                    $als = $clinicalApi->getPatientAllergies($patientId, 'ACTIVE', null);
                     foreach ($als as $al) {
                         $transcribeAllergies[] = [
                             'substanceName' => $al->substanceName,

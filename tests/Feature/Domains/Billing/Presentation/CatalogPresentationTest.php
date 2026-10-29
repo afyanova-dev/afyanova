@@ -6,10 +6,11 @@ namespace Tests\Feature\Domains\Billing\Presentation;
 
 use App\Domains\Billing\Application\Command\CaptureBillableEvent;
 use App\Domains\Billing\Application\Command\SetBillingServiceStatus;
+use App\Domains\Identity\Contracts\BillingAdminRoleDefinition;
+use App\Domains\Identity\Contracts\CashierRoleDefinition;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Tenancy\TenantContextScope;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -293,16 +294,18 @@ it('refuses mapping to an inactive service and denies without the manage key', f
         ->assertStatus(403);
 });
 
-it('grants the seeded billing admin catalog keys and keeps the cashier read-only', function (): void {
-    $this->seed(DatabaseSeeder::class);
-
-    $admin = User::where('email', 'billing@afyanova.local')->firstOrFail();
-    $cashier = User::where('email', 'cashier@afyanova.local')->firstOrFail();
+it('grants the billing admin catalog keys and keeps the cashier read-only', function (): void {
+    $fixture = makeTenantWithUser(BillingAdminRoleDefinition::PERMISSIONS);
+    $admin = $fixture['user'];
+    $cashier = makeUserWithPermissionsInTenant(
+        $fixture['tenant'],
+        $fixture['facility'],
+        CashierRoleDefinition::PERMISSIONS,
+    );
     $scope = app(ScopeChecker::class);
 
-    $facilityId = null;
-    TenantContextScope::run($admin->tenant_id, null, function () use ($admin, $scope, &$facilityId): void {
-        $facilityId = $scope->selectableFacilities($admin)[0];
+    $facilityId = (string) $fixture['facility']->id;
+    TenantContextScope::run($admin->tenant_id, null, function () use ($admin, $scope, $facilityId): void {
         $perms = $scope->effectivePermissions($admin, $facilityId);
         expect($perms)->toContain('billing.catalog.manage')
             ->and($perms)->toContain('billing.charges.manage')

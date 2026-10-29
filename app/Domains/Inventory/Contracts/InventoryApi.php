@@ -6,7 +6,9 @@ namespace App\Domains\Inventory\Contracts;
 
 use App\Domains\Inventory\Contracts\Dto\AvailableStockSummary;
 use App\Domains\Inventory\Contracts\Dto\InventoryItemRef;
+use App\Domains\Inventory\Contracts\Dto\ItemSummary;
 use App\Domains\Inventory\Contracts\Dto\StockLocationRef;
+use App\Domains\Inventory\Contracts\Dto\StockLocationSummary;
 
 /**
  * The ONLY Inventory surface other modules may import (IC §2.1; ADR-170,
@@ -47,6 +49,14 @@ interface InventoryApi
     public function getItems(?string $itemType = null, ?bool $active = null): array;
 
     /**
+     * Inventory item summaries for a consuming workspace that needs tracking
+     * attributes in addition to the narrower cross-domain item reference.
+     *
+     * @return list<ItemSummary>
+     */
+    public function getItemSummaries(?string $itemType = null, ?bool $active = null): array;
+
+    /**
      * The narrow cross-domain reference for one stock location, or null if it
      * does not exist / is out of the caller's `inventory.access` scope (RLS +
      * the `GetStockLocation` facility check). ADR-184 D-G.
@@ -60,6 +70,13 @@ interface InventoryApi
      * facility. Throws `App\Shared\Domain\NotFound` when out of scope.
      */
     public function getAvailableStock(string $itemId, string $facilityId): AvailableStockSummary;
+
+    /**
+     * Protected, facility-scoped stock-location list for a consumer workspace.
+     *
+     * @return list<StockLocationSummary>
+     */
+    public function getStockLocationSummaries(string $facilityId, ?bool $active = null): array;
 
     /**
      * Reserve `$quantity` of an item at a location for a consumer (ADR-180 D-E;

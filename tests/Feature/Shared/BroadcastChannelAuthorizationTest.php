@@ -6,6 +6,7 @@ namespace Tests\Feature\Shared;
 
 use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Organization\Domain\Model\Organization;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,7 +28,7 @@ final class BroadcastChannelAuthorizationTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenantId = (string) Str::uuid7();
+        $this->tenantId = (string) Tenant::factory()->create()->id;
 
         config([
             'broadcasting.default' => 'reverb',

@@ -7,6 +7,8 @@ namespace Tests\Feature\Domains\Patient\Presentation;
 use App\Domains\Encounter\Domain\Enum\EncounterStatus;
 use App\Domains\Encounter\Domain\Enum\EncounterType;
 use App\Domains\Encounter\Domain\Model\Encounter;
+use App\Domains\Identity\Contracts\FacilityAdminRoleDefinition;
+use App\Domains\Identity\Contracts\ReceptionistRoleDefinition;
 use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Patient\Domain\Enum\IdentifierType;
 use App\Domains\Patient\Domain\Enum\Sex;
@@ -15,7 +17,6 @@ use App\Domains\Patient\Domain\Model\PatientIdentifier;
 use App\Domains\Patient\Domain\Model\PatientRegistration;
 use App\Models\User;
 use App\Shared\Tenancy\TenantContextScope;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -152,8 +153,7 @@ it('forbids users without an active facility context', function (): void {
 });
 
 it('forbids admin persona from patient workspace routes (least privilege)', function (): void {
-    $this->seed(DatabaseSeeder::class);
-    $admin = User::where('email', 'admin@afyanova.local')->firstOrFail();
+    $admin = makeTenantWithUser(FacilityAdminRoleDefinition::PERMISSIONS)['user'];
 
     $this->actingAs($admin)
         ->get('/workspaces/patient')
@@ -165,8 +165,7 @@ it('forbids admin persona from patient workspace routes (least privilege)', func
 });
 
 it('allows reception persona to access patient directory', function (): void {
-    $this->seed(DatabaseSeeder::class);
-    $receptionist = User::where('email', 'reception@afyanova.local')->firstOrFail();
+    $receptionist = makeTenantWithUser(ReceptionistRoleDefinition::PERMISSIONS)['user'];
 
     $response = $this->actingAs($receptionist)
         ->get('/workspaces/patient');

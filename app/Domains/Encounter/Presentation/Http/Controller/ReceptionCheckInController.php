@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domains\Encounter\Presentation\Http\Controller;
 
-use App\Domains\Clinical\Application\Command\RequestProcedure;
 use App\Domains\Clinical\Contracts\ClinicalApi;
 use App\Domains\Clinical\Contracts\Dto\ProcedureDefinitionSummary;
 use App\Domains\Clinical\Contracts\Dto\ProcedureProtocolApprovalSummary;
@@ -20,7 +19,6 @@ use App\Domains\Scheduling\Contracts\SchedulingApi;
 use App\Models\User;
 use App\Platform\Queueing\Contracts\DTO\PlaceInQueueDto;
 use App\Platform\Queueing\Contracts\QueueingApi;
-use App\Platform\Queueing\Domain\Enum\ServiceCapability;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -135,10 +133,7 @@ final class ReceptionCheckInController
                 );
             }
 
-            $capability = $selectedQueue->serviceCapability === null
-                ? null
-                : ServiceCapability::tryFrom($selectedQueue->serviceCapability);
-            if ($capability?->requiresOrderProvenance()
+            if ($queueingApi->serviceCapabilityRequiresOrderProvenance($selectedQueue->serviceCapability)
                 && ($protocolDefinition === null || $protocolDefinitionId === null || $queueId !== $queueingApi->procedureQueueId($facilityId, $protocolDefinitionId))) {
                 return $this->queueRoutingError(
                     $request,
@@ -204,7 +199,7 @@ final class ReceptionCheckInController
         $ticketNumber = null;
         if ($protocolDefinition !== null && $protocolDefinitionId !== null) {
             try {
-                $commandBus->dispatch(new RequestProcedure(
+                $clinicalApi->requestProtocolProcedure(
                     procedureId: (string) Str::uuid7(),
                     actorId: (string) $user->getAuthIdentifier(),
                     patientId: $patientId,
@@ -213,9 +208,8 @@ final class ReceptionCheckInController
                     indication: $request->filled('protocol_procedure_indication')
                         ? trim((string) $request->input('protocol_procedure_indication'))
                         : null,
-                    authoredContext: 'NURSING',
                     protocolReference: $protocolApproval->protocolReference,
-                ));
+                );
             } catch (\Throwable $e) {
                 Log::warning('Protocol procedure request failed after reception check-in', [
                     'encounter_id' => $result->encounterId,

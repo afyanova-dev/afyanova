@@ -511,6 +511,56 @@ final class LinkedStaffAccessService implements LinkedStaffLifecycleApi
         return in_array($roleKey, ['tenant_admin', 'facility_admin'], true);
     }
 
+    public function manageFacilityStaffAssignment(
+        string $tenantId,
+        string $staffId,
+        string $assignmentId,
+        string $facilityId,
+        string $action,
+        string $actorId,
+        string $reason,
+        AuditLogger $audit,
+    ): void {
+        abort_unless(in_array($action, ['suspend', 'restore', 'revoke'], true), 404);
+
+        DB::transaction(function () use (
+            $tenantId,
+            $staffId,
+            $assignmentId,
+            $facilityId,
+            $action,
+            $actorId,
+            $reason,
+            $audit,
+        ): void {
+            $target = DB::table('hr_staff_user_links as link')
+                ->join('idn_access_assignments as assignment', function ($join): void {
+                    $join->on('assignment.user_id', '=', 'link.user_id')
+                        ->on('assignment.tenant_id', '=', 'link.tenant_id');
+                })
+                ->join('idn_roles as role', function ($join): void {
+                    $join->on('role.id', '=', 'assignment.role_id')
+                        ->on('role.tenant_id', '=', 'assignment.tenant_id');
+                })
+                ->where('link.tenant_id', $tenantId)
+                ->where('link.staff_id', $staffId)
+                ->where('assignment.id', $assignmentId)
+                ->where('assignment.facility_id', $facilityId)
+                ->lockForUpdate()
+                ->first(['role.key as role_key']);
+            abort_unless($target !== null, 404);
+            abort_unless(array_key_exists((string) $target->role_key, FacilityUserRoleCatalog::STAFF_ROLES), 422);
+
+            if ($action === 'suspend') {
+                $this->suspendAssignment($tenantId, $assignmentId, $actorId, $reason, $audit, $facilityId);
+            } elseif ($action === 'restore') {
+                $this->restoreAssignment($tenantId, $assignmentId, $actorId, $reason, $audit, $facilityId);
+            } else {
+                $this->revokeAssignment($tenantId, $assignmentId, $actorId, $reason, $audit, $facilityId);
+            }
+        });
+    }
+
     /**
      * Revoke a single facility assignment (ordinary access management).
      *

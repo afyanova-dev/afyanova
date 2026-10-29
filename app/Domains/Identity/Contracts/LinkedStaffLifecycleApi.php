@@ -10,6 +10,17 @@ interface LinkedStaffLifecycleApi
 {
     public function lockLinkedUserForLifecycle(string $tenantId, string $staffId): ?string;
 
+    public function manageFacilityStaffAssignment(
+        string $tenantId,
+        string $staffId,
+        string $assignmentId,
+        string $facilityId,
+        string $action,
+        string $actorId,
+        string $reason,
+        AuditLogger $audit,
+    ): void;
+
     /**
      * @return array{
      *     userId: string|null,

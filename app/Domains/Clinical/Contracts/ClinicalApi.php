@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Clinical\Contracts;
 
+use App\Domains\Clinical\Contracts\Dto\AllergySummary;
 use App\Domains\Clinical\Contracts\Dto\EncounterDocumentationStatus;
 use App\Domains\Clinical\Contracts\Dto\PrescribingDecisionSummary;
 use App\Domains\Clinical\Contracts\Dto\ProcedureDefinitionSummary;
@@ -35,6 +36,27 @@ interface ClinicalApi
      * `PrescribingDecisionSummary` unchanged — "the gate IS the authorization".
      */
     public function getPrescribingDecision(string $prescribingDecisionId): PrescribingDecisionSummary;
+
+    /**
+     * Read a patient's allergies through the protected Clinical query.
+     *
+     * @return list<AllergySummary>
+     */
+    public function getPatientAllergies(
+        string $patientId,
+        ?string $clinicalStatus = null,
+        ?string $verificationStatus = null,
+    ): array;
+
+    public function requestProtocolProcedure(
+        string $procedureId,
+        string $actorId,
+        string $patientId,
+        string $encounterId,
+        string $definitionId,
+        ?string $indication,
+        string $protocolReference,
+    ): void;
 
     /**
      * Return only recorded/not-recorded indicators for encounters at a facility.

@@ -8,22 +8,67 @@ use App\Domains\Encounter\Application\Command\CreateEncounter;
 use App\Domains\Encounter\Domain\Enum\EncounterType;
 use App\Domains\Encounter\Domain\Model\Encounter;
 use App\Domains\Identity\Contracts\FacilityAdminRoleDefinition;
+use App\Domains\Identity\Contracts\NurseRoleDefinition;
 use App\Domains\Identity\Contracts\ReceptionistRoleDefinition;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Patient\Domain\Model\Patient;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\TenantContextScope;
 use Carbon\CarbonImmutable;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    $this->seed(DatabaseSeeder::class);
+    $adminFixture = makeTenantWithUser(
+        FacilityAdminRoleDefinition::PERMISSIONS,
+        ['OUTPATIENT_CARE'],
+    );
+    $this->demoTenant = $adminFixture['tenant'];
+    $this->demoFacility = $adminFixture['facility'];
+    $admin = $adminFixture['user'];
+    $admin->forceFill(['email' => 'admin@afyanova.local'])->save();
+
+    $secondFacility = TenantContextScope::run(
+        (string) $this->demoTenant->id,
+        null,
+        fn (): Facility => Facility::factory()
+            ->forTenant((string) $this->demoTenant->id, (string) $adminFixture['organization']->id)
+            ->create(),
+    );
+    TenantContextScope::run((string) $this->demoTenant->id, null, function () use ($admin, $secondFacility): void {
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $this->demoTenant->id,
+            'user_id' => $admin->id,
+            'role_id' => DB::table('idn_access_assignments')->where('user_id', $admin->id)->value('role_id'),
+            'facility_id' => $secondFacility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
+    makeUserWithPermissionsInTenant(
+        $this->demoTenant,
+        $this->demoFacility,
+        ReceptionistRoleDefinition::PERMISSIONS,
+        'reception@afyanova.local',
+        'Demo Receptionist',
+    );
+    makeUserWithPermissionsInTenant(
+        $this->demoTenant,
+        $this->demoFacility,
+        NurseRoleDefinition::PERMISSIONS,
+        'nurse@afyanova.local',
+        'Demo Nurse',
+    );
 });
 
 it('verifies admin persona retains administrative plus queue permissions and cannot access Reception', function (): void {

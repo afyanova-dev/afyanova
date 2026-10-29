@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Pharmacy\Presentation\Http\Presenter;
 
-use App\Domains\Clinical\Application\Query\GetPatientAllergies;
+use App\Domains\Clinical\Contracts\ClinicalApi;
 use App\Domains\Clinical\Contracts\Dto\AllergySummary;
-use App\Domains\Inventory\Application\Query\GetAvailableStock;
-use App\Domains\Inventory\Application\Query\GetItems;
-use App\Domains\Inventory\Application\Query\GetStockLocations;
 use App\Domains\Inventory\Contracts\Dto\InventoryItemRef;
 use App\Domains\Inventory\Contracts\Dto\ItemSummary;
 use App\Domains\Inventory\Contracts\Dto\StockLocationSummary;
@@ -49,6 +46,7 @@ final class PharmacyPresenter
         private readonly QueryBus $queryBus,
         private readonly PatientApi $patientApi,
         private readonly InventoryApi $inventoryApi,
+        private readonly ClinicalApi $clinicalApi,
     ) {}
 
     /**
@@ -252,7 +250,7 @@ final class PharmacyPresenter
         }
 
         /** @var list<ItemSummary> $items */
-        $items = $this->queryBus->dispatch(new GetItems('MEDICATION', true));
+        $items = $this->inventoryApi->getItemSummaries('MEDICATION', true);
         $itemOptions = array_map(static fn (ItemSummary $i): RxItemOption => new RxItemOption(
             itemId: $i->itemId,
             code: $i->code,
@@ -264,7 +262,7 @@ final class PharmacyPresenter
         ), $items);
 
         /** @var list<StockLocationSummary> $locations */
-        $locations = $this->queryBus->dispatch(new GetStockLocations($facilityId, true));
+        $locations = $this->inventoryApi->getStockLocationSummaries($facilityId, true);
         $locationOptions = array_map(static fn (StockLocationSummary $l): RxLocationOption => new RxLocationOption(
             locationId: $l->locationId,
             code: $l->code,
@@ -284,7 +282,7 @@ final class PharmacyPresenter
             }
             if ($selectedItem !== null) {
                 try {
-                    $stock = $this->queryBus->dispatch(new GetAvailableStock($selectedItemId, $facilityId));
+                    $stock = $this->inventoryApi->getAvailableStock($selectedItemId, $facilityId);
                     $availabilityStatus = 'AVAILABLE';
                     foreach ($stock->byLocation as $row) {
                         $stockByLocation[] = new RxStockEntry(
@@ -340,7 +338,7 @@ final class PharmacyPresenter
 
             try {
                 /** @var list<AllergySummary> $als */
-                $als = $this->queryBus->dispatch(new GetPatientAllergies($selectedPatientId, 'ACTIVE', null));
+                $als = $this->clinicalApi->getPatientAllergies($selectedPatientId, 'ACTIVE', null);
                 foreach ($als as $al) {
                     $selectedPatientAllergies[] = [
                         'substanceName' => $al->substanceName,

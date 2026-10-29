@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Domains\Pharmacy\Presentation;
 
 use App\Domains\Billing\Contracts\BillingApi;
+use App\Domains\Identity\Contracts\PharmacistRoleDefinition;
 use App\Domains\Inventory\Domain\Model\Batch;
 use App\Domains\Inventory\Domain\Model\Item;
 use App\Domains\Inventory\Domain\Model\StockBalance;
@@ -21,7 +22,6 @@ use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Tenancy\TenantContextScope;
 use Carbon\CarbonImmutable;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -669,15 +669,13 @@ it('owns the view in the URL: garbage view defaults, selection wins', function (
             ->where('transcribePatient.patientId', $patient));
 });
 
-it('grants the seeded pharmacist the full phase-1 keys', function (): void {
-    $this->seed(DatabaseSeeder::class);
-
-    $pharmacist = User::where('email', 'pharmacy@afyanova.local')->firstOrFail();
+it('grants the pharmacist the full phase-1 keys', function (): void {
+    $fixture = makeTenantWithUser(PharmacistRoleDefinition::PERMISSIONS);
+    $pharmacist = $fixture['user'];
     $scope = app(ScopeChecker::class);
 
-    $facilityId = null;
-    TenantContextScope::run($pharmacist->tenant_id, null, function () use ($pharmacist, $scope, &$facilityId): void {
-        $facilityId = $scope->selectableFacilities($pharmacist)[0];
+    $facilityId = (string) $fixture['facility']->id;
+    TenantContextScope::run($pharmacist->tenant_id, null, function () use ($pharmacist, $scope, $facilityId): void {
         $perms = $scope->effectivePermissions($pharmacist, $facilityId);
         expect($perms)->toContain('pharmacy.dispensing.record')
             ->and($perms)->toContain('pharmacy.dispensing.reverse')

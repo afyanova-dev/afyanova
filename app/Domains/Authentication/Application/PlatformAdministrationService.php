@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Authentication\Application;
 
 use App\Domains\Authentication\Application\Dto\FacilityInvitationForResend;
+use App\Domains\Authentication\Contracts\FacilityUserInvitationApi;
 use App\Domains\Authentication\Contracts\FacilityUserRoleCatalog;
 use App\Domains\Authentication\Infrastructure\Reader\FacilityInvitationReader;
 use App\Domains\Authentication\Infrastructure\Writer\FacilityInvitationEventWriter;
@@ -38,7 +39,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
-final class PlatformAdministrationService
+final class PlatformAdministrationService implements FacilityUserInvitationApi
 {
     public function __construct(
         private readonly FacilityInvitationReader $facilityInvitations,

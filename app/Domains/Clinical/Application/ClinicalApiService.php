@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domains\Clinical\Application;
 
+use App\Domains\Clinical\Application\Command\RequestProcedure;
+use App\Domains\Clinical\Application\Query\GetPatientAllergies;
 use App\Domains\Clinical\Application\Query\GetPrescribingDecision;
 use App\Domains\Clinical\Application\Query\GetProcedureDefinitions;
 use App\Domains\Clinical\Contracts\ClinicalApi;
+use App\Domains\Clinical\Contracts\Dto\AllergySummary;
 use App\Domains\Clinical\Contracts\Dto\EncounterDocumentationStatus;
 use App\Domains\Clinical\Contracts\Dto\PrescribingDecisionSummary;
 use App\Domains\Clinical\Contracts\Dto\ProcedureDefinitionSummary;
@@ -18,6 +21,7 @@ use App\Domains\Clinical\Infrastructure\Reader\ProcedureMaterialReader;
 use App\Domains\Clinical\Infrastructure\Writer\ProcedureProtocolApprovalWriter;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -42,6 +46,7 @@ final class ClinicalApiService implements ClinicalApi
 {
     public function __construct(
         private readonly ClinicalNoteReader $reader,
+        private readonly CommandBus $commandBus,
         private readonly QueryBus $queryBus,
         private readonly VitalSignsObservationReader $vitalsReader,
         private readonly TriageAssessmentReader $triageReader,
@@ -62,6 +67,42 @@ final class ClinicalApiService implements ClinicalApi
         $summary = $this->queryBus->dispatch(new GetPrescribingDecision($prescribingDecisionId));
 
         return $summary;
+    }
+
+    public function getPatientAllergies(
+        string $patientId,
+        ?string $clinicalStatus = null,
+        ?string $verificationStatus = null,
+    ): array {
+        /** @var list<AllergySummary> $allergies */
+        $allergies = $this->queryBus->dispatch(new GetPatientAllergies(
+            patientId: $patientId,
+            clinicalStatus: $clinicalStatus,
+            verificationStatus: $verificationStatus,
+        ));
+
+        return $allergies;
+    }
+
+    public function requestProtocolProcedure(
+        string $procedureId,
+        string $actorId,
+        string $patientId,
+        string $encounterId,
+        string $definitionId,
+        ?string $indication,
+        string $protocolReference,
+    ): void {
+        $this->commandBus->dispatch(new RequestProcedure(
+            procedureId: $procedureId,
+            actorId: $actorId,
+            patientId: $patientId,
+            encounterId: $encounterId,
+            definitionId: $definitionId,
+            indication: $indication,
+            authoredContext: 'NURSING',
+            protocolReference: $protocolReference,
+        ));
     }
 
     public function getEncounterDocumentationStatuses(string $facilityId, array $encounterIds): array

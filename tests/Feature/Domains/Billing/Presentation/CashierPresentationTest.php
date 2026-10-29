@@ -6,12 +6,13 @@ namespace Tests\Feature\Domains\Billing\Presentation;
 
 use App\Domains\Billing\Application\Command\CaptureBillableEvent;
 use App\Domains\Billing\Application\Command\OpenFinancialAccount;
+use App\Domains\Identity\Contracts\CashierRoleDefinition;
+use App\Domains\Identity\Contracts\ReceptionistRoleDefinition;
 use App\Domains\Patient\Domain\Model\Patient as PatientModel;
 use App\Domains\Patient\Domain\Model\PatientRegistration;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Tenancy\TenantContextScope;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -101,16 +102,18 @@ it('redirects guests to login and forbids users without billing.access', functio
         ->get('/workspaces/billing')->assertStatus(403);
 });
 
-it('grants the seeded cashier access and denies the seeded receptionist', function (): void {
-    $this->seed(DatabaseSeeder::class);
-
-    $cashier = User::where('email', 'cashier@afyanova.local')->firstOrFail();
-    $receptionist = User::where('email', 'reception@afyanova.local')->firstOrFail();
+it('grants the cashier permissions and denies the receptionist', function (): void {
+    $fixture = makeTenantWithUser(CashierRoleDefinition::PERMISSIONS);
+    $cashier = $fixture['user'];
+    $receptionist = makeUserWithPermissionsInTenant(
+        $fixture['tenant'],
+        $fixture['facility'],
+        ReceptionistRoleDefinition::PERMISSIONS,
+    );
     $scope = app(ScopeChecker::class);
 
-    $facilityId = null;
-    TenantContextScope::run($cashier->tenant_id, null, function () use ($cashier, $scope, &$facilityId): void {
-        $facilityId = app(ScopeChecker::class)->selectableFacilities($cashier)[0];
+    $facilityId = (string) $fixture['facility']->id;
+    TenantContextScope::run($cashier->tenant_id, null, function () use ($cashier, $scope, $facilityId): void {
         $perms = $scope->effectivePermissions($cashier, $facilityId);
         expect($perms)->toContain('billing.access')
             ->and($perms)->toContain('billing.payments.manage')

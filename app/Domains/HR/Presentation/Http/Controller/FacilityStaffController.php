@@ -7,9 +7,6 @@ namespace App\Domains\HR\Presentation\Http\Controller;
 use App\Domains\Authentication\Application\PlatformAdministrationService;
 use App\Domains\Authentication\Contracts\AccountDirectoryApi;
 use App\Domains\Authentication\Contracts\FacilityUserRoleCatalog;
-use App\Domains\HR\Application\Command\CreateEmployment;
-use App\Domains\HR\Application\Command\CreatePerson;
-use App\Domains\HR\Application\Command\CreateStaff;
 use App\Domains\HR\Application\Command\DefineCadre;
 use App\Domains\HR\Application\Command\DefinePosition;
 use App\Domains\HR\Application\Command\LinkStaffToUser;
@@ -17,18 +14,20 @@ use App\Domains\HR\Application\Command\StartEmployment;
 use App\Domains\HR\Application\Command\UnlinkStaffFromUser;
 use App\Domains\HR\Application\Command\UpdatePerson;
 use App\Domains\HR\Application\FacilityAssignmentRequestService;
+use App\Domains\HR\Application\FacilityStaffCreationService;
 use App\Domains\HR\Application\FacilityStaffDirectoryService;
 use App\Domains\HR\Application\FacilityStaffLifecycleService;
 use App\Domains\HR\Application\FacilityStaffOnboardingService;
+use App\Domains\HR\Application\StaffQualificationService;
 use App\Domains\HR\Domain\Exception\InvalidStaffStatusTransitionException;
 use App\Domains\HR\Domain\Exception\StaffHasActiveAssignmentsException;
 use App\Domains\HR\Domain\Exception\StaffHasActiveEmploymentException;
 use App\Domains\HR\Domain\Exception\StaffHasFutureRosterEntriesException;
 use App\Domains\HR\Domain\ValueObject\AssignmentScope;
 use App\Domains\HR\Domain\ValueObject\CadreCategory;
-use App\Domains\Identity\Application\LinkedStaffAccessService;
 use App\Domains\Identity\Contracts\FacilityStaffManagerRoleDefinition;
 use App\Domains\Identity\Contracts\IdentityApi;
+use App\Domains\Identity\Contracts\LinkedStaffLifecycleApi;
 use App\Domains\Organization\Contracts\OrganizationAdminApi;
 use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Models\User;
@@ -43,7 +42,6 @@ use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -358,6 +356,7 @@ final class FacilityStaffController
         OrganizationAdminApi $organizationAdminApi,
         FacilityStaffDirectoryService $directory,
         PlatformAdministrationService $administration,
+        StaffQualificationService $qualifications,
         string $staff,
     ): Response|RedirectResponse {
         $actor = $request->user();
@@ -490,30 +489,9 @@ final class FacilityStaffController
 
         return Inertia::render('HR/Staff/Show', [
             'facility' => $this->facilitySummary($context, $facilityId),
-            'qualifications' => $canReadQualifications ? DB::table('hr_qualifications')
-                ->where('tenant_id', $context->tenantId())
-                ->where('staff_id', $staff)
-                ->orderByDesc('completion_year')
-                ->orderBy('award')
-                ->get([
-                    'id',
-                    'award',
-                    'field_of_study',
-                    'institution',
-                    'completion_year',
-                    'verification_status',
-                ])
-                ->map(static fn (object $qualification): array => [
-                    'id' => (string) $qualification->id,
-                    'award' => (string) $qualification->award,
-                    'fieldOfStudy' => (string) $qualification->field_of_study,
-                    'institution' => (string) $qualification->institution,
-                    'completionYear' => $qualification->completion_year === null
-                        ? null
-                        : (int) $qualification->completion_year,
-                    'verificationStatus' => (string) $qualification->verification_status,
-                ])
-                ->all() : [],
+            'qualifications' => $canReadQualifications
+                ? $qualifications->forStaff($context->tenantId(), $staff)
+                : [],
             'canReadQualifications' => $canReadQualifications,
             'staff' => [
                 'id' => (string) $row->id,
@@ -603,7 +581,7 @@ final class FacilityStaffController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        LinkedStaffAccessService $access,
+        LinkedStaffLifecycleApi $access,
         AuditLogger $audit,
         string $staff,
         string $assignment,
@@ -626,64 +604,16 @@ final class FacilityStaffController
             'reason' => ['required', 'string', 'min:8', 'max:1000'],
         ])['reason'];
 
-        DB::transaction(function () use (
-            $context,
-            $staff,
-            $assignment,
-            $facilityId,
-            $action,
-            $reason,
-            $actor,
-            $access,
-            $audit,
-        ): void {
-            $target = DB::table('hr_staff_user_links as link')
-                ->join('idn_access_assignments as assignment', function ($join): void {
-                    $join->on('assignment.user_id', '=', 'link.user_id')
-                        ->on('assignment.tenant_id', '=', 'link.tenant_id');
-                })
-                ->join('idn_roles as role', function ($join): void {
-                    $join->on('role.id', '=', 'assignment.role_id')
-                        ->on('role.tenant_id', '=', 'assignment.tenant_id');
-                })
-                ->where('link.tenant_id', $context->tenantId())
-                ->where('link.staff_id', $staff)
-                ->where('assignment.id', $assignment)
-                ->where('assignment.facility_id', $facilityId)
-                ->lockForUpdate()
-                ->first(['link.user_id', 'role.key as role_key']);
-            abort_unless($target !== null, 404);
-            abort_unless(array_key_exists((string) $target->role_key, FacilityUserRoleCatalog::STAFF_ROLES), 422);
-
-            if ($action === 'suspend') {
-                $access->suspendAssignment(
-                    $context->tenantId(),
-                    $assignment,
-                    (string) $actor->getKey(),
-                    trim($reason),
-                    $audit,
-                    $facilityId,
-                );
-            } elseif ($action === 'restore') {
-                $access->restoreAssignment(
-                    $context->tenantId(),
-                    $assignment,
-                    (string) $actor->getKey(),
-                    trim($reason),
-                    $audit,
-                    $facilityId,
-                );
-            } else {
-                $access->revokeAssignment(
-                    $context->tenantId(),
-                    $assignment,
-                    (string) $actor->getKey(),
-                    trim($reason),
-                    $audit,
-                    $facilityId,
-                );
-            }
-        });
+        $access->manageFacilityStaffAssignment(
+            tenantId: $context->tenantId(),
+            staffId: $staff,
+            assignmentId: $assignment,
+            facilityId: $facilityId,
+            action: $action,
+            actorId: (string) $actor->getKey(),
+            reason: trim($reason),
+            audit: $audit,
+        );
 
         return redirect()->route('hr.staff.show', ['staff' => $staff])
             ->with('status', 'Staff access updated.');
@@ -759,11 +689,9 @@ final class FacilityStaffController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        CommandBus $commandBus,
-        AuditLogger $audit,
-        PlatformAdministrationService $administration,
+        FacilityStaffCreationService $creation,
+        FacilityStaffDirectoryService $directory,
         DocumentsApi $documents,
-        FacilityAssignmentRequestService $assignmentRequests,
         OrganizationAdminApi $organization,
     ): RedirectResponse {
         $actor = $request->user();
@@ -827,7 +755,7 @@ final class FacilityStaffController
         }
         $position = null;
         if ($positionId !== null) {
-            $position = app(FacilityStaffDirectoryService::class)->activePosition(
+            $position = $directory->activePosition(
                 $context->tenantId(),
                 $positionId,
             );
@@ -900,115 +828,35 @@ final class FacilityStaffController
             }
         }
 
-        DB::transaction(function () use (
-            $commandBus,
-            $context,
-            $actor,
-            $validated,
-            $personId,
-            $staffId,
-            $requestId,
-            $assignmentRequests,
-            $facilityId,
-            $departmentId,
-            $unitId,
-            $scope,
-            $position,
-            $contractType,
-            $audit,
-            $requestLogin,
-            $administration,
-            $scopeChecker,
-            $photoDocumentId,
-        ): void {
-            $commandBus->dispatch(new CreatePerson(
-                firstName: $validated['first_name'],
-                middleName: $validated['middle_name'] ?? null,
-                lastName: $validated['last_name'],
-                dateOfBirth: $validated['date_of_birth'],
-                gender: $validated['gender'],
-                personId: $personId,
-                phone: $validated['phone'] ?? null,
-                email: $validated['email'] ?? null,
-                photoDocumentId: $photoDocumentId,
-            ));
-            $commandBus->dispatch(new CreateStaff(
-                personId: $personId,
-                staffId: $staffId,
-                primaryCadreId: $position === null ? null : $position['cadreId'],
-                primaryPositionId: $position === null ? null : $position['id'],
-            ));
-            if ($position !== null) {
-                $commandBus->dispatch(new CreateEmployment(
-                    staffId: $staffId,
-                    positionId: $position['id'],
-                    contractType: $contractType,
-                    startDate: $validated['employment_start_date'],
-                    fte: $validated['fte'] ?? '1.00',
-                ));
-            }
-            $assignmentRequests->create(
-                requestId: $requestId,
-                tenantId: $context->tenantId(),
-                staffId: $staffId,
-                facilityId: $facilityId,
-                departmentId: $departmentId,
-                unitId: $unitId,
-                scope: $scope,
-                effectiveFrom: $validated['effective_from'],
-                requesterId: (string) $actor->getKey(),
-            );
-            if ($requestLogin) {
-                try {
-                    $invitation = $administration->inviteFacilityUser(
-                        tenantId: $context->tenantId(),
-                        roleKey: array_values([
-                            (string) $validated['primary_role_key'],
-                            ...($validated['secondary_role_keys'] ?? []),
-                        ]),
-                        facilityId: $facilityId,
-                        name: trim(implode(' ', array_filter([
-                            $validated['first_name'],
-                            $validated['middle_name'] ?? null,
-                            $validated['last_name'],
-                        ]))),
-                        email: mb_strtolower(trim((string) $validated['email'])),
-                        changeReference: (string) $validated['change_reference'],
-                        reason: trim((string) $validated['access_reason']),
-                        actor: $actor,
-                        scopeChecker: $scopeChecker,
-                        staffId: $staffId,
-                    );
-                } catch (\RuntimeException $exception) {
-                    Log::notice('HR staff account invitation was rejected.', [
-                        'actor_id' => (string) $actor->getKey(),
-                        'tenant_id' => $context->tenantId(),
-                        'facility_id' => $facilityId,
-                        'roles' => [
-                            (string) $validated['primary_role_key'],
-                            ...($validated['secondary_role_keys'] ?? []),
-                        ],
-                        'reason' => $exception->getMessage(),
-                    ]);
-                    throw ValidationException::withMessages(['facility_role' => $exception->getMessage()]);
-                }
-
-                $commandBus->dispatch(new LinkStaffToUser(
-                    staffId: $staffId,
-                    userId: $invitation['userId'],
-                    linkedBy: (string) $actor->getKey(),
-                ));
-            }
-            $audit->recordFor(
-                tenantId: $context->tenantId(),
-                action: 'hr.staff_assignment.requested',
-                actorId: (string) $actor->getKey(),
-                facilityId: $facilityId,
-                metadata: ['request' => $requestId, 'staff' => $staffId, 'scope' => $scope->value],
-                targetType: 'staff',
-                targetId: $staffId,
-            );
-        });
+        $creation->create([
+            'tenantId' => $context->tenantId(),
+            'facilityId' => $facilityId,
+            'actor' => $actor,
+            'personId' => $personId,
+            'staffId' => $staffId,
+            'requestId' => $requestId,
+            'firstName' => $validated['first_name'],
+            'middleName' => $validated['middle_name'] ?? null,
+            'lastName' => $validated['last_name'],
+            'dateOfBirth' => $validated['date_of_birth'],
+            'gender' => $validated['gender'],
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'photoDocumentId' => $photoDocumentId,
+            'departmentId' => $departmentId,
+            'unitId' => $unitId,
+            'scope' => $scope,
+            'effectiveFrom' => $validated['effective_from'],
+            'position' => $position,
+            'contractType' => $contractType,
+            'employmentStartDate' => $employmentStartDate,
+            'fte' => $validated['fte'] ?? '1.00',
+            'requestLogin' => $requestLogin,
+            'primaryRoleKey' => $validated['primary_role_key'] ?? null,
+            'secondaryRoleKeys' => $validated['secondary_role_keys'] ?? [],
+            'changeReference' => $validated['change_reference'] ?? null,
+            'accessReason' => $validated['access_reason'] ?? null,
+        ]);
 
         $status = 'Staff created; placement pending confirmation.';
         if ($requestLogin) {
@@ -1596,8 +1444,7 @@ final class FacilityStaffController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        CommandBus $commandBus,
-        PlatformAdministrationService $administration,
+        FacilityStaffCreationService $creation,
         FacilityStaffDirectoryService $directory,
         string $staff,
     ): RedirectResponse {
@@ -1644,52 +1491,16 @@ final class FacilityStaffController
             (string) $validated['primary_role_key'],
             ...($validated['secondary_role_keys'] ?? []),
         ]);
-        try {
-            DB::transaction(function () use (
-                $context,
-                $actor,
-                $scopeChecker,
-                $administration,
-                $commandBus,
-                $validated,
-                $roleKeys,
-                $facilityId,
-                $staffRow,
-            ): void {
-                $invitation = $administration->inviteFacilityUser(
-                    tenantId: $context->tenantId(),
-                    roleKey: $roleKeys,
-                    facilityId: $facilityId,
-                    name: trim(implode(' ', array_filter([
-                        $staffRow['firstName'],
-                        $staffRow['middleName'],
-                        $staffRow['lastName'],
-                    ]))),
-                    email: mb_strtolower(trim((string) $validated['email'])),
-                    changeReference: (string) $validated['change_reference'],
-                    reason: trim((string) $validated['access_reason']),
-                    actor: $actor,
-                    scopeChecker: $scopeChecker,
-                    staffId: $staffRow['id'],
-                );
-                $commandBus->dispatch(new LinkStaffToUser(
-                    staffId: $staffRow['id'],
-                    userId: $invitation['userId'],
-                    linkedBy: (string) $actor->getKey(),
-                ));
-            });
-        } catch (\RuntimeException $exception) {
-            Log::notice('HR staff account invitation was rejected.', [
-                'actor_id' => (string) $actor->getKey(),
-                'tenant_id' => $context->tenantId(),
-                'facility_id' => $facilityId,
-                'staff_id' => $staff,
-                'roles' => $roleKeys,
-                'reason' => $exception->getMessage(),
-            ]);
-
-            throw ValidationException::withMessages(['email' => $exception->getMessage()]);
-        }
+        $creation->inviteAndLinkStaffAccount(
+            tenantId: $context->tenantId(),
+            facilityId: $facilityId,
+            actor: $actor,
+            roleKeys: $roleKeys,
+            staff: $staffRow,
+            email: $validated['email'],
+            changeReference: $validated['change_reference'],
+            reason: $validated['access_reason'],
+        );
 
         return redirect()->route('hr.staff.show', ['staff' => $staff, 'section' => 'access'])
             ->with('status', 'Account invitation sent and linked to this staff record. After setup, approve any pending facility-role requests from this page.');

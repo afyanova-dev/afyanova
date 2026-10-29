@@ -33,6 +33,7 @@ interface CarbonDataTableProps<Row extends CarbonDataTableRow> {
   toolbar?: ReactNode | ((
     onInputChange: DataTableRenderProps<CarbonDataTableRow, ReactNode[]>['onInputChange'],
   ) => ReactNode);
+  headerActions?: ReactNode;
   toolbarLabel?: string;
   className?: string;
   size?: DataTableSize;
@@ -62,6 +63,7 @@ export function CarbonDataTable<Row extends CarbonDataTableRow>({
   ariaLabel,
   emptyState,
   toolbar,
+  headerActions,
   toolbarLabel,
   className,
   size = 'lg',
@@ -100,7 +102,11 @@ export function CarbonDataTable<Row extends CarbonDataTableRow>({
         getExpandedRowProps,
         onInputChange,
       }) => (
-        <TableContainer title={title} className={['afyanova-data-table', className].filter(Boolean).join(' ')}>
+        <TableContainer
+          title={title}
+          decorator={headerActions}
+          className={['afyanova-data-table', className].filter(Boolean).join(' ')}
+        >
           {toolbar ? (
             <TableToolbar aria-label={toolbarLabel ?? `${ariaLabel} toolbar`}>
               <TableToolbarContent>

@@ -10,10 +10,12 @@ use App\Domains\Authentication\Application\Fortify\DashboardTwoFactorLoginRespon
 use App\Domains\Authentication\Application\Fortify\ResetUserPassword;
 use App\Domains\Authentication\Application\Fortify\UpdateUserPassword;
 use App\Domains\Authentication\Application\PendingAdministrativeAccess;
+use App\Domains\Authentication\Application\PlatformAdministrationService;
 use App\Domains\Authentication\Console\BootstrapPlatformSuperAdminCommand;
 use App\Domains\Authentication\Console\BootstrapTenantAdminCommand;
 use App\Domains\Authentication\Console\ExpireFacilityInvitationsCommand;
 use App\Domains\Authentication\Contracts\AccountDirectoryApi;
+use App\Domains\Authentication\Contracts\FacilityUserInvitationApi;
 use App\Domains\Authentication\Support\AuthEventRecorder;
 use App\Domains\Identity\Contracts\LinkedStaffAccessGate;
 use App\Models\User;
@@ -49,6 +51,7 @@ final class AuthenticationServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(AccountDirectoryApi::class, AccountDirectoryApiService::class);
+        $this->app->bind(FacilityUserInvitationApi::class, PlatformAdministrationService::class);
     }
 
     public function boot(): void

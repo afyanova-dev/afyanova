@@ -391,6 +391,8 @@ describe('facility staff workflows', () => {
     fireEvent.change(screen.getByLabelText('Department'), { target: { value: 'Inpatient' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
     expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Active staff filters').closest('.cds--data-table-header__decorator')).not.toBeNull();
+    expect(screen.getByLabelText('Active staff filters').closest('[aria-label="All facility staff directory toolbar"]')).toBeNull();
     expect(screen.getByText('All staff (1 shown of 2)')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Amina Nurse' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Sam Example' })).not.toBeInTheDocument();

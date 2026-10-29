@@ -26,6 +26,23 @@ describe('CarbonDataTable', () => {
     expect(screen.getByText('ACTIVE').tagName).toBe('STRONG');
   });
 
+  it('renders optional header actions on the right of the table title', () => {
+    render(
+      <CarbonDataTable
+        rows={[{ id: 'record-1', name: 'Central Clinic' }]}
+        headers={[{ key: 'name', header: 'Name' }]}
+        title="1 record"
+        ariaLabel="Records"
+        toolbar={<button type="button">Add record</button>}
+        headerActions={<span>Active filters</span>}
+        emptyState={<p>No records</p>}
+      />,
+    );
+
+    expect(screen.getByText('Active filters').closest('.cds--data-table-header__decorator')).not.toBeNull();
+    expect(screen.getByText('Active filters').closest('[aria-label="Records toolbar"]')).toBeNull();
+  });
+
   it('shows the supplied empty state when there are no rows', () => {
     render(
       <CarbonDataTable
