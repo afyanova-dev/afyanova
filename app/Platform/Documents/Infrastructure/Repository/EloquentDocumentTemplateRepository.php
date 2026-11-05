@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Infrastructure\Repository;
 
-use App\Platform\Documents\Domain\Enum\DocumentType;
+use App\Platform\Documents\Contracts\Enum\DocumentType;
 use App\Platform\Documents\Domain\Model\DocumentTemplate;
 use App\Platform\Documents\Domain\Repository\DocumentTemplateRepositoryInterface;
 

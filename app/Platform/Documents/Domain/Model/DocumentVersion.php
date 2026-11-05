@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Domain\Model;
 
-use App\Platform\Documents\Domain\Enum\DocumentStatus;
+use App\Platform\Documents\Contracts\Enum\DocumentStatus;
 use App\Platform\Documents\Domain\Exception\DocumentUnderDisposalException;
 use App\Platform\Documents\Domain\Exception\DocumentVersionDisposedException;
 use App\Shared\Domain\HasUuid;

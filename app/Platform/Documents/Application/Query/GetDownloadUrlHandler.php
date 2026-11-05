@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Platform\Documents\Application\Query;
 
 use App\Platform\Documents\Contracts\DTO\DownloadUrlDto;
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
 use App\Platform\Documents\Domain\Enum\TokenAction;
 use App\Platform\Documents\Domain\Exception\DocumentNotAvailableException;
 use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;

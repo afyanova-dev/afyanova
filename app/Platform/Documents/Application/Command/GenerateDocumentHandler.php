@@ -6,8 +6,8 @@ namespace App\Platform\Documents\Application\Command;
 
 use App\Platform\Documents\Contracts\DTO\DocumentDto;
 use App\Platform\Documents\Contracts\DTO\DocumentVersionDto;
-use App\Platform\Documents\Domain\Enum\DocumentKind;
-use App\Platform\Documents\Domain\Enum\DocumentStatus;
+use App\Platform\Documents\Contracts\Enum\DocumentKind;
+use App\Platform\Documents\Contracts\Enum\DocumentStatus;
 use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;
 use App\Platform\Documents\Domain\Model\Document;
 use App\Platform\Documents\Domain\Model\DocumentVersion;

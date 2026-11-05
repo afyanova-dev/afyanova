@@ -14,6 +14,7 @@ use App\Platform\Documents\Application\Command\ReleaseRetentionRequirementComman
 use App\Platform\Documents\Application\Command\RevokeDocumentAccessCommand;
 use App\Platform\Documents\Application\Command\UploadDocumentCommand;
 use App\Platform\Documents\Application\Query\GetDocumentQuery;
+use App\Platform\Documents\Application\Query\GetDownloadStreamQuery;
 use App\Platform\Documents\Application\Query\GetDownloadUrlQuery;
 use App\Platform\Documents\Application\Query\GetRetentionStatusQuery;
 use App\Platform\Documents\Application\Query\VerifyDocumentReproducibilityQuery;
@@ -22,6 +23,7 @@ use App\Platform\Documents\Contracts\DocumentsApi;
 use App\Platform\Documents\Contracts\DTO\AttachSignatureDto;
 use App\Platform\Documents\Contracts\DTO\DocumentDto;
 use App\Platform\Documents\Contracts\DTO\DocumentVersionDto;
+use App\Platform\Documents\Contracts\DTO\DownloadStreamDto;
 use App\Platform\Documents\Contracts\DTO\DownloadUrlDto;
 use App\Platform\Documents\Contracts\DTO\GenerateDocumentDto;
 use App\Platform\Documents\Contracts\DTO\GrantAccessDto;
@@ -166,6 +168,21 @@ final readonly class DocumentsApiService implements DocumentsApi
             documentId: $documentId,
             versionNo: $versionNo,
             ttlSeconds: $ttlSeconds,
+        ));
+    }
+
+    public function getDownloadStream(
+        string $tenantId,
+        string $documentId,
+        string $actorId,
+        ?int $versionNo = null,
+    ): DownloadStreamDto {
+        /** @var DownloadStreamDto */
+        return $this->queryBus->dispatch(new GetDownloadStreamQuery(
+            tenantId: $tenantId,
+            documentId: $documentId,
+            versionNo: $versionNo,
+            actorId: $actorId,
         ));
     }
 

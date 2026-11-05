@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Domain\Model;
 
-use App\Platform\Documents\Domain\Enum\DocumentType;
+use App\Platform\Documents\Contracts\Enum\DocumentType;
 use App\Shared\Tenancy\BelongsToTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;

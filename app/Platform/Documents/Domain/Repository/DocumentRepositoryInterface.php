@@ -12,7 +12,11 @@ interface DocumentRepositoryInterface
 
     public function findById(string $id): ?Document;
 
+    public function findByIdForCapabilityToken(string $id): ?Document;
+
     public function findByIdWithVersions(string $id): ?Document;
+
+    public function findByIdWithVersionsForCapabilityToken(string $id): ?Document;
 
     public function findBySourceEntity(string $sourceDomain, string $sourceEntityRef): ?Document;
 

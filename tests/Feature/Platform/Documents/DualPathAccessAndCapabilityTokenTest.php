@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Platform\Documents\Application\Query\GetDocumentQuery;
 use App\Platform\Documents\Application\Query\GetDownloadStreamQuery;
 use App\Platform\Documents\Contracts\DocumentsApi;
 use App\Platform\Documents\Contracts\DTO\GrantAccessDto;
 use App\Platform\Documents\Contracts\DTO\UploadDocumentDto;
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
-use App\Platform\Documents\Domain\Enum\DocumentType;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\DocumentType;
 use App\Platform\Documents\Domain\Enum\TokenAction;
 use App\Platform\Documents\Domain\Exception\AmbiguousCredentialsException;
 use App\Platform\Documents\Domain\Exception\DocumentNotAvailableException;
@@ -179,6 +180,67 @@ it('enforces single-use replay protection on capability tokens', function (): vo
         documentId: $docDto->id,
         capabilityToken: $signedToken,
     ))))->toThrow(TokenAlreadyConsumedException::class);
+});
+
+it('allows valid capability tokens to access their document outside its active facility', function (): void {
+    $fx = documentsFixture();
+    $tenantId = (string) $fx['tenant']->id;
+    $facilityA = (string) $fx['facility']->id;
+    $userId = (string) $fx['user']->id;
+
+    $facilityB = TenantContextScope::run($tenantId, null, fn (): Facility => Facility::factory()
+        ->forTenant($tenantId, (string) $fx['organization']->id)
+        ->create());
+
+    $api = app(DocumentsApi::class);
+    $queryBus = app(QueryBus::class);
+    $document = TenantContextScope::run($tenantId, $facilityA, fn () => $api->upload(new UploadDocumentDto(
+        tenantId: $tenantId,
+        facilityId: $facilityA,
+        docType: DocumentType::RECEIPT,
+        confidentialityLevel: ConfidentialityLevel::STANDARD,
+        sourceDomain: 'Billing',
+        sourceEntityRef: 'REC-FACILITY-A',
+        fileContents: 'Facility A receipt',
+        mimeType: 'text/plain',
+        fileName: 'receipt.txt',
+        actorId: $userId,
+    )));
+
+    $metadataToken = (new DocumentCapabilityToken(
+        jti: (string) Str::uuid(),
+        tenantId: $tenantId,
+        documentId: $document->id,
+        versionNo: 1,
+        action: TokenAction::METADATA,
+        expiresAt: CarbonImmutable::now()->addMinutes(10),
+    ))->sign((string) config('app.key'));
+    $metadata = TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => $queryBus->dispatch(
+        new GetDocumentQuery(
+            tenantId: $tenantId,
+            documentId: $document->id,
+            capabilityToken: $metadataToken,
+        ),
+    ));
+
+    $downloadToken = (new DocumentCapabilityToken(
+        jti: (string) Str::uuid(),
+        tenantId: $tenantId,
+        documentId: $document->id,
+        versionNo: 1,
+        action: TokenAction::DOWNLOAD,
+        expiresAt: CarbonImmutable::now()->addMinutes(10),
+    ))->sign((string) config('app.key'));
+    $stream = TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => $queryBus->dispatch(
+        new GetDownloadStreamQuery(
+            tenantId: $tenantId,
+            documentId: $document->id,
+            capabilityToken: $downloadToken,
+        ),
+    ));
+
+    expect($metadata->id)->toBe($document->id);
+    expect($stream->contents)->toBe('Facility A receipt');
 });
 
 it('rejects expired or forged capability tokens', function (): void {

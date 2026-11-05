@@ -7,6 +7,7 @@ namespace App\Platform\Documents\Contracts;
 use App\Platform\Documents\Contracts\DTO\AttachSignatureDto;
 use App\Platform\Documents\Contracts\DTO\DocumentDto;
 use App\Platform\Documents\Contracts\DTO\DocumentVersionDto;
+use App\Platform\Documents\Contracts\DTO\DownloadStreamDto;
 use App\Platform\Documents\Contracts\DTO\DownloadUrlDto;
 use App\Platform\Documents\Contracts\DTO\GenerateDocumentDto;
 use App\Platform\Documents\Contracts\DTO\GrantAccessDto;
@@ -15,6 +16,8 @@ use App\Platform\Documents\Contracts\DTO\ReproducibilityReportDto;
 use App\Platform\Documents\Contracts\DTO\RetentionStatusDto;
 use App\Platform\Documents\Contracts\DTO\SignatureVerificationDto;
 use App\Platform\Documents\Contracts\DTO\UploadDocumentDto;
+use App\Platform\Documents\Contracts\Exception\DocumentNotAvailableException;
+use App\Platform\Documents\Contracts\Exception\DocumentNotFoundException;
 
 interface DocumentsApi
 {
@@ -35,6 +38,17 @@ interface DocumentsApi
     public function getDocument(string $documentId): ?DocumentDto;
 
     public function getDownloadUrl(string $documentId, ?int $versionNo = null, int $ttlSeconds = 300): DownloadUrlDto;
+
+    /**
+     * @throws DocumentNotAvailableException
+     * @throws DocumentNotFoundException
+     */
+    public function getDownloadStream(
+        string $tenantId,
+        string $documentId,
+        string $actorId,
+        ?int $versionNo = null,
+    ): DownloadStreamDto;
 
     public function verifyReproducibility(string $versionId): ReproducibilityReportDto;
 

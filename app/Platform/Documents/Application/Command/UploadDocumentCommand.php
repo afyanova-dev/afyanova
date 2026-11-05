@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Application\Command;
 
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
-use App\Platform\Documents\Domain\Enum\DocumentType;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\DocumentType;
 
 final readonly class UploadDocumentCommand
 {

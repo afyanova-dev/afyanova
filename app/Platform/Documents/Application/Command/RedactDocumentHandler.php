@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Platform\Documents\Application\Command;
 
 use App\Platform\Documents\Contracts\DTO\DocumentVersionDto;
-use App\Platform\Documents\Domain\Enum\DocumentStatus;
+use App\Platform\Documents\Contracts\Enum\DocumentStatus;
 use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;
 use App\Platform\Documents\Domain\Model\DocumentVersion;
 use App\Platform\Documents\Domain\Port\DocumentStoragePort;

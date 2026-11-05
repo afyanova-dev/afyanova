@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Contracts\DTO;
 
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
-use App\Platform\Documents\Domain\Enum\DocumentKind;
-use App\Platform\Documents\Domain\Enum\DocumentStatus;
-use App\Platform\Documents\Domain\Enum\DocumentType;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\DocumentKind;
+use App\Platform\Documents\Contracts\Enum\DocumentStatus;
+use App\Platform\Documents\Contracts\Enum\DocumentType;
 use Carbon\CarbonImmutable;
 
 final readonly class DocumentDto

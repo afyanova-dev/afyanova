@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Platform\Documents\Application\Query;
 
 use App\Platform\Documents\Contracts\DTO\SignatureVerificationDto;
-use App\Platform\Documents\Domain\Enum\DocumentStatus;
+use App\Platform\Documents\Contracts\Enum\DocumentStatus;
 use App\Platform\Documents\Domain\Enum\SignatureVerificationStatus;
 use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;
 use App\Platform\Documents\Domain\Repository\DocumentVersionRepositoryInterface;

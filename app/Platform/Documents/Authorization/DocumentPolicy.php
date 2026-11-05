@@ -13,8 +13,7 @@ final class DocumentPolicy extends BasePolicy
     public function view(User $user, ?Document $document = null): bool
     {
         if ($document !== null) {
-            return $this->sameTenant($user, (string) $document->tenant_id)
-                && $this->permits($user, 'documents.document.view');
+            return $this->canAccessDocument($user, $document, 'documents.document.view');
         }
 
         return $this->coarse($user, 'documents.document.view');
@@ -23,8 +22,7 @@ final class DocumentPolicy extends BasePolicy
     public function download(User $user, ?Document $document = null): bool
     {
         if ($document !== null) {
-            return $this->sameTenant($user, (string) $document->tenant_id)
-                && $this->permits($user, 'documents.document.download');
+            return $this->canAccessDocument($user, $document, 'documents.document.download');
         }
 
         return $this->coarse($user, 'documents.document.download');
@@ -43,8 +41,7 @@ final class DocumentPolicy extends BasePolicy
     public function sign(User $user, ?Document $document = null): bool
     {
         if ($document !== null) {
-            return $this->sameTenant($user, (string) $document->tenant_id)
-                && $this->permits($user, 'documents.document.sign');
+            return $this->canAccessDocument($user, $document, 'documents.document.sign');
         }
 
         return $this->coarse($user, 'documents.document.sign');
@@ -53,8 +50,7 @@ final class DocumentPolicy extends BasePolicy
     public function redact(User $user, ?Document $document = null): bool
     {
         if ($document !== null) {
-            return $this->sameTenant($user, (string) $document->tenant_id)
-                && $this->permits($user, 'documents.document.redact');
+            return $this->canAccessDocument($user, $document, 'documents.document.redact');
         }
 
         return $this->coarse($user, 'documents.document.redact');
@@ -63,8 +59,7 @@ final class DocumentPolicy extends BasePolicy
     public function dispose(User $user, ?Document $document = null): bool
     {
         if ($document !== null) {
-            return $this->sameTenant($user, (string) $document->tenant_id)
-                && $this->permits($user, 'documents.document.dispose');
+            return $this->canAccessDocument($user, $document, 'documents.document.dispose');
         }
 
         return $this->coarse($user, 'documents.document.dispose');
@@ -89,5 +84,18 @@ final class DocumentPolicy extends BasePolicy
     {
         return $this->context->hasTenant()
             && $this->permits($user, $key);
+    }
+
+    private function canAccessDocument(User $user, Document $document, string $permission): bool
+    {
+        $facilityId = $this->context->facilityId();
+        $withinActiveFacility = $facilityId !== null
+            ? $this->inActiveFacility((string) $document->facility_id)
+            : ($this->context->isGeneral()
+                && $this->inFacilityScope($user, (string) $document->facility_id));
+
+        return $this->sameTenant($user, (string) $document->tenant_id)
+            && $withinActiveFacility
+            && $this->permits($user, $permission);
     }
 }

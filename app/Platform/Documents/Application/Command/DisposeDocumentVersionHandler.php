@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Application\Command;
 
-use App\Platform\Documents\Domain\Enum\DocumentStatus;
+use App\Platform\Documents\Contracts\Enum\DocumentStatus;
 use App\Platform\Documents\Domain\Exception\DisposalBlockedException;
 use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;
 use App\Platform\Documents\Domain\Port\DocumentStoragePort;

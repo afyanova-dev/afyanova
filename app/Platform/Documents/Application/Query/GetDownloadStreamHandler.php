@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Platform\Documents\Application\Query;
 
 use App\Platform\Documents\Contracts\DTO\DownloadStreamDto;
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
 use App\Platform\Documents\Domain\Enum\TokenAction;
 use App\Platform\Documents\Domain\Exception\AmbiguousCredentialsException;
 use App\Platform\Documents\Domain\Exception\DocumentNotAvailableException;
@@ -75,7 +75,9 @@ final class GetDownloadStreamHandler
             throw new DocumentNotAvailableException('Access denied: no credentials or capability token provided.');
         }
 
-        $document = $this->documentRepository->findById($query->documentId);
+        $document = $query->capabilityToken !== null
+            ? $this->documentRepository->findByIdForCapabilityToken($query->documentId)
+            : $this->documentRepository->findById($query->documentId);
         if ($document === null) {
             throw new DocumentNotFoundException("Document '{$query->documentId}' not found.");
         }
@@ -87,9 +89,13 @@ final class GetDownloadStreamHandler
             }
         }
 
-        $version = $versionNo !== null
-            ? $this->versionRepository->findByDocumentAndVersion($document->id, $versionNo)
-            : $this->versionRepository->getLatestVersion($document->id);
+        if ($query->capabilityToken !== null) {
+            $version = $this->versionRepository->findByDocumentAndVersionForCapabilityToken($document->id, $versionNo);
+        } else {
+            $version = $versionNo !== null
+                ? $this->versionRepository->findByDocumentAndVersion($document->id, $versionNo)
+                : $this->versionRepository->getLatestVersion($document->id);
+        }
 
         if ($version === null) {
             throw new DocumentNotFoundException("Document version for document '{$query->documentId}' not found.");

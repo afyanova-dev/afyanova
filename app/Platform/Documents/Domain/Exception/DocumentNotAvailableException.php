@@ -4,6 +4,6 @@ declare(strict_types=1);
 
 namespace App\Platform\Documents\Domain\Exception;
 
-use RuntimeException;
+use App\Platform\Documents\Contracts\Exception\DocumentNotAvailableException as DocumentNotAvailableContract;
 
-final class DocumentNotAvailableException extends RuntimeException {}
+final class DocumentNotAvailableException extends DocumentNotAvailableContract {}

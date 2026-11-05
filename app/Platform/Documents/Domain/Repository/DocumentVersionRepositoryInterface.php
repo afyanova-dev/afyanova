@@ -16,6 +16,8 @@ interface DocumentVersionRepositoryInterface
 
     public function findByDocumentAndVersion(string $documentId, int $versionNo): ?DocumentVersion;
 
+    public function findByDocumentAndVersionForCapabilityToken(string $documentId, int $versionNo): ?DocumentVersion;
+
     public function getLatestVersion(string $documentId): ?DocumentVersion;
 
     /**

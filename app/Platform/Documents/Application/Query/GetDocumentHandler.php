@@ -6,7 +6,7 @@ namespace App\Platform\Documents\Application\Query;
 
 use App\Platform\Documents\Contracts\DTO\DocumentDto;
 use App\Platform\Documents\Contracts\DTO\DocumentVersionDto;
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
 use App\Platform\Documents\Domain\Enum\TokenAction;
 use App\Platform\Documents\Domain\Exception\AmbiguousCredentialsException;
 use App\Platform\Documents\Domain\Exception\DocumentNotAvailableException;
@@ -29,11 +29,6 @@ final class GetDocumentHandler
             throw new AmbiguousCredentialsException('Ambiguous credentials: both actor identity and capability token supplied.');
         }
 
-        $document = $this->documentRepository->findByIdWithVersions($query->documentId);
-        if ($document === null) {
-            return null;
-        }
-
         // Path B: External capability token
         if ($query->capabilityToken !== null) {
             $appKey = (string) config('app.key');
@@ -50,7 +45,16 @@ final class GetDocumentHandler
             if (! in_array($token->action, [TokenAction::METADATA, TokenAction::DOWNLOAD], true)) {
                 throw new InvalidCapabilityTokenException('Token action does not permit metadata access.');
             }
-        } elseif ($query->actorId !== null) {
+        }
+
+        $document = $query->capabilityToken !== null
+            ? $this->documentRepository->findByIdWithVersionsForCapabilityToken($query->documentId)
+            : $this->documentRepository->findByIdWithVersions($query->documentId);
+        if ($document === null) {
+            return null;
+        }
+
+        if ($query->capabilityToken === null && $query->actorId !== null) {
             // Path A: Staff session
             // F2 & F8: If RESTRICTED, Documents mechanically checks for explicit domain grant
             if ($document->confidentiality_level === ConfidentialityLevel::RESTRICTED) {
