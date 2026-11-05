@@ -10,6 +10,7 @@ use App\Domains\BedWard\Domain\Model\BedOccupancy;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetEncounterBedHandler
     public function __construct(
         private readonly BedOccupancyReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -39,7 +41,7 @@ final class GetEncounterBedHandler
             $facilityId = $result['history'][0]->facilityId;
         }
 
-        if ($facilityId !== null && ! in_array('bed_ward.access', $this->scope->effectivePermissions($user, $facilityId), true)) {
+        if ($facilityId !== null && ! $this->scope->hasFacilityPermissionInContext($user, $this->context, $facilityId, 'bed_ward.access')) {
             throw NotFound::aggregate(BedOccupancy::class, $query->encounterId);
         }
 

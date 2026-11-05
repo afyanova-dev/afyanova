@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\BedWard\Application\Command\AssignBed;
+use App\Domains\BedWard\Application\Command\DecommissionWard;
 use App\Domains\BedWard\Application\Command\ReleaseBed;
 use App\Domains\BedWard\Application\Query\GetAvailableBeds;
 use App\Domains\BedWard\Application\Query\GetBed;
@@ -16,10 +17,13 @@ use App\Domains\BedWard\Contracts\Dto\FacilityOccupancySummary;
 use App\Domains\BedWard\Contracts\Dto\WardSummary;
 use App\Domains\BedWard\Domain\Model\Bed;
 use App\Domains\BedWard\Domain\ValueObject\BedEndReason;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -105,6 +109,31 @@ test('GetAvailableBeds filters by features and bed_class', function () {
         ->and($available[0]->label)->toBe('ICU-1');
 });
 
+test('GetAvailableBeds excludes beds belonging to decommissioned wards without a ward type filter', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $activeWard = createWardFixture((string) $tenant->id, (string) $facility->id);
+    $inactiveWard = createWardFixture((string) $tenant->id, (string) $facility->id);
+    $activeBed = createBedFixture((string) $tenant->id, (string) $facility->id, (string) $activeWard->id, [
+        'label' => 'ACTIVE-WARD-BED',
+    ]);
+    createBedFixture((string) $tenant->id, (string) $facility->id, (string) $inactiveWard->id, [
+        'label' => 'DECOMMISSIONED-WARD-BED',
+    ]);
+
+    TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new DecommissionWard(
+        wardId: (string) $inactiveWard->id,
+        actorId: (string) $user->id,
+    )));
+
+    /** @var list<BedSummary> $available */
+    $available = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(QueryBus::class)->dispatch(new GetAvailableBeds(
+        facilityId: (string) $facility->id,
+    )));
+
+    expect(array_column($available, 'bedId'))->toBe([(string) $activeBed->id]);
+});
+
 test('GetEncounterBed and GetBedOccupancyHistory return occupancy state', function () {
     ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
 
@@ -165,4 +194,42 @@ test('GetFacilityOccupancy computes aggregate statistics', function () {
         ->and($summary->occupiedBeds)->toBe(1)
         ->and($summary->availableBeds)->toBe(1)
         ->and($summary->occupancyRate)->toBe(50.0);
+});
+
+test('facility B cannot read beds or occupancy from facility A', function (): void {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = bedWardFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $ward = createWardFixture($tenantId, $facilityAId);
+    $bed = createBedFixture($tenantId, $facilityAId, (string) $ward->id);
+
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user, $roleId): string {
+        $facilityB = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new GetBed((string) $bed->id)),
+    ))->toThrow(NotFound::class);
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new GetAvailableBeds(facilityId: $facilityAId)),
+    ))->toThrow(NotFound::class);
 });

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domains\BedWard\Application\Command\CancelBedReservation;
+use App\Domains\BedWard\Application\Command\DecommissionWard;
 use App\Domains\BedWard\Application\Command\HoldBedReservation;
 use App\Domains\BedWard\Application\Command\RequestBedReservation;
 use App\Domains\BedWard\Contracts\Event\BedReservationCancelled;
@@ -11,6 +12,7 @@ use App\Domains\BedWard\Contracts\Event\BedReservationRequested;
 use App\Domains\BedWard\Domain\Exception\BedReservationConflict;
 use App\Domains\BedWard\Domain\Exception\IllegalBedReservationTransition;
 use App\Domains\BedWard\Domain\Exception\IllegalBedTransition;
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Bed;
 use App\Domains\BedWard\Domain\Model\BedReservation;
 use App\Shared\Bus\CommandBus;
@@ -100,6 +102,32 @@ test('it rejects a second REQUEST against a bed that already has an open reserva
         holdUntil: CarbonImmutable::now()->addHours(1),
         actorId: (string) $user->id,
     )))->toThrow(BedReservationConflict::class);
+});
+
+test('it rejects requesting a reservation for a bed in a decommissioned ward', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $ward = createWardFixture((string) $tenant->id, (string) $facility->id);
+    $bed = createBedFixture((string) $tenant->id, (string) $facility->id, (string) $ward->id);
+    dispatchReservationCommand((string) $tenant->id, (string) $facility->id, new DecommissionWard(
+        wardId: (string) $ward->id,
+        actorId: (string) $user->id,
+    ));
+
+    expect(fn () => dispatchReservationCommand((string) $tenant->id, (string) $facility->id, new RequestBedReservation(
+        reservationId: (string) Str::uuid7(),
+        bedId: (string) $bed->id,
+        encounterId: null,
+        patientId: null,
+        reason: 'ADMISSION',
+        holdUntil: CarbonImmutable::now()->addHours(1),
+        actorId: (string) $user->id,
+    )))->toThrow(WardNotActive::class);
+
+    $reservationCount = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => BedReservation::query()
+        ->where('bed_id', (string) $bed->id)
+        ->count());
+    expect($reservationCount)->toBe(0);
 });
 
 test('it holds a REQUESTED reservation once the bed is AVAILABLE: HELD, bed RESERVED, event on outbox', function () {

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\BedWard\Application\Command;
 
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Room;
+use App\Domains\BedWard\Domain\Model\Ward;
 use App\Domains\BedWard\Domain\WardRepository;
 
 final class CreateRoomHandler
@@ -15,7 +17,10 @@ final class CreateRoomHandler
 
     public function __invoke(CreateRoom $command): void
     {
-        $ward = $this->wards->getById($command->wardId);
+        $ward = $this->wards->getByIdForUpdate($command->wardId);
+        if ($ward->status !== Ward::STATUS_ACTIVE) {
+            throw WardNotActive::forWard((string) $ward->id);
+        }
 
         Room::create([
             'id' => $command->roomId,

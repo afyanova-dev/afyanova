@@ -11,6 +11,7 @@ use App\Domains\BedWard\Domain\Model\BedOccupancy;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -20,6 +21,7 @@ final class GetBedOccupancyHistoryHandler
         private readonly BedOccupancyReader $reader,
         private readonly BedReader $bedReader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -34,7 +36,7 @@ final class GetBedOccupancyHistoryHandler
             throw new RuntimeException('GetBedOccupancyHistory dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! in_array('bed_ward.access', $this->scope->effectivePermissions($user, $bedSummary->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $bedSummary->facilityId, 'bed_ward.access')) {
             throw NotFound::aggregate(BedOccupancy::class, $query->bedId);
         }
 

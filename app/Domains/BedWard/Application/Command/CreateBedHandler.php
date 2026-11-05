@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\BedWard\Application\Command;
 
 use App\Domains\BedWard\Domain\BedRepository;
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Bed;
+use App\Domains\BedWard\Domain\Model\Ward;
 use App\Domains\BedWard\Domain\WardRepository;
 use App\Shared\Tenancy\TenantContext;
 
@@ -19,7 +21,10 @@ final class CreateBedHandler
 
     public function __invoke(CreateBed $command): void
     {
-        $ward = $this->wards->getById($command->wardId);
+        $ward = $this->wards->getByIdForUpdate($command->wardId);
+        if ($ward->status !== Ward::STATUS_ACTIVE) {
+            throw WardNotActive::forWard((string) $ward->id);
+        }
 
         $tenantId = $this->context->tenantId();
 

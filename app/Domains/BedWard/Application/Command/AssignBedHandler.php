@@ -11,10 +11,13 @@ use App\Domains\BedWard\Domain\Exception\BedAlreadyOccupied;
 use App\Domains\BedWard\Domain\Exception\BedNotAvailable;
 use App\Domains\BedWard\Domain\Exception\EncounterAlreadyHasActiveOccupancy;
 use App\Domains\BedWard\Domain\Exception\EncounterNotEligibleForBedAssignment;
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Bed;
 use App\Domains\BedWard\Domain\Model\BedOccupancy;
 use App\Domains\BedWard\Domain\Model\BedReservation;
+use App\Domains\BedWard\Domain\Model\Ward;
 use App\Domains\BedWard\Domain\Service\BedLifecycle;
+use App\Domains\BedWard\Domain\WardRepository;
 use App\Domains\Encounter\Contracts\EncounterApi;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -35,12 +38,18 @@ final class AssignBedHandler
         private readonly BedReservationRepository $reservations,
         private readonly EncounterApi $encounters,
         private readonly BedLifecycle $lifecycle,
+        private readonly WardRepository $wards,
         private readonly TenantContext $context,
     ) {}
 
     public function __invoke(AssignBed $command): void
     {
         $bed = $this->beds->getById($command->bedId);
+        $ward = $this->wards->getByIdForUpdate((string) $bed->ward_id);
+        if ($ward->status !== Ward::STATUS_ACTIVE) {
+            throw WardNotActive::forWard((string) $ward->id);
+        }
+
         $matchedReservation = null;
 
         if ($bed->status === Bed::STATUS_RESERVED) {

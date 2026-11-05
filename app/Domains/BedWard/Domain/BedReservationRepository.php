@@ -21,4 +21,6 @@ interface BedReservationRepository extends Repository
      * exist at a time (bw_bed_reservations_one_open_per_bed).
      */
     public function getOpenForBed(string $bedId): ?BedReservation;
+
+    public function hasOpenForWard(string $wardId): bool;
 }

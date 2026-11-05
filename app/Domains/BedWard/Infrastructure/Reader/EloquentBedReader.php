@@ -47,18 +47,19 @@ final class EloquentBedReader implements BedReader
             ->where('facility_id', $facilityId)
             ->where('status', Bed::STATUS_AVAILABLE);
 
+        $wardQuery = Ward::query()
+            ->where('facility_id', $facilityId)
+            ->where('status', Ward::STATUS_ACTIVE);
+
         if ($bedClass !== null) {
             $query->where('bed_class', $bedClass);
         }
 
         if ($wardType !== null) {
-            $wardIds = Ward::query()
-                ->where('facility_id', $facilityId)
-                ->where('ward_type', $wardType)
-                ->where('status', Ward::STATUS_ACTIVE)
-                ->pluck('id');
-            $query->whereIn('ward_id', $wardIds);
+            $wardQuery->where('ward_type', $wardType);
         }
+
+        $query->whereIn('ward_id', $wardQuery->select('id'));
 
         $beds = $query->get();
 

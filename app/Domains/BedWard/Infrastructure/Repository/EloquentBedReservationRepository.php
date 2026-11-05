@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\BedWard\Infrastructure\Repository;
 
 use App\Domains\BedWard\Domain\BedReservationRepository;
+use App\Domains\BedWard\Domain\Model\Bed;
 use App\Domains\BedWard\Domain\Model\BedReservation;
 use App\Shared\Domain\EloquentRepository;
 use App\Shared\Domain\NotFound;
@@ -37,5 +38,15 @@ final class EloquentBedReservationRepository extends EloquentRepository implemen
             ->where('bed_id', $bedId)
             ->whereIn('status', [BedReservation::STATUS_REQUESTED, BedReservation::STATUS_HELD])
             ->first();
+    }
+
+    public function hasOpenForWard(string $wardId): bool
+    {
+        return BedReservation::query()
+            ->whereIn('bed_id', Bed::query()
+                ->where('ward_id', $wardId)
+                ->select('id'))
+            ->whereIn('status', [BedReservation::STATUS_REQUESTED, BedReservation::STATUS_HELD])
+            ->exists();
     }
 }

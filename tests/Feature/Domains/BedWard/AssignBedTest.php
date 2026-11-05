@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use App\Domains\BedWard\Application\Command\AssignBed;
+use App\Domains\BedWard\Application\Command\DecommissionWard;
 use App\Domains\BedWard\Contracts\Event\BedAssigned;
 use App\Domains\BedWard\Contracts\Event\BedReservationFulfilled;
 use App\Domains\BedWard\Domain\Exception\BedNotAvailable;
 use App\Domains\BedWard\Domain\Exception\EncounterAlreadyHasActiveOccupancy;
 use App\Domains\BedWard\Domain\Exception\EncounterNotEligibleForBedAssignment;
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Bed;
 use App\Domains\BedWard\Domain\Model\BedOccupancy;
 use App\Domains\BedWard\Domain\Model\BedReservation;
@@ -169,6 +171,30 @@ test('it rejects AssignBed if bed is not in AVAILABLE status', function () {
 
     expect(fn () => TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch($command)))
         ->toThrow(BedNotAvailable::class);
+});
+
+test('it rejects assigning a bed in a decommissioned ward', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $ward = createWardFixture((string) $tenant->id, (string) $facility->id);
+    $bed = createBedFixture((string) $tenant->id, (string) $facility->id, (string) $ward->id);
+    ['encounterId' => $encounterId] =
+        seedActiveInpatientEncounter((string) $tenant->id, (string) $facility->id, (string) $user->id);
+
+    TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new DecommissionWard(
+        wardId: (string) $ward->id,
+        actorId: (string) $user->id,
+    )));
+
+    expect(fn () => TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new AssignBed(
+        occupancyId: (string) Str::uuid7(),
+        bedId: (string) $bed->id,
+        encounterId: $encounterId,
+        actorId: (string) $user->id,
+    ))))->toThrow(WardNotActive::class);
+
+    $freshBed = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => Bed::query()->find($bed->id));
+    expect($freshBed?->status)->toBe(Bed::STATUS_AVAILABLE);
 });
 
 test('it rejects AssignBed if encounter already has an active bed occupancy', function () {

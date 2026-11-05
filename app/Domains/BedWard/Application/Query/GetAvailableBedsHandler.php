@@ -10,6 +10,7 @@ use App\Domains\BedWard\Domain\Model\Bed;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetAvailableBedsHandler
     public function __construct(
         private readonly BedReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -30,7 +32,7 @@ final class GetAvailableBedsHandler
             throw new RuntimeException('GetAvailableBeds dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! in_array('bed_ward.access', $this->scope->effectivePermissions($user, $query->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $query->facilityId, 'bed_ward.access')) {
             throw NotFound::aggregate(Bed::class, $query->facilityId);
         }
 

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\BedWard\Application\Command\CreateRoom;
+use App\Domains\BedWard\Application\Command\DecommissionWard;
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Room;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\Tenancy;
@@ -79,6 +81,24 @@ test('it can create multiple rooms under the same ward', function () {
 
     $count = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => Room::query()->where('ward_id', (string) $ward->id)->count());
     expect($count)->toBe(2);
+});
+
+test('it rejects creating a room in a decommissioned ward', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $ward = createWardFixture((string) $tenant->id, (string) $facility->id);
+    TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new DecommissionWard(
+        wardId: (string) $ward->id,
+        actorId: (string) $user->id,
+    )));
+
+    expect(fn () => TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new CreateRoom(
+        roomId: (string) Str::uuid7(),
+        wardId: (string) $ward->id,
+        actorId: (string) $user->id,
+        name: 'Inactive Room',
+        roomType: 'STANDARD',
+    ))))->toThrow(WardNotActive::class);
 });
 
 test('CreateRoom requires bed_ward.wards.configure permission', function () {

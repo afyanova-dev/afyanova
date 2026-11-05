@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\BedWard\Application\Command\BlockBed;
 use App\Domains\BedWard\Application\Command\CreateBed;
 use App\Domains\BedWard\Application\Command\DecommissionBed;
+use App\Domains\BedWard\Application\Command\DecommissionWard;
 use App\Domains\BedWard\Application\Command\MarkBedCleaning;
 use App\Domains\BedWard\Application\Command\MarkBedReady;
 use App\Domains\BedWard\Application\Command\UnblockBed;
@@ -12,6 +13,7 @@ use App\Domains\BedWard\Application\Command\UpdateBed;
 use App\Domains\BedWard\Contracts\Event\BedCreated;
 use App\Domains\BedWard\Contracts\Event\BedDecommissioned;
 use App\Domains\BedWard\Domain\Exception\IllegalBedTransition;
+use App\Domains\BedWard\Domain\Exception\WardNotActive;
 use App\Domains\BedWard\Domain\Model\Bed;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\Tenancy;
@@ -92,6 +94,26 @@ test('it rejects duplicate bed label in the same ward', function () {
 
     expect(fn () => TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch($command)))
         ->toThrow(QueryException::class);
+});
+
+test('it rejects creating a bed in a decommissioned ward', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $ward = createWardFixture((string) $tenant->id, (string) $facility->id);
+    TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new DecommissionWard(
+        wardId: (string) $ward->id,
+        actorId: (string) $user->id,
+    )));
+
+    expect(fn () => TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new CreateBed(
+        bedId: (string) Str::uuid7(),
+        facilityId: (string) $facility->id,
+        wardId: (string) $ward->id,
+        roomId: null,
+        actorId: (string) $user->id,
+        label: 'BED-INACTIVE-WARD',
+        bedClass: 'STANDARD',
+    ))))->toThrow(WardNotActive::class);
 });
 
 test('it updates bed details', function () {

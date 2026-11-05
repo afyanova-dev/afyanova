@@ -2,13 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Domains\BedWard\Application\Command\AssignBed;
 use App\Domains\BedWard\Application\Command\CreateWard;
 use App\Domains\BedWard\Application\Command\DecommissionWard;
+use App\Domains\BedWard\Application\Command\ReleaseBed;
 use App\Domains\BedWard\Application\Command\UpdateWard;
 use App\Domains\BedWard\Contracts\Event\WardCreated;
 use App\Domains\BedWard\Contracts\Event\WardDecommissioned;
 use App\Domains\BedWard\Domain\Exception\WardCapabilityUnavailable;
+use App\Domains\BedWard\Domain\Exception\WardHasOpenReservations;
+use App\Domains\BedWard\Domain\Model\Bed;
+use App\Domains\BedWard\Domain\Model\BedOccupancy;
+use App\Domains\BedWard\Domain\Model\BedReservation;
 use App\Domains\BedWard\Domain\Model\Ward;
+use App\Domains\BedWard\Domain\ValueObject\BedEndReason;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\Tenancy;
 use App\Shared\Tenancy\TenantContextScope;
@@ -160,6 +167,60 @@ test('it decommissions a ward and records WardDecommissioned event', function ()
 
     expect($outbox)->not->toBeNull()
         ->and($outbox->event_name)->toBe('bed_ward.WardDecommissioned');
+});
+
+test('it blocks ward decommissioning while a bed has an open reservation', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $ward = createWardFixture((string) $tenant->id, (string) $facility->id);
+    $bed = createBedFixture((string) $tenant->id, (string) $facility->id, (string) $ward->id);
+    createBedReservationFixture((string) $tenant->id, (string) $facility->id, (string) $bed->id, [
+        'status' => BedReservation::STATUS_HELD,
+    ]);
+
+    expect(fn () => TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => app(CommandBus::class)->dispatch(new DecommissionWard(
+        wardId: (string) $ward->id,
+        actorId: (string) $user->id,
+    ))))->toThrow(WardHasOpenReservations::class);
+
+    $freshWard = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => Ward::query()->find($ward->id));
+    expect($freshWard?->status)->toBe(Ward::STATUS_ACTIVE);
+});
+
+test('it allows existing bed occupancies to drain after ward decommissioning', function () {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = bedWardFixture();
+
+    $ward = createWardFixture((string) $tenant->id, (string) $facility->id);
+    $bed = createBedFixture((string) $tenant->id, (string) $facility->id, (string) $ward->id);
+    ['encounterId' => $encounterId] =
+        seedActiveInpatientEncounter((string) $tenant->id, (string) $facility->id, (string) $user->id);
+    $occupancyId = (string) Str::uuid7();
+
+    TenantContextScope::run((string) $tenant->id, (string) $facility->id, function () use ($bed, $encounterId, $occupancyId, $user): void {
+        app(CommandBus::class)->dispatch(new AssignBed(
+            occupancyId: $occupancyId,
+            bedId: (string) $bed->id,
+            encounterId: $encounterId,
+            actorId: (string) $user->id,
+        ));
+        app(CommandBus::class)->dispatch(new DecommissionWard(
+            wardId: (string) $bed->ward_id,
+            actorId: (string) $user->id,
+        ));
+        app(CommandBus::class)->dispatch(new ReleaseBed(
+            occupancyId: $occupancyId,
+            actorId: (string) $user->id,
+            endReason: BedEndReason::DISCHARGE,
+        ));
+    });
+
+    $freshBed = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => Bed::query()->find($bed->id));
+    $occupancy = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => BedOccupancy::query()->find($occupancyId));
+    $freshWard = TenantContextScope::run((string) $tenant->id, (string) $facility->id, fn () => Ward::query()->find($ward->id));
+
+    expect($freshWard?->status)->toBe(Ward::STATUS_DECOMMISSIONED)
+        ->and($freshBed?->status)->toBe(Bed::STATUS_CLEANING)
+        ->and($occupancy?->status)->toBe(BedOccupancy::STATUS_ENDED);
 });
 
 test('CreateWard requires bed_ward.wards.configure permission', function () {
