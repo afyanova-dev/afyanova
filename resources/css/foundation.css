@@ -21,10 +21,10 @@
  * Page scaffold
  * ------------------------------------------------------------------ */
 
-/* Content canvas — the workspace paints the soft gray backdrop so raised
-   surfaces (cards, stat tiles, tables, link panels) read as floating
-   white panels in light themes. Dark themes re-map the canvas to Carbon's
-   background so the same rules keep working (see tokens.css). */
+/* Content canvas — every theme paints Carbon's background so raised
+   surfaces (cards, stat tiles, tables, link panels) read as distinct
+   panels against it (white theme: white canvas / gray-10 surfaces; g10
+   the reverse; dark themes keep Carbon's dark layering). */
 .cds--content {
   background-color: var(--afy-canvas);
 }
@@ -198,19 +198,29 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Cards — raised panels on the soft canvas ("soft clinical" expression:
- * white/raised surface, hairline edge, diffuse elevation, rounded 8px).
+ * Cards — raised panels on the soft canvas. Use Carbon's second layer so
+ * fields inside the card keep the first-layer field token and remain
+ * distinguishable in every theme.
  * (Prefer Carbon <Tile> when the surface alone is enough; use .afy-card
  * when composite content needs consistent padding and headings.)
  * ------------------------------------------------------------------ */
 
 .afy-card {
   min-inline-size: 0;
-  background: var(--afy-surface);
+  background: var(--cds-layer-02, var(--afy-surface));
   border: 1px solid var(--afy-hairline);
   border-radius: var(--afy-radius);
   box-shadow: var(--afy-elevation-rest);
   padding: var(--afy-space-lg);
+}
+
+/* In light themes the second Carbon layer matches the page canvas. Keep
+   cards on layer one and scope their fields to layer two for visible contrast. */
+.cds--white .afy-card,
+.cds--g10 .afy-card {
+  --cds-field: var(--cds-field-02);
+  --cds-field-hover: var(--cds-field-hover-02);
+  background: var(--cds-layer-01);
 }
 
 /* Selectable cards (choice banks, summary cards that drill in). The
@@ -1330,6 +1340,395 @@
   box-shadow: -0.0625rem 0 0 0 var(--cds-button-separator, #e0e0e0);
 }
 
+.clinician-orders__section-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--afy-space-sm);
+  min-block-size: 3.5rem;
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+}
+
+.clinician-orders__section-heading h2,
+.clinician-orders__section-heading h3 {
+  margin: 0;
+}
+
+.clinician-orders__header {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  padding-block-end: var(--afy-space-xs);
+}
+
+.clinician-orders__description {
+  margin: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+}
+
+.clinician-order-group {
+  min-inline-size: 0;
+  overflow: hidden;
+  background: var(--cds-layer-01, var(--afy-surface));
+  border: 1px solid var(--afy-hairline);
+  border-radius: var(--afy-radius);
+}
+
+.clinician-orders__section-heading,
+.clinician-order-group--drug .clinician-orders__section-heading,
+.clinician-order-group--lab .clinician-orders__section-heading {
+  min-block-size: 2.75rem;
+  padding: var(--afy-space-2xs) var(--afy-space-sm);
+}
+
+.clinician-orders__icon,
+.clinician-order-group--drug .clinician-orders__icon,
+.clinician-order-group--lab .clinician-orders__icon {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+}
+
+.clinician-order-group__content,
+.clinician-order-group--drug .clinician-order-group__content,
+.clinician-order-group--lab .clinician-order-group__content {
+  padding: var(--afy-space-sm);
+}
+
+.clinician-orders__title {
+  display: flex;
+  align-items: center;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.clinician-orders__icon {
+  display: grid;
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  place-items: center;
+  color: var(--cds-text-primary);
+  background: var(--cds-layer-01, var(--afy-surface));
+}
+
+.clinician-orders__section-heading .clinician-panel__title {
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+}
+
+.clinician-orders__section-heading > .cds--btn[aria-label^="Add"] {
+  margin-inline-start: auto;
+}
+
+.clinician-orders__section-heading > .clinician-orders__toggle {
+  flex: none;
+}
+
+.clinician-orders__toggle [aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.clinician-order-group__content {
+  display: grid;
+  gap: var(--afy-space-sm);
+  padding: var(--afy-space-md);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.clinician-order-group__content[hidden] {
+  display: none;
+}
+
+.clinician-order-group__content > form {
+  display: grid;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.clinician-order-basket {
+  margin-block-end: var(--afy-space-md);
+  border-block-end: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+}
+
+.clinician-order-basket__header {
+  display: flex;
+  align-items: center;
+  min-block-size: 2.5rem;
+}
+
+.clinician-order-basket__header h3 {
+  margin: 0;
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+}
+
+.clinician-medication-search-results {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  margin-block-start: var(--afy-space-sm);
+}
+
+.clinician-medication-search-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--afy-space-md);
+  padding: var(--afy-space-sm) var(--afy-space-md);
+  border: 1px solid var(--afy-hairline);
+  background: var(--afy-surface);
+}
+
+.clinician-order-picker--drug-search .clinician-medication-search-result {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--afy-space-xs);
+}
+
+.clinician-order-picker--drug-search .clinician-medication-search-result__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--afy-space-2xs);
+}
+
+.clinician-order-picker--drug-search .clinician-medication-search-result__actions > .cds--btn {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+.clinician-medication-search-result__item,
+.clinician-medication-search-result > div {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.clinician-medication-search-result__actions,
+.clinician-medication-search-result span {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.clinician-medication-basket__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clinician-medication-basket__list > li,
+.clinician-medication-basket li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--cds-spacing-03, 0.5rem) var(--cds-spacing-04, 0.75rem);
+  padding: var(--cds-spacing-03, 0.5rem) var(--cds-spacing-04, 0.75rem);
+  border: 0;
+  border-block-end: 1px solid var(--clinician-border, var(--cds-border-subtle));
+  border-inline-start: 2px solid var(--cds-support-caution-major, #ff832b);
+  border-radius: 0;
+  background: var(--clinician-surface, var(--cds-layer-01));
+  transition: border-color var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.clinician-medication-basket__list > li.clinician-medication-basket__entry--complete,
+.clinician-medication-basket li.clinician-medication-basket__entry--complete {
+  border-inline-start-color: var(--cds-support-success, #24a148);
+}
+
+.clinician-medication-basket__list > li.clinician-medication-basket__entry--incomplete,
+.clinician-medication-basket li.clinician-medication-basket__entry--incomplete {
+  border-inline-start-color: var(--cds-support-warning, #f1c21b);
+}
+
+.clinician-medication-basket__list > li.clinician-medication-basket__entry--uncertain,
+.clinician-medication-basket li.clinician-medication-basket__entry--uncertain {
+  border-inline-start-color: var(--cds-support-error, #da1e28);
+}
+
+.clinician-medication-basket__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--afy-space-xs);
+  min-inline-size: 0;
+}
+
+.clinician-medication-basket__heading > strong {
+  flex-basis: auto;
+}
+
+.clinician-medication-basket__heading span {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.clinician-medication-basket__sig {
+  display: flex;
+  flex-direction: column;
+  gap: var(--afy-space-2xs);
+  flex-basis: 100%;
+  margin-block-start: var(--afy-space-2xs);
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  background: var(--afy-surface-interactive);
+  border-radius: var(--afy-radius);
+  border-inline-start: 2px solid var(--afy-link);
+}
+
+.clinician-medication-basket__sig-text {
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  color: var(--afy-text-primary);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.clinician-medication-basket__sig-indication {
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  color: var(--afy-text-secondary);
+  font-style: italic;
+}
+
+.clinician-order-group__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--afy-space-sm);
+  padding: var(--afy-space-md);
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  background: var(--afy-surface-interactive);
+  border: 1px dashed var(--afy-border);
+  border-radius: var(--afy-radius);
+}
+
+.clinician-medication-history__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clinician-medication-history__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs) var(--afy-space-sm);
+  padding-block: var(--afy-space-xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.clinician-medication-history__item:last-child {
+  border-block-end: 0;
+}
+
+.clinician-medication-history__details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.clinician-medication-history__details strong {
+  font-weight: 600;
+}
+
+.clinician-medication-history__sig {
+  color: var(--afy-text-secondary);
+}
+
+.clinician-medication-basket__actions {
+  display: flex;
+  align-self: start;
+  align-content: start;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--afy-space-2xs);
+}
+
+.clinician-medication-basket__form {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--afy-space-lg);
+}
+
+.clinician-medication-basket__identity,
+.clinician-medication-basket__section {
+  display: grid;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-medication-basket__identity {
+  padding: var(--afy-space-sm);
+  border: 1px solid var(--afy-hairline);
+  background: var(--afy-surface);
+}
+
+.clinician-medication-basket__identity span {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.clinician-medication-basket__section h3 {
+  margin: 0;
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+}
+
+.clinician-medication-basket__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--afy-space-sm) var(--afy-space-md);
+}
+
+.clinician-medication-basket__fields > * {
+  min-inline-size: 0;
+}
+
+.clinician-medication-basket__fields .cds--form-item {
+  margin-block-end: 0;
+}
+
+.clinician-medication-basket__duration {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-medication-basket__duration .cds--select {
+  min-inline-size: 0;
+}
+
+.clinician-medication-basket__field--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 42rem) {
+  .clinician-medication-basket__list > li,
+  .clinician-medication-search-result {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-medication-search-result {
+    align-items: stretch;
+  }
+
+  .clinician-medication-search-result__actions,
+  .clinician-medication-basket__actions {
+    justify-content: flex-start;
+  }
+
+  .clinician-medication-basket__fields,
+  .clinician-medication-basket__duration {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-medication-basket__field--full {
+    grid-column: auto;
+  }
+}
+
 .afy-dock__form-actions > .cds--btn {
   flex: 1 1 50%;
   block-size: 4rem;
@@ -1949,4 +2348,135 @@
 
 .afy-form-errors {
   margin-block-end: var(--afy-space-md);
+}
+
+/* Clinical entry workspaces share a responsive layout, Carbon tab treatment,
+   and spacing rhythm while keeping role-specific content and actions local. */
+.clinical-entry-shell {
+  min-inline-size: 0;
+}
+
+.clinical-entry-workspace {
+  --clinical-entry-sidebar-offset: calc(
+    var(--cds-spacing-09, 3rem) + var(--cds-spacing-12, 6rem) + var(--afy-space-md)
+  );
+  --clinician-sidebar-sticky-offset: var(--clinical-entry-sidebar-offset);
+  display: grid;
+  grid-template-columns: minmax(0, 1.28fr) minmax(17rem, 0.72fr);
+  align-items: start;
+  column-gap: var(--afy-space-md);
+  row-gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.clinical-entry-workspace__workbench {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  align-content: start;
+  gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.clinical-entry-workspace__sidebar {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  align-content: start;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.clinical-entry-workspace__sidebar > .afy-card {
+  gap: var(--afy-space-xs);
+  padding: var(--afy-space-sm);
+}
+
+.clinical-entry-workspace-navigation {
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.clinical-entry-workspace-navigation .cds--tab-content {
+  padding-block-start: 0;
+}
+
+.clinical-entry-workspace-navigation .clinical-entry-workspace__vertical-tabs {
+  flex-direction: column;
+  height: fit-content !important;
+  min-block-size: 0 !important;
+}
+
+.clinical-entry-tab-content .afy-card.clinician-panel:not(.clinician-recorded),
+.clinical-entry-tab-content .afy-card.nurse-station-panel {
+  padding: var(--afy-space-md);
+}
+
+@media (min-width: 42.01rem) {
+  .clinical-entry-workspace-navigation > .cds--css-grid,
+  .clinical-entry-workspace-navigation > .cds--grid {
+    position: relative;
+    padding-inline: 0;
+  }
+
+  .clinical-entry-workspace-navigation > .cds--css-grid::before,
+  .clinical-entry-workspace-navigation > .cds--grid::before {
+    position: absolute;
+    z-index: 0;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 12.5%;
+    background: var(--cds-layer);
+    content: '';
+    pointer-events: none;
+  }
+
+  .clinical-entry-workspace-navigation .cds--tabs--vertical,
+  .clinical-entry-workspace-navigation .cds--tab-content {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@media (min-width: 66.01rem) {
+  .clinical-entry-workspace-navigation > .cds--css-grid::before,
+  .clinical-entry-workspace-navigation > .cds--grid::before {
+    inline-size: 25%;
+  }
+}
+
+@media (min-width: 50.01rem) {
+  .clinical-entry-shell--active {
+    /* Cancel Carbon's content top padding so an active banner aligns to the shell. */
+    margin-block-start: calc(-1 * var(--afy-space-xl));
+    display: flex;
+    flex-direction: column;
+  }
+
+  .clinical-entry-workspace__sidebar {
+    position: sticky;
+    inset-block-start: var(--clinical-entry-sidebar-offset);
+    max-block-size: calc(100dvh - var(--clinical-entry-sidebar-offset) - var(--afy-space-md));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (max-width: 50rem) {
+  .clinical-entry-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinical-entry-workspace__workbench {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .clinical-entry-workspace__sidebar {
+    position: static;
+    grid-column: 1;
+    grid-row: 2;
+    max-block-size: none;
+    overflow: visible;
+  }
 }

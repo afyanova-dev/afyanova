@@ -4,6 +4,12 @@ import { router, usePage } from '@inertiajs/react';
 import { useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { routes } from '@/app/routes';
 import {
+  MEDICATION_DURATION_UNITS,
+  MEDICATION_FREQUENCY_OPTIONS,
+  MEDICATION_ROUTE_OPTIONS,
+  OTHER_MEDICATION_OPTION,
+} from '@/features/clinical/medication-order-options';
+import {
   MIN_SEARCH_CHARACTERS,
   PatientSearchPhoto,
   usePatientSearch,
@@ -35,34 +41,6 @@ interface BasketLine {
   routeCustom: boolean;
   urgency: string;
 }
-
-const OTHER_OPTION = 'Other — enter manually';
-const FREQUENCY_OPTIONS = [
-  'Once',
-  'Once daily',
-  'BID (twice daily)',
-  'TID (three times daily)',
-  'QID (four times daily)',
-  'Every 4 hours',
-  'Every 6 hours',
-  'Every 8 hours',
-  'Every 12 hours',
-  'Weekly',
-  'As needed (PRN)',
-];
-const ROUTE_OPTIONS = [
-  'Oral',
-  'Topical',
-  'Intramuscular',
-  'Intravenous',
-  'Subcutaneous',
-  'Inhalation',
-  'Sublingual',
-  'Rectal',
-  'Ophthalmic',
-  'Otic',
-  'Nasal',
-];
 
 function blankLine(key: string): BasketLine {
   return {
@@ -470,18 +448,18 @@ export function TranscribePanel({
                 <ComboBox
                   id="pharmacy-transcribe-frequency"
                   titleText="Frequency (optional)"
-                  items={[...FREQUENCY_OPTIONS, OTHER_OPTION]}
-                  selectedItem={draft.frequencyCustom ? OTHER_OPTION : draft.frequency || null}
+                  items={[...MEDICATION_FREQUENCY_OPTIONS, OTHER_MEDICATION_OPTION]}
+                  selectedItem={draft.frequencyCustom ? OTHER_MEDICATION_OPTION : draft.frequency || null}
                   itemToString={(item) => item ?? ''}
                   onChange={({ selectedItem }) => {
                     setDraft((current) => current ? {
                       ...current,
-                      frequency: selectedItem === OTHER_OPTION ? '' : selectedItem ?? '',
-                      frequencyCustom: selectedItem === OTHER_OPTION,
+                      frequency: selectedItem === OTHER_MEDICATION_OPTION ? '' : selectedItem ?? '',
+                      frequencyCustom: selectedItem === OTHER_MEDICATION_OPTION,
                     } : current);
                   }}
                   shouldFilterItem={({ item, inputValue }) => (
-                    item === OTHER_OPTION
+                    item === OTHER_MEDICATION_OPTION
                     || item.toLocaleLowerCase().includes((inputValue ?? '').trim().toLocaleLowerCase())
                   )}
                 />
@@ -514,10 +492,9 @@ export function TranscribePanel({
                   onChange={(event) => setDraftField('durationUnit', event.currentTarget.value)}
                 >
                   <SelectItem value="" text="Select a unit" />
-                  <SelectItem value="hour" text="Hours" />
-                  <SelectItem value="day" text="Days" />
-                  <SelectItem value="week" text="Weeks" />
-                  <SelectItem value="month" text="Months" />
+                  {MEDICATION_DURATION_UNITS.map(({ value, label }) => (
+                    <SelectItem key={value} value={value} text={label} />
+                  ))}
                 </Select>
               </div>
               <TextInput
@@ -531,18 +508,18 @@ export function TranscribePanel({
                 <ComboBox
                   id="pharmacy-transcribe-route"
                   titleText="Route (optional)"
-                  items={[...ROUTE_OPTIONS, OTHER_OPTION]}
-                  selectedItem={draft.routeCustom ? OTHER_OPTION : draft.route || null}
+                  items={[...MEDICATION_ROUTE_OPTIONS, OTHER_MEDICATION_OPTION]}
+                  selectedItem={draft.routeCustom ? OTHER_MEDICATION_OPTION : draft.route || null}
                   itemToString={(item) => item ?? ''}
                   onChange={({ selectedItem }) => {
                     setDraft((current) => current ? {
                       ...current,
-                      route: selectedItem === OTHER_OPTION ? '' : selectedItem ?? '',
-                      routeCustom: selectedItem === OTHER_OPTION,
+                      route: selectedItem === OTHER_MEDICATION_OPTION ? '' : selectedItem ?? '',
+                      routeCustom: selectedItem === OTHER_MEDICATION_OPTION,
                     } : current);
                   }}
                   shouldFilterItem={({ item, inputValue }) => (
-                    item === OTHER_OPTION
+                    item === OTHER_MEDICATION_OPTION
                     || item.toLocaleLowerCase().includes((inputValue ?? '').trim().toLocaleLowerCase())
                   )}
                 />

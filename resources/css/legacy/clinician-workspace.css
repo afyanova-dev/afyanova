@@ -1,0 +1,967 @@
+/* Clinician consultation queue and encounter workspace. */
+
+.clinician-consultation {
+  --clinician-surface: var(--cds-layer-01);
+  --clinician-border: var(--cds-border-subtle);
+}
+
+.diagnosis-catalog__table-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-04, 0.75rem);
+  inline-size: 100%;
+}
+
+.diagnosis-catalog__table-heading {
+  font-weight: 600;
+}
+
+.clinician-queue-list {
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+
+.clinician-queue-toolbar {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) minmax(10rem, 12rem) minmax(12rem, 14rem);
+  align-items: end;
+  gap: var(--afy-space-sm);
+  margin-block-end: var(--afy-space-md);
+}
+
+.clinician-queue-toolbar:has(+ .clinician-queue-active-filters) {
+  margin-block-end: var(--afy-space-xs);
+}
+
+.clinician-queue-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  margin-block-end: var(--afy-space-md);
+}
+
+.clinician-queue-active-filters__label {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 600;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.clinician-queue-active-filters__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+}
+
+.clinician-queue-active-filters .cds--tag,
+.clinician-queue-active-filters .cds--tag .cds--interactive--tag-children {
+  max-inline-size: none;
+}
+
+.clinician-queue-active-filters .cds--tag {
+  flex: 0 0 auto;
+}
+
+.clinician-queue-active-filters__reset {
+  min-block-size: 1.5rem;
+  padding: 0 var(--afy-space-xs);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.afy-card.clinician-queue-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--cds-spacing-04, 0.75rem);
+  padding: var(--afy-space-md) var(--afy-space-lg);
+  border-inline-start: 4px solid var(--afy-border);
+}
+
+.afy-card.clinician-queue-card--emergency {
+  border-inline-start-color: var(--afy-status-negative);
+}
+
+.afy-card.clinician-queue-card--urgent {
+  border-inline-start-color: var(--afy-status-caution);
+}
+
+.clinician-queue-card__main {
+  min-inline-size: 0;
+}
+
+.clinician-queue-card__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-queue-card__heading h2 {
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+  overflow-wrap: anywhere;
+}
+
+.clinician-queue-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs) var(--afy-space-xs);
+  margin: var(--afy-space-xs) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.clinician-queue-card__meta span + span::before {
+  content: '·';
+  margin-inline-end: var(--afy-space-xs);
+  color: var(--afy-text-helper);
+}
+
+.clinician-queue-card__chart-action {
+  flex: none;
+}
+
+.clinician-queue-card__action {
+  flex: none;
+}
+
+.clinician-queue-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-workspace__orders {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.clinician-workspace--orders .clinician-orders__header {
+  padding-block-start: var(--afy-space-md);
+  padding-inline: var(--afy-space-md);
+}
+
+.clinician-orders {
+  gap: var(--afy-space-sm);
+}
+
+.clinician-orders > form {
+  display: grid;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.clinician-orders__section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-orders__section-heading h2,
+.clinician-orders__section-heading h3 {
+  margin: 0;
+}
+
+.clinician-order-picker {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-md);
+}
+
+.clinician-order-picker > p {
+  margin: 0;
+}
+
+.clinician-workspace__sidebar .clinician-panel__subtitle {
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.clinician-workspace__main {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-md);
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+
+.clinician-documentation-group {
+  display: grid;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.afy-card.clinician-recorded {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.clinician-recorded__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  padding: var(--afy-space-md);
+  cursor: pointer;
+}
+
+.clinician-recorded__summary > span:first-child {
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 600;
+}
+
+.clinician-recorded__body {
+  display: grid;
+  gap: var(--afy-space-md);
+  padding: 0 var(--afy-space-md) var(--afy-space-md);
+}
+
+.clinician-recorded__section {
+  display: grid;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-recorded__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clinician-recorded__list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--afy-space-sm);
+  padding-block: var(--afy-space-xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.clinician-recorded__list > li:last-child {
+  border-block-end: 0;
+}
+
+.clinician-recorded__list > li > span:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  overflow-wrap: anywhere;
+}
+
+.clinician-recorded__preview {
+  flex-basis: 100%;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.clinician-recorded__meta {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  white-space: nowrap;
+}
+
+.clinician-documentation-section {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.clinician-optional-section > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--afy-space-xs);
+  min-inline-size: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.clinician-optional-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.clinician-optional-section > summary::after {
+  flex: none;
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  border-block-end: 1px solid var(--afy-text-secondary);
+  border-inline-end: 1px solid var(--afy-text-secondary);
+  content: '';
+  transform: rotate(45deg);
+  margin-inline-start: auto;
+}
+
+.clinician-optional-section[open] > summary::after {
+  transform: rotate(225deg);
+}
+
+.clinician-optional-section > summary:focus-visible {
+  outline: 2px solid var(--afy-focus);
+  outline-offset: 2px;
+}
+
+.clinician-documentation-section + .clinician-documentation-section {
+  padding-block-start: var(--afy-space-md);
+}
+
+.clinician-consultation .afy-card.clinician-panel {
+  --cds-field: var(--cds-field-02);
+  --cds-field-hover: var(--cds-field-hover-02);
+  background-color: var(--clinician-surface);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.clinician-consultation .clinician-context__section,
+.clinician-consultation .clinician-vitals + .clinician-vitals,
+.clinician-consultation .clinician-procedure {
+  border: 0;
+}
+
+.clinician-consultation .clinician-triage__finding {
+  border-inline-start: 0;
+}
+
+@media (min-width: 50.01rem) {
+  .clinician-consultation--active > .patient-chart--entry .patient-chart__banner {
+    position: sticky;
+    inset-block-start: 3rem;
+    margin-block: 0 var(--cds-spacing-05, 1rem);
+  }
+
+  .clinician-workspace__main {
+    padding-inline-end: 0;
+  }
+
+  .clinician-workspace__orders {
+    position: sticky;
+    inset-block-start: var(--clinician-sidebar-sticky-offset);
+    max-block-size: calc(100dvh - var(--clinician-sidebar-sticky-offset) - var(--cds-spacing-05, 1rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+.afy-card.clinician-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.clinician-panel__title,
+.clinician-panel__subtitle {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+}
+
+.clinician-panel__subtitle {
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+}
+
+.clinician-panel__description,
+.clinician-panel__note,
+.clinician-context__empty {
+  margin: calc(-1 * var(--afy-space-xs)) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.clinician-draft-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  padding: 0 var(--cds-spacing-05, 1rem) var(--cds-spacing-03, 0.5rem);
+  min-inline-size: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.clinician-draft-status--card {
+  margin: 0;
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border: 1px solid var(--afy-hairline);
+  background: var(--cds-layer-01);
+}
+
+.clinician-triage__details dt,
+.clinician-vitals__measurements dt {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.clinician-context__section {
+  display: grid;
+  gap: var(--afy-space-sm);
+  padding-block-start: var(--afy-space-md);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.clinician-context__section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-triage__complaint {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.clinician-triage__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--afy-space-xs);
+  margin: 0;
+}
+
+.clinician-triage__details dd {
+  margin: var(--afy-space-2xs) 0 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.clinician-context__meta {
+  margin: 0;
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.clinician-safety__row {
+  display: grid;
+  grid-template-columns: minmax(4.25rem, 0.55fr) minmax(0, 1fr);
+  gap: var(--afy-space-2xs);
+  padding-block: var(--afy-space-2xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.clinician-safety__row:last-child {
+  padding-block-end: 0;
+  border-block-end: 0;
+}
+
+.clinician-safety__row--alert {
+  padding-inline-start: var(--afy-space-2xs);
+  border-inline-start: 3px solid var(--afy-status-negative);
+  background: color-mix(in srgb, var(--afy-status-negative) 12%, var(--afy-surface));
+}
+
+.clinician-safety__row--alert .clinician-safety__value {
+  color: color-mix(in srgb, var(--afy-status-negative) 62%, var(--afy-text-primary));
+}
+
+.clinician-safety__alert-message {
+  display: block;
+  min-inline-size: 0;
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  overflow-wrap: anywhere;
+}
+
+.clinician-safety__label {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 600;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.clinician-safety__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  overflow-wrap: anywhere;
+}
+
+.clinician-safety__muted {
+  color: var(--afy-text-secondary);
+}
+
+.clinician-safety__link {
+  color: var(--cds-link-primary, #0f62fe);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  white-space: nowrap;
+}
+
+.clinician-note__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--afy-space-md);
+}
+
+.clinician-consultation-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.clinician-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-vitals {
+  display: grid;
+  gap: var(--afy-space-xs);
+}
+
+.clinician-vitals + .clinician-vitals {
+  padding-block-start: var(--afy-space-sm);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.clinician-vitals__measurements {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--afy-hairline);
+}
+
+.clinician-vitals__measurements > div {
+  min-inline-size: 0;
+  padding: var(--afy-space-2xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.clinician-vitals__measurements > div:not(:nth-child(4n)) {
+  border-inline-end: 1px solid var(--afy-hairline);
+}
+
+.clinician-vitals__measurements dd {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.clinician-vitals__measurements dd small {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 400;
+}
+
+.clinician-sidebar-card {
+  gap: var(--afy-space-sm);
+}
+
+.clinician-documentation-section {
+  scroll-margin-block-start: 3rem;
+}
+
+.clinician-documentation-section .cds--text-area {
+  min-block-size: 8rem;
+}
+
+.clinician-diagnosis__fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--afy-space-sm);
+}
+
+.clinician-disposition__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--afy-space-sm);
+}
+
+.clinician-disposition__actions form {
+  display: grid;
+  flex: 1 1 18rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--afy-space-sm);
+}
+
+.clinician-disposition__actions form .cds--form-item {
+  min-inline-size: 0;
+}
+
+.clinician-disposition__buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--afy-space-xs);
+}
+
+.clinician-disposition__buttons > .cds--btn {
+  inline-size: 100%;
+  max-inline-size: none;
+  margin-block-start: 0;
+}
+
+.clinician-disposition__actions > .cds--btn {
+  inline-size: calc((100% - var(--afy-space-xs)) / 2);
+  max-inline-size: none;
+  margin-inline-start: auto;
+}
+
+.clinician-panel > form {
+  display: grid;
+  gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.clinician-form__submit {
+  margin-block-start: var(--afy-space-xs);
+}
+
+.clinician-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-sm);
+}
+
+.clinician-draft-actions > .clinician-form__submit {
+  margin-block-start: 0;
+}
+
+.clinician-lab-orders > form {
+  display: grid;
+  gap: var(--afy-space-sm);
+  min-inline-size: 0;
+}
+
+.clinician-lab-basket__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clinician-lab-basket__list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--cds-spacing-03, 0.5rem);
+  padding: var(--cds-spacing-03, 0.5rem) var(--cds-spacing-04, 0.75rem);
+  border-block-end: 1px solid var(--clinician-border, var(--cds-border-subtle));
+  background: var(--clinician-surface, var(--cds-layer-01));
+  transition: border-color var(--afy-duration-interaction) var(--afy-easing);
+}
+
+.clinician-lab-basket__list > li > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-xs);
+  min-inline-size: 0;
+}
+
+.clinician-lab-basket__list > li > span > strong {
+  flex-basis: auto;
+}
+
+.clinician-lab-basket__list > li > span > span {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.clinician-diagnosis-suggestions {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  max-block-size: 12rem;
+  overflow-y: auto;
+}
+
+.clinician-diagnosis-suggestions .cds--btn {
+  justify-content: flex-start;
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+.clinician-procedure-list {
+  display: grid;
+  gap: var(--afy-space-sm);
+}
+
+.clinician-procedure {
+  display: grid;
+  justify-items: start;
+  gap: var(--afy-space-xs);
+  padding-block-start: var(--afy-space-sm);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.clinician-procedure__summary,
+.clinician-procedure__indication {
+  margin: 0;
+  color: var(--afy-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.clinician-procedure__indication {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+@media (max-width: 50rem) {
+  .clinician-workspace__sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clinician-workspace__sidebar > :first-child,
+  .clinician-workspace__sidebar > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .clinician-queue-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clinician-queue-toolbar > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 48rem) {
+  .afy-card.clinician-queue-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-queue-card__action {
+    justify-self: start;
+  }
+
+  .clinician-queue-card__actions {
+    justify-content: flex-start;
+  }
+
+  .clinician-queue-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-queue-toolbar > :first-child {
+    grid-column: auto;
+  }
+
+  .clinician-workspace__sidebar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-workspace__sidebar > * {
+    grid-column: auto;
+  }
+
+  .clinician-vitals__measurements {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clinician-vitals__measurements > div:not(:nth-child(2n)) {
+    border-inline-end: 1px solid var(--afy-hairline);
+  }
+
+  .clinician-vitals__measurements > div:nth-child(2n) {
+    border-inline-end: 0;
+  }
+
+  .clinician-disposition__buttons {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-recorded__list > li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-recorded__meta {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 36rem) {
+  .clinician-queue-card__action {
+    flex: 1 1 12rem;
+    inline-size: auto;
+    max-inline-size: none;
+  }
+
+  .clinician-queue-card__actions {
+    inline-size: 100%;
+  }
+
+  .afy-card.clinician-panel {
+    padding: var(--afy-space-md);
+  }
+}
+
+/* The consultation work surface keeps patient context beside one task at a time. */
+@media (max-width: 42rem) {
+  .clinician-diagnosis__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clinician-workspace-navigation .cds--tabs {
+    flex-wrap: wrap;
+    min-block-size: 3rem;
+  }
+
+}
+
+.clinician-workspace__form-content {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-md);
+  min-inline-size: 0;
+}
+
+.clinician-workspace--documentation .clinician-documentation-section--visit-note,
+.clinician-workspace--orders .clinician-workspace__orders,
+.clinician-workspace--plan .clinician-documentation-group--additional > .clinician-optional-section:first-child,
+.clinician-workspace--record .clinician-recorded {
+  padding-block-start: var(--cds-spacing-03, 0.5rem);
+}
+
+.clinician-workspace--orders .clinician-workspace__orders,
+.clinician-workspace--plan .clinician-documentation-group--additional,
+.clinician-workspace--record .clinician-recorded {
+  margin-block-start: 0;
+}
+
+.clinician-workspace__workbench {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.clinician-workspace__main {
+  grid-column: 1;
+  grid-row: auto;
+}
+
+.clinician-workspace:not(.clinician-workspace--active) .clinician-workspace__main {
+  grid-row: auto;
+}
+
+.clinician-workspace--documentation .clinician-workspace__orders,
+.clinician-workspace--plan .clinician-workspace__orders,
+.clinician-workspace--record .clinician-workspace__orders {
+  display: none;
+}
+
+.clinician-workspace--orders .clinician-workspace__form-content {
+  display: none;
+}
+
+.clinician-workspace--plan .clinician-documentation-group:not(.clinician-documentation-group--additional),
+.clinician-workspace--plan #clinician-recorded,
+.clinician-workspace--record .clinician-documentation-group,
+.clinician-workspace--record #clinician-disposition {
+  display: none;
+}
+
+.clinician-workspace--documentation #clinician-recorded,
+.clinician-workspace--documentation .clinician-documentation-group--additional,
+.clinician-workspace--documentation #clinician-disposition {
+  display: none;
+}
+
+.clinician-workspace--record .clinician-workspace__main {
+  align-content: start;
+}
+
+.clinician-nursing-notes {
+  display: grid;
+  gap: var(--cds-spacing-03, 0.5rem);
+  padding-block-start: var(--cds-spacing-04, 0.75rem);
+  border-block-start: 1px solid var(--afy-hairline);
+}
+
+.clinician-nursing-note {
+  display: grid;
+  gap: var(--cds-spacing-02, 0.25rem);
+  padding: var(--cds-spacing-03, 0.5rem);
+  background: var(--cds-layer-02);
+}
+
+.clinician-nursing-note strong {
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.clinician-nursing-note p,
+.clinician-nursing-note span {
+  margin: 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.afy-card.clinician-recorded--empty {
+  gap: var(--cds-spacing-04, 0.75rem);
+  padding: var(--cds-spacing-05, 1rem);
+}
+
+@media (min-width: 50.01rem) {
+  .clinician-workspace__orders {
+    position: static;
+    max-block-size: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 50rem) {
+  .clinician-workspace-navigation,
+  .clinician-workspace__workbench,
+  .clinician-workspace__main,
+  .clinician-workspace__tab-content,
+  .clinician-workspace__form-content,
+  .clinician-workspace__orders,
+  .clinician-workspace__sidebar,
+  .clinician-workspace:not(.clinician-workspace--active) .clinician-workspace__main {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .clinician-workspace__orders {
+    margin-block-start: 0;
+  }
+
+  .clinician-workspace__workbench {
+    grid-row: 1;
+  }
+
+  .clinician-workspace__sidebar {
+    grid-row: 2;
+  }
+}
