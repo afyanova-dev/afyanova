@@ -16,7 +16,9 @@ use InvalidArgumentException;
  * Record money received against a Financial Account
  * (20-billing-and-payments-domain.md §57; ADR-191 B5-B / B5-C).
  *
- * Class-level `manage` (`billing.payments.manage`). The account must exist and
+ * Class-level `manage` (`billing.payments.manage`). The active facility is the
+ * collection site; the account may belong to another facility by design. The
+ * account must exist and
  * not be CLOSED — a prepayment for a patient with no account opens one first
  * (`OpenFinancialAccount`). Posts ONE `PAYMENT` / `CREDIT` for the full amount
  * (B5-B) + mints one `RCT-%08d` receipt. `RECORDED` only — no gateway states.

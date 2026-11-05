@@ -144,7 +144,7 @@ final class EloquentBillingCatalogReader implements BillingCatalogReader
     {
         $sentinel = $this->context->tenantId();
 
-        return Tariff::query()
+        return array_values(Tariff::query()
             ->where('billing_service_id', $billingServiceId)
             ->orderByDesc('effective_from')
             ->orderByDesc('id')
@@ -160,7 +160,7 @@ final class EloquentBillingCatalogReader implements BillingCatalogReader
                 status: (string) $t->status,
                 recordedAt: CarbonImmutable::parse((string) $t->recorded_at)->toIso8601String(),
             ))
-            ->all();
+            ->all());
     }
 
     private function toSummary(BillingService $s): BillingServiceSummary

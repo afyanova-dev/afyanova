@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Billing\Domain;
 
 use App\Domains\Billing\Contracts\Dto\BillingServiceSummary;
+use App\Domains\Billing\Contracts\Dto\TariffHistoryEntry;
 use App\Domains\Billing\Contracts\Dto\TariffResolution;
 
 /**

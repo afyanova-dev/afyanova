@@ -12,7 +12,9 @@ use App\Domains\Billing\Domain\Exception\BillingPatientNotFound;
 use App\Domains\Billing\Domain\Exception\FinancialAccountAlreadyOpen;
 use App\Domains\Billing\Domain\Exception\IllegalFinancialAccountTransition;
 use App\Domains\Billing\Domain\Model\FinancialAccount;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +23,7 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /**
- * @return array{t: string, f: string, a: string, patient: string}
+ * @return array{t: string, f: string, a: string, patient: string, organization: string, roleId: string}
  */
 function billingSetup(): array
 {
@@ -31,7 +33,35 @@ function billingSetup(): array
     $a = (string) $fixture['user']->id;
     $patient = billingPatient($t);
 
-    return ['t' => $t, 'f' => $f, 'a' => $a, 'patient' => $patient];
+    return [
+        't' => $t,
+        'f' => $f,
+        'a' => $a,
+        'patient' => $patient,
+        'organization' => (string) $fixture['organization']->id,
+        'roleId' => (string) $fixture['role_id'],
+    ];
+}
+
+function billingFacilityForUser(string $tenantId, string $organizationId, string $userId, string $roleId): string
+{
+    return TenantContextScope::run($tenantId, null, function () use ($tenantId, $organizationId, $userId, $roleId): string {
+        $facility = Facility::factory()->forTenant($tenantId, $organizationId)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $userId,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facility->id;
+    });
 }
 
 function openAccount(string $t, string $f, string $a, string $patient): string
@@ -86,6 +116,31 @@ test('the same patient gets a separate account at a different facility', functio
     ));
 
     expect(queryBilling($t, $otherFacility, new GetFinancialAccount($id2))->facilityId)->toBe($otherFacility);
+});
+
+test('opening or closing a financial account for another active facility is denied', function () {
+    ['t' => $t, 'f' => $facilityAId, 'a' => $a, 'patient' => $patient, 'organization' => $organizationId, 'roleId' => $roleId] = billingSetup();
+    $accountId = openAccount($t, $facilityAId, $a, $patient);
+    $patientForOpen = billingPatient($t);
+    $facilityBId = billingFacilityForUser($t, $organizationId, $a, $roleId);
+    $newAccountId = (string) Str::uuid7();
+
+    expect(fn () => dispatchBilling($t, $facilityBId, new OpenFinancialAccount(
+        financialAccountId: $newAccountId,
+        actorId: $a,
+        patientId: $patientForOpen,
+        facilityId: $facilityAId,
+    )))->toThrow(AuthorizationException::class)
+        ->and(fn () => dispatchBilling($t, $facilityBId, new CloseFinancialAccount(
+            financialAccountId: $accountId,
+            actorId: $a,
+            reasonCode: 'DUPLICATE_ACCOUNT',
+        )))->toThrow(AuthorizationException::class);
+
+    expect(Tenancy::run($t, fn (): bool => DB::table('bill_financial_accounts')->where('id', $newAccountId)->exists()))
+        ->toBeFalse()
+        ->and(queryBilling($t, $facilityAId, new GetFinancialAccount($accountId))->status)
+        ->toBe(FinancialAccount::STATUS_OPEN);
 });
 
 test('OpenFinancialAccount for an unknown patient is refused', function () {

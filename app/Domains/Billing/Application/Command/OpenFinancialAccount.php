@@ -17,7 +17,7 @@ use InvalidArgumentException;
  * ONE non-closed account per patient per facility (HD-1; the partial unique
  * index — `FinancialAccountAlreadyOpen` on the race). Class-level authorization
  * (`open`) — the `FinancialAccountPolicy` checks `billing.accounts.manage` at
- * this command's `facilityId`. Single currency `TZS` in Bill.1.
+ * this command's `facilityId` in the current context. Single currency `TZS` in Bill.1.
  */
 final readonly class OpenFinancialAccount implements Auditable, AuthorizesAgainst
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Billing\Application\Command\CloseFinancialAccount;
 use App\Domains\Billing\Application\Command\OpenFinancialAccount;
 use App\Domains\Billing\Application\Command\RecordPayment;
+use App\Domains\Billing\Application\Command\RecordPaymentHandler;
 use App\Domains\Billing\Application\Command\ReversePayment;
 use App\Domains\Billing\Application\Query\GetAccountPayments;
 use App\Domains\Billing\Application\Query\GetOutstandingBalance;
@@ -55,6 +56,27 @@ function paymentLedger(string $tenantId, string $sourceType, string $sourceId): 
     return Tenancy::run($tenantId, fn () => DB::table('bill_account_ledger_entries')
         ->where('source_type', $sourceType)->where('source_id', $sourceId)->first());
 }
+
+test('RecordPayment requires an active collection facility instead of defaulting to the account facility', function () {
+    ['t' => $t, 'a' => $a, 'account' => $account] = paymentSetup();
+    $paymentId = (string) Str::uuid7();
+
+    expect(fn () => TenantContextScope::run($t, null, fn () => app(RecordPaymentHandler::class)->__invoke(new RecordPayment(
+        paymentId: $paymentId,
+        actorId: $a,
+        financialAccountId: $account,
+        amount: '1000.00',
+        method: 'CASH',
+    ))))->toThrow(RuntimeException::class, 'active facility context');
+
+    expect(Tenancy::run($t, fn (): bool => DB::table('bill_payments')->where('id', $paymentId)->exists()))
+        ->toBeFalse()
+        ->and(Tenancy::run($t, fn (): bool => DB::table('bill_account_ledger_entries')
+            ->where('source_type', 'PAYMENT')
+            ->where('source_id', $paymentId)
+            ->exists()))
+        ->toBeFalse();
+});
 
 test('RecordPayment posts ONE PAYMENT/CREDIT for the full amount, lowers the balance, mints RCT-00000001', function () {
     ['t' => $t, 'f' => $f, 'a' => $a, 'account' => $account] = paymentSetup();

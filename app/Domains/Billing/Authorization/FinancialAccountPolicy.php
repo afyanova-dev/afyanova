@@ -15,9 +15,10 @@ use App\Shared\Authorization\BasePolicy;
  *
  * `view` is a coarse `billing.access` check (the reads carry no cross-account
  * data — one account id in, one account's rows out). `open` is class-level:
- * `billing.accounts.manage` at the command's `facilityId` (there is no account
- * row yet). `close` is per-subject: `billing.accounts.manage` at the account's
- * facility — the `PharmacyOrderPolicy::manage` shape.
+ * `billing.accounts.manage` at the command's `facilityId` in the current
+ * context (there is no account row yet). `close` is per-subject:
+ * `billing.accounts.manage` at the account's facility in the current context —
+ * the `PharmacyOrderPolicy::manage` shape.
  */
 final class FinancialAccountPolicy extends BasePolicy
 {
@@ -31,20 +32,22 @@ final class FinancialAccountPolicy extends BasePolicy
         return $command !== null
             && $this->context->hasTenant()
             && (string) $user->tenant_id === $this->context->tenantId()
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                $command->facilityId,
                 'billing.accounts.manage',
-                $this->scope->effectivePermissions($user, $command->facilityId),
-                true,
             );
     }
 
     public function close(User $user, FinancialAccount $account, ?CloseFinancialAccount $command = null): bool
     {
         return $this->sameTenant($user, (string) $account->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $account->facility_id,
                 'billing.accounts.manage',
-                $this->scope->effectivePermissions($user, (string) $account->facility_id),
-                true,
             );
     }
 

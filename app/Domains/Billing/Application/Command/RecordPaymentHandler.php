@@ -53,6 +53,7 @@ final class RecordPaymentHandler
             return;
         }
 
+        $collectionFacilityId = $this->context->requireFacilityId();
         $account = $this->accounts->getByIdForUpdate($command->financialAccountId);
 
         if ((string) $account->status === FinancialAccount::STATUS_CLOSED) {
@@ -66,7 +67,6 @@ final class RecordPaymentHandler
 
         $now = CarbonImmutable::now();
         $accountFacilityId = (string) $account->facility_id;
-        $collectionFacilityId = $this->context->facilityId() ?? $accountFacilityId;
         $amount = Money::of($command->amount);
 
         $session = $this->cashSessions->liveForCashierAtFacilityForUpdate($command->actorId, $collectionFacilityId);
