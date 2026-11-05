@@ -62,6 +62,9 @@ abstract class BaseAppointmentActionController
         return back()->withErrors([$key => $message]);
     }
 
+    /**
+     * @param  array<string, mixed>  $extra
+     */
     protected function domainError(\Throwable $e, string $key, string $context, array $extra = []): RedirectResponse
     {
         if ($e instanceof \DomainException) {

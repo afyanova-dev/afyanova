@@ -11,8 +11,10 @@ use App\Domains\Scheduling\Application\Command\RecordAppointmentArrival;
 use App\Domains\Scheduling\Application\Command\RescheduleAppointment;
 use App\Domains\Scheduling\Application\Query\GetAppointmentTypes;
 use App\Domains\Scheduling\Application\Query\GetDailyFacilityAppointments;
+use App\Domains\Scheduling\Application\Query\GetPatientAppointments;
 use App\Domains\Scheduling\Application\Query\GetSchedulableResources;
 use App\Domains\Scheduling\Contracts\Dto\AppointmentSummary;
+use App\Domains\Scheduling\Contracts\Dto\SchedulableResourceSummary;
 use App\Domains\Scheduling\Contracts\Dto\WaitlistEntrySummary;
 use App\Domains\Scheduling\Contracts\SchedulingApi;
 use App\Domains\Scheduling\Domain\AppointmentReader;
@@ -68,6 +70,17 @@ final readonly class SchedulingApiService implements SchedulingApi
         ));
     }
 
+    /**
+     * @return list<AppointmentSummary>
+     */
+    public function getPatientAppointments(string $patientId, string $facilityId): array
+    {
+        /** @var list<AppointmentSummary> $appointments */
+        $appointments = $this->queryBus->dispatch(new GetPatientAppointments($patientId, $facilityId));
+
+        return $appointments;
+    }
+
     public function isResourceAvailable(string $resourceId, CarbonImmutable $startTime, CarbonImmutable $endTime): bool
     {
         $hasConflict = Appointment::query()
@@ -114,6 +127,17 @@ final readonly class SchedulingApiService implements SchedulingApi
         }
 
         return ['types' => $types, 'resources' => $resources];
+    }
+
+    /**
+     * @return list<SchedulableResourceSummary>
+     */
+    public function getSchedulableResources(string $facilityId, ?string $resourceType = null): array
+    {
+        /** @var list<SchedulableResourceSummary> $resources */
+        $resources = $this->queryBus->dispatch(new GetSchedulableResources($facilityId, $resourceType));
+
+        return $resources;
     }
 
     public function recordArrival(string $appointmentId): void

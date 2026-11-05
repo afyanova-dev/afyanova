@@ -9,10 +9,8 @@ use App\Domains\Encounter\Contracts\EncounterApi;
 use App\Domains\Identity\Contracts\IdentityApi;
 use App\Domains\Patient\Contracts\Dto\PatientSummary;
 use App\Domains\Patient\Contracts\PatientApi;
-use App\Domains\Scheduling\Application\Query\GetSchedulableResources;
 use App\Domains\Scheduling\Contracts\SchedulingApi;
 use App\Platform\Queueing\Contracts\QueueingApi;
-use App\Shared\Bus\QueryBus;
 use Carbon\CarbonImmutable;
 
 /**
@@ -26,7 +24,6 @@ final readonly class AttentionBoardPresenter
     private const LONG_WAIT_MINUTES = 120;
 
     public function __construct(
-        private QueryBus $queryBus,
         private SchedulingApi $schedulingApi,
         private PatientApi $patientApi,
         private QueueingApi $queueingApi,
@@ -192,9 +189,7 @@ final readonly class AttentionBoardPresenter
         }
 
         try {
-            $resources = $this->queryBus->dispatch(
-                new GetSchedulableResources($facilityId, 'PROVIDER')
-            );
+            $resources = $this->schedulingApi->getSchedulableResources($facilityId, 'PROVIDER');
         } catch (\Throwable) {
             return [];
         }

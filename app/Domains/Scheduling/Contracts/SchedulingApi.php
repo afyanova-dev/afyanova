@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Scheduling\Contracts;
 
 use App\Domains\Scheduling\Contracts\Dto\AppointmentSummary;
+use App\Domains\Scheduling\Contracts\Dto\SchedulableResourceSummary;
 use App\Domains\Scheduling\Contracts\Dto\WaitlistEntrySummary;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -27,6 +28,13 @@ interface SchedulingApi
      * @return list<AppointmentSummary>
      */
     public function getPatientUpcomingAppointments(string $patientId, ?string $facilityId = null): array;
+
+    /**
+     * Retrieve patient appointments within a facility.
+     *
+     * @return list<AppointmentSummary>
+     */
+    public function getPatientAppointments(string $patientId, string $facilityId): array;
 
     /**
      * Check whether a schedulable resource has open availability in the specified window.
@@ -55,6 +63,11 @@ interface SchedulingApi
      * @return array{types: array<string, string>, resources: array<string, string>}
      */
     public function getSchedulingDisplayNames(string $facilityId): array;
+
+    /**
+     * @return list<SchedulableResourceSummary>
+     */
+    public function getSchedulableResources(string $facilityId, ?string $resourceType = null): array;
 
     /**
      * Record the physical arrival of a patient for a scheduled appointment.

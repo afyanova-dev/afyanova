@@ -43,6 +43,21 @@ test('the calendar page requires scheduling access', function (): void {
         ->assertForbidden();
 });
 
+test('the calendar returns 403 without an active facility context', function (): void {
+    $fixture = queueingFixture(['sch.access']);
+
+    queueTestSecondFacility(
+        (string) $fixture['tenant']->id,
+        (string) $fixture['organization']->id,
+        (string) $fixture['user']->id,
+        (string) $fixture['role_id'],
+    );
+
+    $this->actingAs($fixture['user'])
+        ->get(route('appointments.calendar'))
+        ->assertForbidden();
+});
+
 test('the calendar page renders the month grid', function (): void {
     $fixture = queueingFixture(['sch.access']);
 
@@ -108,8 +123,7 @@ test('the selected calendar day includes appointment and patient context', funct
     $schedulingApi = Mockery::mock(SchedulingApi::class);
     $schedulingApi->shouldReceive('getDailyFacilityAppointments')
         ->once()
-        ->withArgs(fn (string $facilityId, CarbonImmutable $date): bool =>
-            $facilityId === (string) $fixture['facility']->id && $date->toDateString() === '2026-10-03')
+        ->withArgs(fn (string $facilityId, CarbonImmutable $date): bool => $facilityId === (string) $fixture['facility']->id && $date->toDateString() === '2026-10-03')
         ->andReturn([$appointment]);
     $schedulingApi->shouldReceive('getSchedulingDisplayNames')
         ->once()

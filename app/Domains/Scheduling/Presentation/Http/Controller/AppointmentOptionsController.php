@@ -6,11 +6,14 @@ namespace App\Domains\Scheduling\Presentation\Http\Controller;
 
 use App\Domains\Scheduling\Application\Query\GetAppointmentTypes;
 use App\Domains\Scheduling\Application\Query\GetSchedulableResources;
+use App\Domains\Scheduling\Contracts\Dto\AppointmentTypeSummary;
+use App\Domains\Scheduling\Contracts\Dto\SchedulableResourceSummary;
 use App\Models\User;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use UnexpectedValueException;
 
 final class AppointmentOptionsController
 {
@@ -26,10 +29,33 @@ final class AppointmentOptionsController
         $facilityId = $context->facilityId();
         abort_if($facilityId === null || $facilityId === '', 403, 'No active facility context.');
 
-        /** @var list<object> $types */
-        $types = $queryBus->dispatch(new GetAppointmentTypes(facilityId: $facilityId));
-        /** @var list<object> $resources */
-        $resources = $queryBus->dispatch(new GetSchedulableResources(facilityId: $facilityId));
+        $typeResults = $queryBus->dispatch(new GetAppointmentTypes(facilityId: $facilityId));
+        if (! is_array($typeResults) || ! array_is_list($typeResults)) {
+            throw new UnexpectedValueException('The appointment type query must return a list.');
+        }
+
+        $types = [];
+        foreach ($typeResults as $type) {
+            if (! $type instanceof AppointmentTypeSummary) {
+                throw new UnexpectedValueException('The appointment type query returned an invalid result.');
+            }
+
+            $types[] = $type;
+        }
+
+        $resourceResults = $queryBus->dispatch(new GetSchedulableResources(facilityId: $facilityId));
+        if (! is_array($resourceResults) || ! array_is_list($resourceResults)) {
+            throw new UnexpectedValueException('The schedulable resource query must return a list.');
+        }
+
+        $resources = [];
+        foreach ($resourceResults as $resource) {
+            if (! $resource instanceof SchedulableResourceSummary) {
+                throw new UnexpectedValueException('The schedulable resource query returned an invalid result.');
+            }
+
+            $resources[] = $resource;
+        }
 
         return response()->json([
             'types' => array_map(static fn ($t): array => [

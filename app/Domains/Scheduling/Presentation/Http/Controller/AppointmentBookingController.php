@@ -42,7 +42,7 @@ final class AppointmentBookingController
         } catch (\Throwable) {
             return back()->withErrors(['booking' => 'Scheduled date and time are invalid.']);
         }
-        if ($start === false) {
+        if ($start === null) {
             return back()->withErrors(['booking' => 'Scheduled date and time are invalid.']);
         }
 
