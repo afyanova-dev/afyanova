@@ -211,7 +211,7 @@ export function AddItemPanel({
               checked={itemForm.data.is_controlled}
               onChange={(_, { checked }) => itemForm.setData('is_controlled', checked)}
             />
-            <p style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
+            <p style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
               Removing stock for a controlled item then requires the name of a witness, recorded on the removal request.
             </p>
           </div>
@@ -220,7 +220,7 @@ export function AddItemPanel({
         <fieldset style={{ border: '1px solid var(--cds-border-subtle, #e0e0e0)', borderRadius: '4px', padding: '1rem' }}>
           <legend style={{ fontWeight: 600, paddingInline: '0.25rem' }}>Buying unit (optional)</legend>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBlockStart: '0.5rem' }}>
-            <p style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
+            <p style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
               How this item is bought, if that differs from the base unit it is counted in. A dispenser may still
               receive part of a pack — for example 8 bottles out of a pack of 20.
             </p>
@@ -250,7 +250,7 @@ export function AddItemPanel({
               invalidText={itemForm.errors.pack_size}
             />
             {itemForm.data.pack_unit && itemForm.data.pack_size ? (
-              <p style={{ fontSize: '0.8125rem', fontWeight: 600, margin: 0 }}>
+              <p style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', fontWeight: 600, margin: 0 }}>
                 1 {itemForm.data.pack_unit} = {itemForm.data.pack_size} {itemForm.data.uom || 'base unit'}
               </p>
             ) : null}

@@ -15,6 +15,7 @@ final class SetInventoryItemActiveRequest extends FormRequest
             && app(TenantContext::class)->isGeneral();
     }
 
+    /** @return array<string, list<string|\Stringable>> */
     public function rules(): array
     {
         return ['active' => ['required', 'boolean']];

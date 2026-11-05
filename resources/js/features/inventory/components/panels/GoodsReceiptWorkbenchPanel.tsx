@@ -126,8 +126,23 @@ function acceptedQuantity(line: DraftReceiptLine): string {
   return accepted <= 0 ? '0' : accepted.toFixed(4);
 }
 
-function errorFor(errors: Record<string, string>, key: string): string | undefined {
-  return errors[key];
+function generatedBatchPreview(itemCode: string, receivedAt: string): string {
+  const normalized = itemCode.toUpperCase().trim()
+    .replace(/([A-Z])-(?=\d)/g, '$1')
+    .replace(/\s+/g, '')
+    .replace(/_/g, '-');
+  const date = receivedAt === '' ? new Date() : new Date(receivedAt);
+  const year = Number.isFinite(date.getTime()) ? date.getFullYear() : new Date().getFullYear();
+
+  return `${normalized}-${year}01`;
+}
+
+function errorFor(
+  errors: Record<string, string>,
+  key: string,
+  localErrors: Record<string, string> = {},
+): string | undefined {
+  return errors[key] ?? localErrors[key];
 }
 
 function isBackdated(value: string): boolean {
@@ -198,6 +213,7 @@ export function GoodsReceiptWorkbenchPanel({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [postedReceiptId, setPostedReceiptId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
   const selectedPoRef = useRef(form.data.po_ref);
   selectedPoRef.current = form.data.po_ref;
 
@@ -373,6 +389,7 @@ export function GoodsReceiptWorkbenchPanel({
   function setLines(lines: DraftReceiptLine[]): void {
     form.setData('lines', lines);
     form.clearErrors();
+    setClientErrors({});
   }
 
   function updateLine(index: number, patch: Partial<DraftReceiptLine>): void {
@@ -420,7 +437,7 @@ export function GoodsReceiptWorkbenchPanel({
       quantity_delivered: multiply(enteredQuantity, packSize),
       quantity_rejected: '0',
       condition: 'GOOD',
-      batch_number: '',
+      batch_number: item.tracksBatch ? generatedBatchPreview(item.code, form.data.received_at) : '',
       expiry_date: '',
       manufacture_date: '',
       condition_notes: '',
@@ -506,7 +523,7 @@ export function GoodsReceiptWorkbenchPanel({
       quantity_delivered: '',
       quantity_rejected: '0',
       condition: 'GOOD',
-      batch_number: '',
+      batch_number: item.tracksBatch ? generatedBatchPreview(item.code, form.data.received_at) : '',
       expiry_date: '',
       manufacture_date: '',
       condition_notes: '',
@@ -653,6 +670,8 @@ export function GoodsReceiptWorkbenchPanel({
   function handlePurchaseOrderChange(next: OpenPurchaseOrder | null): void {
     setSuccessMessage(null);
     setNotice(null);
+    setClientErrors({});
+    form.clearErrors();
     setLineSearch('');
     setOpenLines([]);
     setSelectedPurchaseOrder(next);
@@ -665,10 +684,129 @@ export function GoodsReceiptWorkbenchPanel({
     form.clearErrors();
   }
 
+  function validateReceipt(): Record<string, string> {
+    const nextErrors: Record<string, string> = {};
+    const effective = form.data.received_at === ''
+      ? new Date()
+      : new Date(form.data.received_at);
+    const effectiveDateKey = Number.isFinite(effective.getTime())
+      ? `${effective.getFullYear()}-${String(effective.getMonth() + 1).padStart(2, '0')}-${String(effective.getDate()).padStart(2, '0')}`
+      : new Date().toISOString().slice(0, 10);
+
+    if (form.data.location_id === '') {
+      nextErrors.location_id = 'Select a stock location.';
+    }
+    if (form.data.lines.length === 0) {
+      nextErrors.lines = 'Add at least one receipt line.';
+    }
+    if (form.data.received_at !== '') {
+      const receivedAt = new Date(form.data.received_at);
+      if (! Number.isFinite(receivedAt.getTime())) {
+        nextErrors.received_at = 'Enter a valid receipt date.';
+      } else if (receivedAt.getTime() > Date.now()) {
+        nextErrors.received_at = 'Receipt time cannot be in the future.';
+      }
+    }
+
+    form.data.lines.forEach((line, index) => {
+      const item = itemsById.get(line.item_id);
+      const entered = Number.parseFloat(line.entered_quantity);
+      const delivered = Number.parseFloat(line.quantity_delivered);
+      const rejected = Number.parseFloat(line.quantity_rejected || '0');
+      const pack = Number.parseFloat(line.pack_size);
+
+      if (! Number.isFinite(entered) || entered <= 0) {
+        nextErrors[`lines.${index}.entered_quantity`] = 'Enter a delivered quantity greater than zero.';
+      }
+      if (! Number.isFinite(pack) || pack <= 0) {
+        nextErrors[`lines.${index}.pack_size`] = 'Enter a valid pack size.';
+      } else if (Number.isFinite(entered) && entered > 0
+        && Number.isFinite(delivered) && Math.abs(entered * pack - delivered) > 0.0001) {
+        nextErrors[`lines.${index}.quantity_delivered`] = 'Delivered quantity does not match entered quantity × pack size.';
+      }
+      if (! Number.isFinite(rejected) || rejected < 0) {
+        nextErrors[`lines.${index}.quantity_rejected`] = 'Enter zero or a positive rejected quantity.';
+      } else if (Number.isFinite(delivered) && rejected > delivered) {
+        nextErrors[`lines.${index}.quantity_rejected`] = 'Rejected quantity cannot exceed delivered quantity.';
+      }
+      if (Number.isFinite(rejected) && rejected > 0 && line.rejection_reason.trim() === '') {
+        nextErrors[`lines.${index}.rejection_reason`] = 'Give a reason for the rejected quantity.';
+      }
+      if (item?.tracksExpiry) {
+        if (line.expiry_date.trim() === '') {
+          nextErrors[`lines.${index}.expiry_date`] = 'An expiry date is required for this item.';
+        } else if (line.expiry_date < effectiveDateKey) {
+          nextErrors[`lines.${index}.expiry_date`] = 'This batch is already expired as of the receipt date.';
+        }
+      }
+      if (line.substituted_for_item_id !== '' && line.condition !== 'WRONG_ITEM') {
+        nextErrors[`lines.${index}.condition`] = 'A substituted item must use the WRONG_ITEM condition.';
+      }
+      if (line.condition === 'WRONG_ITEM' && line.substituted_for_item_id === '') {
+        nextErrors[`lines.${index}.substituted_for_item_id`] = 'Select the substitute item.';
+      }
+      if (line.substituted_for_item_id !== '' && line.condition_notes.trim() === '') {
+        nextErrors[`lines.${index}.condition_notes`] = 'Give a reason for the substitution.';
+      }
+    });
+
+    return nextErrors;
+  }
+
+  function submittedReceivedAt(value: string): string {
+    if (value === '') {
+      return '';
+    }
+
+    const localDate = new Date(value);
+    return Number.isFinite(localDate.getTime()) ? localDate.toISOString() : value;
+  }
+
   function handleSubmit(event: FormEvent): void {
     event.preventDefault();
     setNotice(null);
+    form.clearErrors();
+    const validationErrors = validateReceipt();
+    setClientErrors(validationErrors);
 
+    if (Object.keys(validationErrors).length > 0) {
+      const validationErrorKeys = Object.keys(validationErrors);
+      const firstInvalidKey = validationErrorKeys.find((key) => key.startsWith('lines.'))
+        ?? validationErrorKeys[0];
+      if (firstInvalidKey === undefined) {
+        throw new Error('Receipt validation returned errors without a field key.');
+      }
+      const firstLineIndex = firstInvalidKey.match(/^lines\.(\d+)/)?.[1];
+      setNotice(`Correct ${Object.keys(validationErrors).length} validation issue${Object.keys(validationErrors).length === 1 ? '' : 's'} before posting. Each highlighted line remains available for editing.`);
+      window.requestAnimationFrame(() => {
+        let element: HTMLElement | null = null;
+        if (firstLineIndex !== undefined) {
+          if (firstInvalidKey.includes('expiry_date')) {
+            element = document.getElementById(`goods-receipt-expiry-${firstLineIndex}`);
+          } else if (firstInvalidKey.includes('quantity_rejected')) {
+            element = document.getElementById(`goods-receipt-rejected-${firstLineIndex}`);
+          } else if (firstInvalidKey.includes('rejection_reason')) {
+            element = document.getElementById(`goods-receipt-rejection-reason-${firstLineIndex}`);
+          } else if (firstInvalidKey.includes('condition')) {
+            element = document.getElementById(`goods-receipt-condition-${firstLineIndex}`);
+          } else {
+            element = document.getElementById(`goods-receipt-delivered-${firstLineIndex}`);
+          }
+        } else if (firstInvalidKey === 'location_id') {
+          element = document.getElementById('goods-receipt-location');
+        } else if (firstInvalidKey === 'received_at') {
+          element = document.getElementById('goods-receipt-received-at');
+        }
+        element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        element?.focus();
+      });
+      return;
+    }
+
+    form.transform((data) => ({
+      ...data,
+      received_at: submittedReceivedAt(data.received_at),
+    }));
     form.post(routes.workspaces.inventoryGoodsReceiptsStore, {
       preserveScroll: true,
       preserveState: true,
@@ -696,17 +834,22 @@ export function GoodsReceiptWorkbenchPanel({
           lines: [],
         });
         form.clearErrors();
+        setClientErrors({});
         setLineRefreshToken((token) => token + 1);
         onSuccess?.();
+      },
+      onError: (errors) => {
+        const serverErrors = errors as Record<string, string>;
+        const receiptError = serverErrors.receipt;
+        setSuccessMessage(null);
+        setNotice(receiptError ?? 'The goods receipt was not posted. Review the highlighted fields and try again.');
+        setClientErrors(serverErrors);
       },
     });
   }
 
   const errors = form.errors as Record<string, string>;
-  const workbenchDisabled = form.processing
-    || form.data.location_id === ''
-    || form.data.lines.length === 0
-    || totals.invalid > 0;
+  const workbenchDisabled = form.processing;
   const selectedPurchaseOrderOption: PurchaseOrderOption | null = selectedPurchaseOrder === null
     ? null
     : {
@@ -741,6 +884,7 @@ export function GoodsReceiptWorkbenchPanel({
       primaryLabel={form.processing ? 'Posting…' : 'Post goods receipt'}
       primaryDisabled={workbenchDisabled}
       secondaryLabel="Close"
+      noValidate
       width="min(72rem, 100%)"
       expandedWidth="min(96rem, 100%)"
       contentClassName="afy-grn"
@@ -835,9 +979,16 @@ export function GoodsReceiptWorkbenchPanel({
             labelText="Stock location"
             size="sm"
             value={form.data.location_id}
-            onChange={(event) => form.setData('location_id', event.currentTarget.value)}
-            invalid={Boolean(errors.location_id)}
-            invalidText={errors.location_id}
+            onChange={(event) => {
+              form.setData('location_id', event.currentTarget.value);
+              setClientErrors((current) => {
+                const next = { ...current };
+                delete next.location_id;
+                return next;
+              });
+            }}
+            invalid={Boolean(errors.location_id ?? clientErrors.location_id)}
+            invalidText={errors.location_id ?? clientErrors.location_id}
           >
             {locations.map((location) => (
               <SelectItem key={location.id} value={location.id} text={`${location.code} — ${location.name}`} />
@@ -874,9 +1025,16 @@ export function GoodsReceiptWorkbenchPanel({
             size="sm"
             type="datetime-local"
             value={form.data.received_at}
-            onChange={(event) => form.setData('received_at', event.currentTarget.value)}
-            invalid={Boolean(errors.received_at)}
-            invalidText={errors.received_at}
+            onChange={(event) => {
+              form.setData('received_at', event.currentTarget.value);
+              setClientErrors((current) => {
+                const next = { ...current };
+                delete next.received_at;
+                return next;
+              });
+            }}
+            invalid={Boolean(errors.received_at ?? clientErrors.received_at)}
+            invalidText={errors.received_at ?? clientErrors.received_at}
           />
         </div>
 
@@ -1060,17 +1218,17 @@ export function GoodsReceiptWorkbenchPanel({
               <tbody>
                 {form.data.lines.map((line, index) => {
                   const item = itemsById.get(line.item_id);
-                  const deliveredError = errorFor(errors, `lines.${index}.quantity_delivered`)
-                    ?? errorFor(errors, `lines.${index}.entered_quantity`);
-                  const rejectedError = errorFor(errors, `lines.${index}.quantity_rejected`);
-                  const batchError = errorFor(errors, `lines.${index}.batch_number`);
-                  const expiryError = errorFor(errors, `lines.${index}.expiry_date`);
-                  const conditionError = errorFor(errors, `lines.${index}.condition`);
-                  const rejectionReasonError = errorFor(errors, `lines.${index}.rejection_reason`);
-                  const itemError = errorFor(errors, `lines.${index}.item_id`);
-                  const packError = errorFor(errors, `lines.${index}.pack_size`);
-                  const substituteError = errorFor(errors, `lines.${index}.substituted_for_item_id`);
-                  const conditionNotesError = errorFor(errors, `lines.${index}.condition_notes`);
+                  const deliveredError = errorFor(errors, `lines.${index}.quantity_delivered`, clientErrors)
+                    ?? errorFor(errors, `lines.${index}.entered_quantity`, clientErrors);
+                  const rejectedError = errorFor(errors, `lines.${index}.quantity_rejected`, clientErrors);
+                  const batchError = errorFor(errors, `lines.${index}.batch_number`, clientErrors);
+                  const expiryError = errorFor(errors, `lines.${index}.expiry_date`, clientErrors);
+                  const conditionError = errorFor(errors, `lines.${index}.condition`, clientErrors);
+                  const rejectionReasonError = errorFor(errors, `lines.${index}.rejection_reason`, clientErrors);
+                  const itemError = errorFor(errors, `lines.${index}.item_id`, clientErrors);
+                  const packError = errorFor(errors, `lines.${index}.pack_size`, clientErrors);
+                  const substituteError = errorFor(errors, `lines.${index}.substituted_for_item_id`, clientErrors);
+                  const conditionNotesError = errorFor(errors, `lines.${index}.condition_notes`, clientErrors);
                   const poLine = openLines.find((candidate) => candidate.lineId === line.po_line_id);
                   const isSubstitution = line.substituted_for_item_id !== '';
 
@@ -1110,6 +1268,9 @@ export function GoodsReceiptWorkbenchPanel({
                                       ?? line.entered_unit,
                                     pack_size: packSize,
                                     quantity_delivered: multiply(line.entered_quantity, packSize),
+                                    batch_number: original?.tracksBatch
+                                      ? generatedBatchPreview(original.code, form.data.received_at)
+                                      : '',
                                   });
 
                                   return;
@@ -1124,7 +1285,9 @@ export function GoodsReceiptWorkbenchPanel({
                                   entered_unit: substitute?.unitOfMeasure ?? line.entered_unit,
                                   pack_size: '1',
                                   quantity_delivered: line.entered_quantity,
-                                  batch_number: '',
+                                  batch_number: substitute?.tracksBatch
+                                    ? generatedBatchPreview(substitute.code, form.data.received_at)
+                                    : '',
                                   expiry_date: '',
                                   manufacture_date: '',
                                 });
@@ -1229,7 +1392,7 @@ export function GoodsReceiptWorkbenchPanel({
                             onChange={(event) => updateLine(index, { batch_number: event.currentTarget.value })}
                             invalid={Boolean(batchError)}
                             invalidText={batchError}
-                            placeholder="Batch"
+                            placeholder="Auto-generated"
                           />
                         ) : <span className="afy-grn__muted">—</span>}
                       </td>

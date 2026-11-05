@@ -47,7 +47,7 @@ final readonly class DefineStockLocation implements Auditable, AuditFacilityAwar
         return null;
     }
 
-    public function auditFacilityId(): ?string
+    public function auditFacilityId(): string
     {
         return $this->facilityId;
     }

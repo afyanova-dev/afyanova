@@ -33,6 +33,15 @@ final class RecordGoodsReceiptRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $lines = $this->input('lines');
+        $receivedAt = $this->input('received_at');
+
+        if (is_string($receivedAt)) {
+            $receivedAt = trim($receivedAt);
+            if ($receivedAt !== '' && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $receivedAt) === 1) {
+                $receivedAt .= ':00';
+            }
+            $this->merge(['received_at' => $receivedAt !== '' ? $receivedAt : null]);
+        }
 
         if (is_array($lines)) {
             foreach ($lines as $index => $line) {
@@ -73,7 +82,7 @@ final class RecordGoodsReceiptRequest extends FormRequest
             'invoice_status' => ['required', 'in:RECEIVED,PENDING,NOT_REQUIRED'],
             'invoice_currency' => ['required', 'string', 'size:3'],
             'invoice_total' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
-            'received_at' => ['nullable', 'date', 'before_or_equal:now'],
+            'received_at' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:2000'],
             'reason' => ['nullable', 'string', 'max:500'],
 
@@ -180,11 +189,6 @@ final class RecordGoodsReceiptRequest extends FormRequest
                 "lines.{$index}.item_id",
                 'Serial-tracked items cannot be received through this workflow yet.',
             );
-        }
-
-        $batchNumber = $line['batch_number'] ?? null;
-        if ($item->trackBatch && (! is_string($batchNumber) || trim($batchNumber) === '')) {
-            $validator->errors()->add("lines.{$index}.batch_number", 'A batch number is required for this item.');
         }
 
         $expiryDate = $line['expiry_date'] ?? null;
@@ -456,13 +460,17 @@ final class RecordGoodsReceiptRequest extends FormRequest
     {
         $receivedAt = $this->input('received_at');
 
-        if (! $validator->errors()->has('received_at')
-            && is_string($receivedAt) && filled($receivedAt)
-            && CarbonImmutable::parse($receivedAt)->lessThan(
+        if (! $validator->errors()->has('received_at') && is_string($receivedAt) && filled($receivedAt)) {
+            $received = CarbonImmutable::parse($receivedAt);
+            $now = CarbonImmutable::now();
+
+            if ($received->greaterThan($now)) {
+                $validator->errors()->add('received_at', 'Receipt time cannot be in the future.');
+            } elseif ($received->lessThan(
                 now()->toImmutable()->subHours(RecordGoodsReceipt::BACKDATE_REASON_THRESHOLD_HOURS),
-            )
-            && blank($this->input('reason'))) {
-            $validator->errors()->add('reason', 'A reason is required for receipts dated more than 24 hours ago.');
+            ) && blank($this->input('reason'))) {
+                $validator->errors()->add('reason', 'A reason is required for receipts dated more than 24 hours ago.');
+            }
         }
     }
 

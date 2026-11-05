@@ -26,6 +26,7 @@ use App\Domains\Inventory\Contracts\Dto\ExpiringStockSummary;
 use App\Domains\Inventory\Contracts\Dto\GoodsReceiptDetail;
 use App\Domains\Inventory\Contracts\Dto\GoodsReceiptSearchPage;
 use App\Domains\Inventory\Contracts\Dto\ItemLevelSummary;
+use App\Domains\Inventory\Contracts\Dto\ItemSummary;
 use App\Domains\Inventory\Contracts\Dto\LocationItemStockSummary;
 use App\Domains\Inventory\Contracts\Dto\LowStockItemSummary;
 use App\Domains\Inventory\Contracts\Dto\StockAdjustmentSummary;
@@ -33,6 +34,7 @@ use App\Domains\Inventory\Contracts\Dto\StockBalanceSummary;
 use App\Domains\Inventory\Contracts\Dto\StockCountLineSummary;
 use App\Domains\Inventory\Contracts\Dto\StockCountSummary;
 use App\Domains\Inventory\Contracts\Dto\StockLedgerEntrySummary;
+use App\Domains\Inventory\Contracts\Dto\StockLocationSummary;
 use App\Domains\Inventory\Contracts\Dto\StockLocationTypeSummary;
 use App\Domains\Inventory\Contracts\Dto\StockReservationSummary;
 use App\Domains\Inventory\Contracts\Dto\StockTransferSummary;
@@ -100,9 +102,11 @@ final class InventoryWorkspaceController
         // is checked in a facility context (not the General context the item
         // catalogue itself requires).
         $canManageLevels = $facilityId !== null && ($request->user()?->can('inventory.items.manage') ?? false);
+        /** @var list<ItemSummary> $items */
         $items = $needsItems
             ? $this->queries->dispatch(new GetItems(active: $canManageItems ? null : true))
             : [];
+        /** @var list<StockLocationSummary> $locations */
         $locations = ! $needsLocations || $facilityId === null
             ? []
             : $this->queries->dispatch(new GetStockLocations($facilityId, active: $canManageLocations ? null : true));
@@ -111,22 +115,24 @@ final class InventoryWorkspaceController
             : null;
         $departmentScoped = $departmentIds !== null;
         $departmentName = null;
-        if (is_array($departmentIds) && count($departmentIds) === 1 && $facilityId !== null) {
+        if (is_array($departmentIds) && count($departmentIds) === 1) {
             $structure = $this->organization->getFacilityStructure($facilityId);
-            foreach ($structure?->departments ?? [] as $department) {
+            foreach ($structure->departments ?? [] as $department) {
                 if ((string) ($department['id'] ?? '') === $departmentIds[0]) {
                     $departmentName = (string) ($department['name'] ?? '');
                     break;
                 }
             }
         }
-        $locationTypes = collect([
+        /** @var list<StockLocationTypeSummary> $additionalLocationTypes */
+        $additionalLocationTypes = $section === 'locations'
+            ? $this->queries->dispatch(new GetStockLocationTypes($facilityId))
+            : [];
+        $locationTypes = collect(array_merge([
             new StockLocationTypeSummary('WAREHOUSE', 'Warehouse', 'BUILT_IN'),
             new StockLocationTypeSummary('STORE', 'Store', 'BUILT_IN'),
             new StockLocationTypeSummary('QUARANTINE', 'Quarantine', 'BUILT_IN'),
-        ])->concat($section === 'locations'
-            ? $this->queries->dispatch(new GetStockLocationTypes($facilityId))
-            : []);
+        ], $additionalLocationTypes));
         $adjustmentStatus = $request->query('adjustment_status');
         $adjustmentStatus = is_string($adjustmentStatus)
             && in_array($adjustmentStatus, ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'], true)
@@ -168,7 +174,7 @@ final class InventoryWorkspaceController
         $transferFromLocationId = null;
         $transferSource = [];
         if ($facilityId !== null && $section === 'transfers' && is_string($transferFromId)
-            && collect($locations)->contains(fn ($location): bool => $location->locationId === $transferFromId)) {
+            && collect($locations)->contains(fn (StockLocationSummary $location): bool => $location->locationId === $transferFromId)) {
             $transferFromLocationId = $transferFromId;
             $transferSource = $this->queries->dispatch(new GetTransferSourceStock($transferFromId));
         }
@@ -201,15 +207,16 @@ final class InventoryWorkspaceController
         ];
 
         $selectedItem = $section === 'stock' && $facilityId !== null && is_string($itemId)
-            ? collect($items)->first(fn ($item): bool => $item->itemId === $itemId)
+            ? collect($items)->first(fn (ItemSummary $item): bool => $item->itemId === $itemId)
             : null;
         $selectedLocation = $section === 'stock' && $facilityId !== null && is_string($locationId)
-            ? collect($locations)->first(fn ($location): bool => $location->locationId === $locationId)
+            ? collect($locations)->first(fn (StockLocationSummary $location): bool => $location->locationId === $locationId)
             : null;
         if ($selectedItem !== null && $selectedLocation !== null) {
+            /** @var list<StockBalanceSummary> $balances */
             $balances = $this->queries->dispatch(new GetStockBalance($selectedItem->itemId, $selectedLocation->locationId));
             $locationItems = [];
-        } elseif ($selectedLocation !== null && $selectedItem === null) {
+        } elseif ($selectedLocation !== null) {
             $validatedFilters = $request->validate([
                 'page' => ['sometimes', 'integer', 'min:1'],
                 'per_page' => ['sometimes', 'integer', 'in:15,30,50,100'],
@@ -219,6 +226,7 @@ final class InventoryWorkspaceController
             ]);
             $locationStockFilters = array_merge($locationStockFilters, $validatedFilters);
             $locationStockFilters['q'] = trim((string) ($locationStockFilters['q'] ?? ''));
+            /** @var LengthAwarePaginator<int, LocationItemStockSummary> $locationItems */
             $locationItems = $this->queries->dispatch(new GetStockByLocation(
                 $selectedLocation->locationId,
                 (int) $locationStockFilters['page'],
@@ -233,7 +241,7 @@ final class InventoryWorkspaceController
             $locationItems = [];
         }
         $locationItemRows = $locationItems instanceof LengthAwarePaginator
-            ? $locationItems->getCollection()
+            ? collect($locationItems->items())
             : collect();
 
         $ledger = $request->query('view') === 'ledger' && $selectedItem !== null && $selectedLocation !== null
@@ -262,6 +270,7 @@ final class InventoryWorkspaceController
             $facilityStockFilters['location_id'] = is_string($facilityStockFilters['location_id'])
                 ? $facilityStockFilters['location_id']
                 : null;
+            /** @var LengthAwarePaginator<int, StockBalanceSummary> $facilityStock */
             $facilityStock = $this->queries->dispatch(new GetStockByFacility(
                 $facilityId,
                 (int) $facilityStockFilters['page'],
@@ -273,7 +282,7 @@ final class InventoryWorkspaceController
             ));
         }
         $facilityStockRows = $facilityStock instanceof LengthAwarePaginator
-            ? $facilityStock->getCollection()
+            ? collect($facilityStock->items())
             : collect();
 
         // Phase 1 — goods-receipt register + opened detail. The register is
@@ -310,7 +319,7 @@ final class InventoryWorkspaceController
         // `Inventory/routes.php`; they are deliberately not injected into the
         // page. The receiving picker only needs the coarse access flag here.
         $canReceiveAgainstPurchaseOrders = $canReceive
-            && ($request->user()?->can('procurement.access') ?? false);
+            && $request->user()->can('procurement.access');
 
         return Inertia::render('Inventory/Index', [
             'items' => collect($items)->map(fn ($item): array => [

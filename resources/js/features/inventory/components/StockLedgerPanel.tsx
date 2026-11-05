@@ -96,27 +96,27 @@ export function StockLedgerPanel({
             }}
           >
             <div>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>
+              <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>
                 Current on hand
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                {ledger.currentOnHandQty} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>{uom}</span>
+              <div style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 700 }}>
+                {ledger.currentOnHandQty} <span style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', fontWeight: 400 }}>{uom}</span>
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>
+              <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>
                 Ledger sum
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                {ledger.ledgerSum} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>{uom}</span>
+              <div style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 700 }}>
+                {ledger.ledgerSum} <span style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', fontWeight: 400 }}>{uom}</span>
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>
+              <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>
                 Drift
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBlockStart: '0.25rem' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{ledger.drift}</span>
+                <span style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 700 }}>{ledger.drift}</span>
                 {drift !== 0 ? <Tag type="red" size="sm">Reconciliation required</Tag> : <Tag type="green" size="sm">Balanced</Tag>}
               </div>
             </div>
@@ -140,7 +140,7 @@ export function StockLedgerPanel({
           }}
         />
 
-        <p style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)' }}>
+        <p style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)' }}>
           The ledger is append-only. A non-zero drift means the materialised balance and the movement sum disagree and
           requires reconciliation; stock is never corrected by editing a balance directly.
         </p>

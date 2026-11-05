@@ -33,6 +33,7 @@ vi.mock('@inertiajs/react', async () => {
     router: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
     useForm: (initial: Record<string, unknown>) => {
       const [data, setDataState] = React.useState(initial);
+      let submittedData = data;
 
       return {
         data,
@@ -47,8 +48,11 @@ vi.mock('@inertiajs/react', async () => {
         }, []),
         clearErrors: vi.fn(),
         reset: vi.fn(),
+        transform: (callback: (data: Record<string, unknown>) => Record<string, unknown>) => {
+          submittedData = callback(data);
+        },
         post: vi.fn((url: string, options?: { onSuccess?: () => void }) => {
-          formState.posted.push({ url, data: data as Record<string, unknown> });
+          formState.posted.push({ url, data: submittedData as Record<string, unknown> });
           options?.onSuccess?.();
         }),
       };

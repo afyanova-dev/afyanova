@@ -54,6 +54,7 @@ interface StockBalanceReader
      * (§30, §327; ADR-170 D-M). Optionally narrowed to one location and a
      * free-text search over item code/name and location code/name.
      *
+     * @param  list<string>|null  $departmentIds
      * @return LengthAwarePaginator<int, StockBalanceSummary>
      */
     public function forFacility(
@@ -70,6 +71,8 @@ interface StockBalanceReader
     /**
      * Available stock for one item across a facility's locations (ADR-170 D-M).
      * Throws `App\Shared\Domain\NotFound` if the item is unknown in the tenant.
+     *
+     * @param  list<string>|null  $departmentIds
      */
     public function availableForItem(
         string $itemId,

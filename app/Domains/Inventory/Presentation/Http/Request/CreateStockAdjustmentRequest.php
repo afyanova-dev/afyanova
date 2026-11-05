@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Domains\Inventory\Presentation\Http\Request;
 
 use App\Domains\Inventory\Application\Query\GetItems;
+use App\Domains\Inventory\Contracts\Dto\ItemSummary;
 use App\Shared\Bus\QueryBus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
+use UnexpectedValueException;
 
 /**
  * Validate a stock-adjustment request (18-inventory-and-warehousing-domain.md
@@ -21,6 +23,7 @@ final class CreateStockAdjustmentRequest extends FormRequest
         return $this->user()?->can('inventory.adjustments.create') ?? false;
     }
 
+    /** @return array<string, list<string|\Stringable>> */
     public function rules(): array
     {
         return [
@@ -37,6 +40,7 @@ final class CreateStockAdjustmentRequest extends FormRequest
         ];
     }
 
+    /** @return list<callable(Validator): void> */
     public function after(): array
     {
         return [
@@ -47,7 +51,21 @@ final class CreateStockAdjustmentRequest extends FormRequest
                 }
 
                 $items = app(QueryBus::class)->dispatch(new GetItems(active: true));
-                $item = collect($items)->first(fn ($candidate): bool => $candidate->itemId === $itemId);
+                if (! is_array($items)) {
+                    throw new UnexpectedValueException('The inventory item query must return a list.');
+                }
+
+                $item = null;
+                foreach ($items as $candidate) {
+                    if (! $candidate instanceof ItemSummary) {
+                        throw new UnexpectedValueException('The inventory item query returned an invalid item.');
+                    }
+
+                    if ($candidate->itemId === $itemId) {
+                        $item = $candidate;
+                        break;
+                    }
+                }
 
                 if ($item === null) {
                     return;

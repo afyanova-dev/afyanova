@@ -18,4 +18,8 @@ interface BatchRepository extends Repository
 
     /** The batch for this (item, batch number) in the tenant, or null (RLS). */
     public function findByItemAndNumber(string $tenantId, string $itemId, string $batchNumber): ?Batch;
+
+    public function nextGeneratedBatchNumber(string $tenantId, string $itemId, string $itemCode, int $year): string;
+
+    public function isGeneratedBatchNumber(string $itemCode, string $batchNumber, int $year): bool;
 }

@@ -9,6 +9,7 @@ use App\Domains\Inventory\Presentation\Http\Request\DefineStockLocationTypeReque
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\DomainException;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -26,11 +27,12 @@ final class DefineStockLocationTypeController
         $facilityId = $this->context->facilityId();
         abort_if(! $this->context->isGeneral() && ($facilityId === null || $facilityId === ''), 403, 'Select General or an active facility context.');
         $locationTypeFacilityId = $this->context->isGeneral() ? null : $facilityId;
+        $actor = $request->user() ?? throw new AuthenticationException;
 
         try {
             $this->commands->dispatch(new DefineStockLocationType(
                 typeId: (string) Str::uuid7(),
-                actorId: (string) $request->user()->id,
+                actorId: (string) $actor->getAuthIdentifier(),
                 locationTypeFacilityId: $locationTypeFacilityId,
                 code: $data['code'],
                 name: $data['name'],

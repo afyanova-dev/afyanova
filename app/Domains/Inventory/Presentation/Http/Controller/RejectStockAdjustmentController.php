@@ -8,6 +8,7 @@ use App\Domains\Inventory\Application\Command\RejectStockAdjustment;
 use App\Domains\Inventory\Presentation\Http\Request\RejectStockAdjustmentRequest;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\DomainException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use InvalidArgumentException;
 
@@ -22,11 +23,12 @@ final class RejectStockAdjustmentController
     public function __invoke(RejectStockAdjustmentRequest $request, string $adjustmentId): RedirectResponse
     {
         $data = $request->validated();
+        $actor = $request->user() ?? throw new AuthenticationException;
 
         try {
             $this->commands->dispatch(new RejectStockAdjustment(
                 adjustmentId: $adjustmentId,
-                actorId: (string) $request->user()->id,
+                actorId: (string) $actor->getAuthIdentifier(),
                 reason: $data['reason'],
                 idempotencyKey: $data['idempotency_key'],
             ));

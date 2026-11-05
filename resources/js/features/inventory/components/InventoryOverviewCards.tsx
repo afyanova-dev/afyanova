@@ -33,7 +33,7 @@ export function InventoryOverviewCards({
   return (
     <section aria-labelledby="inventory-overview-heading" style={{ marginBlockEnd: '2rem' }}>
       <div style={{ marginBlockEnd: '1.25rem' }}>
-        <h2 id="inventory-overview-heading" style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+        <h2 id="inventory-overview-heading" style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600 }}>
           Inventory overview
         </h2>
         <p style={{ color: 'var(--cds-text-secondary, #525252)' }}>
@@ -70,10 +70,10 @@ export function InventoryOverviewCards({
       <section aria-labelledby="inventory-operations-heading" style={{ marginBlock: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
-            <h3 id="inventory-operations-heading" style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
+            <h3 id="inventory-operations-heading" style={{ fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)', fontWeight: 600, margin: 0 }}>
               Quick operations & workflows
             </h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
+            <p style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
               Review balances, receive deliveries, or update the catalogue and facility locations.
             </p>
           </div>

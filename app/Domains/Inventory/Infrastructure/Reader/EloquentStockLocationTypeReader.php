@@ -17,15 +17,17 @@ final class EloquentStockLocationTypeReader implements StockLocationTypeReader
             ->where(fn ($query) => $query->whereNull('facility_id')
                 ->when($facilityId !== null, fn ($types) => $types->orWhere('facility_id', $facilityId)));
 
-        return $query
-            ->orderBy('facility_id')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (StockLocationType $type): StockLocationTypeSummary => new StockLocationTypeSummary(
-                code: (string) $type->code,
-                name: (string) $type->name,
-                scope: $type->facility_id === null ? 'TENANT' : 'FACILITY',
-            ))
-            ->all();
+        return array_values(
+            $query
+                ->orderBy('facility_id')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (StockLocationType $type): StockLocationTypeSummary => new StockLocationTypeSummary(
+                    code: (string) $type->code,
+                    name: (string) $type->name,
+                    scope: $type->facility_id === null ? 'TENANT' : 'FACILITY',
+                ))
+                ->all()
+        );
     }
 }

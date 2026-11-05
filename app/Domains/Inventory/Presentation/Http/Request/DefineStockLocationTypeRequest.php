@@ -13,6 +13,7 @@ final class DefineStockLocationTypeRequest extends FormRequest
         return $this->user()?->can('inventory.location_types.manage') ?? false;
     }
 
+    /** @return array<string, list<string|\Stringable>> */
     public function rules(): array
     {
         return [

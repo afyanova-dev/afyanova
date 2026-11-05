@@ -15,6 +15,7 @@ use App\Domains\Procurement\Domain\Model\PoLine;
 use App\Domains\Procurement\Domain\Model\PurchaseOrder;
 use App\Shared\Events\DispatchListenerJob;
 use App\Shared\Tenancy\TenantContextScope;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -664,18 +665,25 @@ it('posts a 500-line delivery as one GRN within the phase gate', function (): vo
 });
 
 it('creates the batch for a batch/expiry-tracked line and keeps its expiry', function (): void {
+    $this->travelTo('2026-01-15 12:00:00');
+
     ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = inventoryFixture([
         'inventory.access', 'inventory.receipts.create',
     ]);
     $t = (string) $tenant->id;
     $f = (string) $facility->id;
-    $item = (string) seedInventoryItem($t, ['code' => 'AMOX', 'uom' => 'BOX'])->id;
+    $item = (string) seedInventoryItem($t, ['code' => 'PARA-1G-TAB', 'uom' => 'BOX'])->id;
     $location = (string) seedStockLocation($t, $f)->id;
 
     // The factory's expiry state is applied after creation; keep the item simple
     // and patch the tracking flags through the model for this inventory test.
     TenantContextScope::run($t, null, fn () => Item::query()
         ->whereKey($item)->update(['track_batch' => true, 'track_expiry' => true]));
+
+    $queries = [];
+    DB::listen(static function (QueryExecuted $query) use (&$queries): void {
+        $queries[] = strtolower($query->sql);
+    });
 
     $payload = goodsReceiptPayload([
         [
@@ -687,7 +695,7 @@ it('creates the batch for a batch/expiry-tracked line and keeps its expiry', fun
             'quantity_delivered' => '2',
             'quantity_rejected' => '0',
             'condition' => 'GOOD',
-            'batch_number' => 'AMOX-001',
+            'batch_number' => '',
             'expiry_date' => now()->addYear()->toDateString(),
         ],
     ], [
@@ -700,18 +708,81 @@ it('creates the batch for a batch/expiry-tracked line and keeps its expiry', fun
         ->post('/workspaces/inventory/goods-receipts', $payload)
         ->assertSessionHas('status', 'Goods receipt posted.');
 
+    $secondPayload = goodsReceiptPayload([
+        [
+            'receipt_line_id' => (string) Str::uuid7(),
+            'item_id' => $item,
+            'entered_unit' => 'BOX',
+            'entered_quantity' => '1',
+            'pack_size' => '1',
+            'quantity_delivered' => '1',
+            'quantity_rejected' => '0',
+            'condition' => 'GOOD',
+            'batch_number' => '',
+            'expiry_date' => now()->addYear()->toDateString(),
+        ],
+    ], [
+        'location_id' => $location,
+        'source_type' => 'DONATION',
+        'supplier_ref' => null,
+    ]);
+
+    $this->actingAs($user)->withSession(['active_facility_id' => $f])
+        ->post('/workspaces/inventory/goods-receipts', $secondPayload)
+        ->assertSessionHas('status', 'Goods receipt posted.');
+
     $line = TenantContextScope::run($t, $f, fn () => GoodsReceiptLine::query()
         ->where('receipt_id', $payload['receipt_id'])->firstOrFail());
     expect($line->batch_id)->not->toBeNull()
-        ->and($line->batch_number)->toBe('AMOX-001')
+        ->and($line->batch_number)->toBe('PARA1G-TAB-202601')
         ->and($line->expiry_date)->not->toBeNull();
 
     $batch = TenantContextScope::run($t, null, fn () => Batch::query()
-        ->where('item_id', $item)->where('batch_number', 'AMOX-001')->first());
+        ->where('item_id', $item)->where('batch_number', 'PARA1G-TAB-202601')->first());
     expect($batch)->not->toBeNull()
         ->and((string) $batch->id)->toBe((string) $line->batch_id);
 
     $movement = TenantContextScope::run($t, $f, fn () => StockMovement::query()
         ->where('goods_receipt_ref', $payload['receipt_id'])->firstOrFail());
     expect((string) $movement->batch_id)->toBe((string) $line->batch_id);
+
+    $secondLine = TenantContextScope::run($t, $f, fn () => GoodsReceiptLine::query()
+        ->where('receipt_id', $secondPayload['receipt_id'])->firstOrFail());
+    expect($secondLine->batch_number)->toBe('PARA1G-TAB-202602');
+
+    $itemLocks = collect($queries)->filter(
+        fn (string $sql): bool => str_contains($sql, 'from "inv_items"') && str_contains($sql, 'for update'),
+    );
+    expect($itemLocks)->toHaveCount(2);
+});
+
+it('accepts a current UTC ISO receipt timestamp and rejects a future timestamp inline', function (): void {
+    $fx = goodsReceiptFixture();
+    $base = [
+        'location_id' => $fx['location'],
+        'po_ref' => $fx['poNumber'],
+        'supplier_ref' => $fx['supplier'],
+    ];
+
+    $currentPayload = goodsReceiptPayload([
+        goodsReceiptLinePayload($fx['itemA'], $fx['lineA'], '1'),
+    ], [
+        ...$base,
+        'received_at' => now()->subMinute()->utc()->toIso8601String(),
+    ]);
+
+    $this->actingAs($fx['user'])->withSession(['active_facility_id' => $fx['f']])
+        ->post('/workspaces/inventory/goods-receipts', $currentPayload)
+        ->assertSessionHasNoErrors();
+
+    $futurePayload = goodsReceiptPayload([
+        goodsReceiptLinePayload($fx['itemB'], $fx['lineB'], '1'),
+    ], [
+        ...$base,
+        'received_at' => now()->addHour()->utc()->toIso8601String(),
+    ]);
+
+    $this->actingAs($fx['user'])->withSession(['active_facility_id' => $fx['f']])
+        ->post('/workspaces/inventory/goods-receipts', $futurePayload)
+        ->assertSessionHasErrors(['received_at']);
 });

@@ -179,26 +179,26 @@ export function ReceiptDetailPanel({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <section aria-labelledby="receipt-detail-heading">
-          <h3 id="receipt-detail-heading" style={{ marginBlockEnd: '0.5rem', fontSize: '1rem' }}>Delivery</h3>
+          <h3 id="receipt-detail-heading" style={{ marginBlockEnd: '0.5rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)' }}>Delivery</h3>
           <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))', gap: '0.5rem 1rem', margin: 0 }}>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Received</dt><dd style={{ margin: 0 }}>{formatWhen(receipt.receivedAt)}</dd></div>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Source</dt><dd style={{ margin: 0 }}>{sourceLabel(receipt.sourceType)}</dd></div>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Purchase order</dt><dd style={{ margin: 0 }}>{receipt.poRef ?? '—'}</dd></div>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Destination</dt><dd style={{ margin: 0 }}>{receipt.locationCode} — {receipt.locationName}</dd></div>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Delivery note</dt><dd style={{ margin: 0 }}>{receipt.deliveryNoteNumber ?? '—'}</dd></div>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Recorded</dt><dd style={{ margin: 0 }}>{formatWhen(receipt.recordedAt)}</dd></div>
-            <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Status</dt><dd style={{ margin: 0 }}>{receipt.status} · {receipt.matchStatus}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Received</dt><dd style={{ margin: 0 }}>{formatWhen(receipt.receivedAt)}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Source</dt><dd style={{ margin: 0 }}>{sourceLabel(receipt.sourceType)}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Purchase order</dt><dd style={{ margin: 0 }}>{receipt.poRef ?? '—'}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Destination</dt><dd style={{ margin: 0 }}>{receipt.locationCode} — {receipt.locationName}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Delivery note</dt><dd style={{ margin: 0 }}>{receipt.deliveryNoteNumber ?? '—'}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Recorded</dt><dd style={{ margin: 0 }}>{formatWhen(receipt.recordedAt)}</dd></div>
+            <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Status</dt><dd style={{ margin: 0 }}>{receipt.status} · {receipt.matchStatus}</dd></div>
           </dl>
         </section>
 
         <section aria-labelledby="receipt-invoice-heading">
-          <h3 id="receipt-invoice-heading" style={{ marginBlockEnd: '0.5rem', fontSize: '1rem' }}>Supplier invoice</h3>
+          <h3 id="receipt-invoice-heading" style={{ marginBlockEnd: '0.5rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)' }}>Supplier invoice</h3>
           {receipt.invoiceNumber !== null ? (
             <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))', gap: '0.5rem 1rem', margin: 0 }}>
-              <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Invoice</dt><dd style={{ margin: 0 }}>{receipt.invoiceNumber}</dd></div>
-              <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Invoice date</dt><dd style={{ margin: 0 }}>{formatDate(receipt.invoiceDate)}</dd></div>
-              <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Status</dt><dd style={{ margin: 0 }}>{receipt.invoiceStatus.replaceAll('_', ' ')}</dd></div>
-              <div><dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Total</dt><dd style={{ margin: 0 }}>{receipt.invoiceTotal !== null ? `${receipt.invoiceCurrency} ${receipt.invoiceTotal}` : '—'}</dd></div>
+              <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Invoice</dt><dd style={{ margin: 0 }}>{receipt.invoiceNumber}</dd></div>
+              <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Invoice date</dt><dd style={{ margin: 0 }}>{formatDate(receipt.invoiceDate)}</dd></div>
+              <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Status</dt><dd style={{ margin: 0 }}>{receipt.invoiceStatus.replaceAll('_', ' ')}</dd></div>
+              <div><dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Total</dt><dd style={{ margin: 0 }}>{receipt.invoiceTotal !== null ? `${receipt.invoiceCurrency} ${receipt.invoiceTotal}` : '—'}</dd></div>
             </dl>
           ) : (
             <p>Invoice pending. Attach it when it is available; this does not change posted stock.</p>
@@ -253,7 +253,7 @@ export function ReceiptDetailPanel({
         </section>
 
         <section aria-labelledby="receipt-lines-heading">
-          <h3 id="receipt-lines-heading" style={{ marginBlockEnd: '0.5rem', fontSize: '1rem' }}>Lines ({receipt.lines.length})</h3>
+          <h3 id="receipt-lines-heading" style={{ marginBlockEnd: '0.5rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)' }}>Lines ({receipt.lines.length})</h3>
           <div style={{ overflowX: 'auto' }}>
             <table className="afy-table">
               <caption className="afy-visually-hidden">Goods receipt lines</caption>
@@ -273,14 +273,14 @@ export function ReceiptDetailPanel({
                   <tr key={line.receiptLineId}>
                     <td>
                       <strong>{line.itemCode}</strong>
-                      <div style={{ fontSize: '0.8125rem' }}>{line.itemName}</div>
+                      <div style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)' }}>{line.itemName}</div>
                       {line.poLineRef !== null ? (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>
+                        <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                           PO line {line.poLineRef.slice(0, 8)}
                         </div>
                       ) : null}
                       {line.substitutedForItemId !== null ? (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>
+                        <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                           Substitute for the ordered item
                         </div>
                       ) : null}
@@ -288,16 +288,16 @@ export function ReceiptDetailPanel({
                     <td>{qty(line.quantityDelivered)} {line.uom}</td>
                     <td>{qty(line.quantityRejected)} {line.uom}</td>
                     <td><strong>{qty(line.quantityAccepted)} {line.uom}</strong></td>
-                    <td>{line.batchNumber ?? '—'}{line.expiryDate !== null ? <div style={{ fontSize: '0.75rem' }}>Exp {formatDate(line.expiryDate)}</div> : null}</td>
+                    <td>{line.batchNumber ?? '—'}{line.expiryDate !== null ? <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)' }}>Exp {formatDate(line.expiryDate)}</div> : null}</td>
                     <td>
                       {line.condition.replaceAll('_', ' ')}
                       {line.conditionNotes !== null ? (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>
+                        <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                           {line.conditionNotes}
                         </div>
                       ) : null}
                       {line.rejectionReason !== null ? (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>
+                        <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                           {line.rejectionReason}
                         </div>
                       ) : null}
@@ -312,7 +312,7 @@ export function ReceiptDetailPanel({
 
         {canMatchInvoice && receipt.invoiceNumber !== null && receipt.sourceType === 'PROCUREMENT' ? (
           <section aria-labelledby="receipt-invoice-match-heading">
-            <h3 id="receipt-invoice-match-heading" style={{ marginBlockEnd: '0.5rem', fontSize: '1rem' }}>Invoice matching</h3>
+            <h3 id="receipt-invoice-match-heading" style={{ marginBlockEnd: '0.5rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)' }}>Invoice matching</h3>
             <p>Compare invoice quantities with accepted receipt quantities and invoice prices with the PO prices. Taxes and other charges are not calculated here.</p>
             <form onSubmit={matchInvoice}>
               <Stack gap={5}>
@@ -421,7 +421,7 @@ export function ReceiptDetailPanel({
 
         {canManageReturns ? (
           <section aria-labelledby="receipt-return-heading">
-            <h3 id="receipt-return-heading" style={{ marginBlockEnd: '0.5rem', fontSize: '1rem' }}>Return stock to supplier</h3>
+            <h3 id="receipt-return-heading" style={{ marginBlockEnd: '0.5rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)' }}>Return stock to supplier</h3>
             <p>Post a return against accepted goods only. To quarantine stock first, transfer it to a QUARANTINE location, then select that location as the return source.</p>
             <form onSubmit={returnGoods}>
               <Stack gap={5}>
@@ -522,7 +522,7 @@ export function ReceiptDetailPanel({
 
         {receipt.remarks !== null ? (
           <section aria-labelledby="receipt-remarks-heading">
-            <h3 id="receipt-remarks-heading" style={{ marginBlockEnd: '0.5rem', fontSize: '1rem' }}>Remarks</h3>
+            <h3 id="receipt-remarks-heading" style={{ marginBlockEnd: '0.5rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)' }}>Remarks</h3>
             <p style={{ margin: 0 }}>{receipt.remarks}</p>
           </section>
         ) : null}

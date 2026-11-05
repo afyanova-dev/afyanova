@@ -18,6 +18,7 @@ final class ApproveStockAdjustmentRequest extends FormRequest
         return $this->user()?->can('inventory.adjustments.approve') ?? false;
     }
 
+    /** @return array<string, list<string|\Stringable>> */
     public function rules(): array
     {
         return [

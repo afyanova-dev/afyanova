@@ -8,6 +8,7 @@ use App\Domains\Inventory\Application\Command\SetInventoryItemActive;
 use App\Domains\Inventory\Presentation\Http\Request\SetInventoryItemActiveRequest;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\DomainException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -19,11 +20,12 @@ final class SetInventoryItemActiveController
     public function __invoke(SetInventoryItemActiveRequest $request, string $itemId): RedirectResponse
     {
         abort_unless(Str::isUuid($itemId), 404);
+        $actor = $request->user() ?? throw new AuthenticationException;
 
         try {
             $this->commands->dispatch(new SetInventoryItemActive(
                 itemId: $itemId,
-                actorId: (string) $request->user()->id,
+                actorId: (string) $actor->getAuthIdentifier(),
                 active: (bool) $request->validated('active'),
             ));
         } catch (DomainException|InvalidArgumentException $exception) {

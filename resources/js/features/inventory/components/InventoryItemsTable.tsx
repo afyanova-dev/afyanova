@@ -191,7 +191,7 @@ export function InventoryItemsTable({
         renderCell={(cell, row) => {
           if (cell.info.header === 'code') {
             return (
-              <code style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--cds-text-primary, #161616)' }}>
+              <code style={{ fontSize: 'var(--cds-code-02-font-size, 0.875rem)', fontWeight: 600, color: 'var(--cds-text-primary, #161616)' }}>
                 {String(cell.value)}
               </code>
             );
@@ -218,7 +218,7 @@ export function InventoryItemsTable({
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span>{String(cell.value)}</span>
                 {rawItem?.packUnit && rawItem.packSize ? (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>
+                  <span style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                     1 {rawItem.packUnit} = {formatQuantity(rawItem.packSize)} {rawItem.unitOfMeasure}
                   </span>
                 ) : null}

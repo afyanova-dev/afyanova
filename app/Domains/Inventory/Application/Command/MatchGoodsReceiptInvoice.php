@@ -45,7 +45,7 @@ final readonly class MatchGoodsReceiptInvoice implements Auditable, AuthorizesAg
         return 'matchInvoice';
     }
 
-    public function subjectId(): ?string
+    public function subjectId(): string
     {
         return $this->goodsReceiptId;
     }

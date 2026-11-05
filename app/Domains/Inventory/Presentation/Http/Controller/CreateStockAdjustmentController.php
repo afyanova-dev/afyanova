@@ -8,6 +8,7 @@ use App\Domains\Inventory\Application\Command\CreateStockAdjustment;
 use App\Domains\Inventory\Presentation\Http\Request\CreateStockAdjustmentRequest;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\DomainException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use InvalidArgumentException;
 
@@ -23,11 +24,12 @@ final class CreateStockAdjustmentController
     public function __invoke(CreateStockAdjustmentRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $actor = $request->user() ?? throw new AuthenticationException;
 
         try {
             $this->commands->dispatch(new CreateStockAdjustment(
                 adjustmentId: $data['adjustment_id'],
-                actorId: (string) $request->user()->id,
+                actorId: (string) $actor->getAuthIdentifier(),
                 itemId: $data['item_id'],
                 locationId: $data['location_id'],
                 direction: $data['direction'],

@@ -188,7 +188,7 @@ export function StockLookupSection({
   return (
     <section aria-labelledby="stock-lookup-heading" style={{ marginBlockEnd: '2rem' }}>
       <div style={{ marginBlockEnd: '1.25rem' }}>
-        <h2 id="stock-lookup-heading" style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+        <h2 id="stock-lookup-heading" style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600 }}>
           Stock by location
         </h2>
         <p style={{ color: 'var(--cds-text-secondary, #525252)' }}>
@@ -229,7 +229,7 @@ export function StockLookupSection({
               {departmentName || soleLocation.name}
             </p>
             {departmentName ? (
-              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)' }}>
+              <p style={{ margin: 0, fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                 Stock location: {soleLocation.name}
               </p>
             ) : null}
@@ -291,10 +291,10 @@ export function StockLookupSection({
             }}
           >
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
+              <h3 style={{ margin: 0, fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600 }}>
                 Stock at {currentLocation.name}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)' }}>
+              <p style={{ margin: 0, fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)' }}>
                 Items recorded at this location and their aggregate quantities across batches.
               </p>
             </div>
@@ -336,7 +336,7 @@ export function StockLookupSection({
 
               return (
                 <div aria-label={`Batches for ${item.itemCode}`}>
-                  <h4 style={{ margin: '0 0 0.75rem', fontSize: '1rem', fontWeight: 600 }}>
+                  <h4 style={{ margin: '0 0 0.75rem', fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)', fontWeight: 600 }}>
                     Batches for {item.itemName} ({item.itemCode})
                   </h4>
                   <Table aria-label={`Batches for ${item.itemCode}`} size="sm">
@@ -411,35 +411,35 @@ export function StockLookupSection({
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '1.125rem', fontWeight: 600 }}>{currentItem.name}</span>
-                <code style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)' }}>({currentItem.code})</code>
+                <span style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600 }}>{currentItem.name}</span>
+                <code style={{ fontSize: 'var(--cds-code-02-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)' }}>({currentItem.code})</code>
                 <Tag type="blue" size="sm">{currentItem.itemType}</Tag>
                 <Tag type="cool-gray" size="sm">{currentItem.unitOfMeasure}</Tag>
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)', marginBlockStart: '0.25rem' }}>
+              <div style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)', marginBlockStart: '0.25rem' }}>
                 Location: <strong>{currentLocation.name}</strong> ({currentLocation.code})
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center', minWidth: '5rem' }}>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>On hand</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--cds-text-primary, #161616)' }}>
-                  {totals.onHand} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>{currentItem.unitOfMeasure}</span>
+                <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>On hand</div>
+                <div style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 700, color: 'var(--cds-text-primary, #161616)' }}>
+                  {totals.onHand} <span style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', fontWeight: 400 }}>{currentItem.unitOfMeasure}</span>
                 </div>
               </div>
               <div style={{ width: '1px', height: '2rem', background: 'var(--cds-border-subtle, #e0e0e0)' }} />
               <div style={{ textAlign: 'center', minWidth: '5rem' }}>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>Reserved</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--cds-support-warning, #f1c21b)' }}>
-                  {totals.reserved} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>{currentItem.unitOfMeasure}</span>
+                <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>Reserved</div>
+                <div style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 700, color: 'var(--cds-support-warning, #f1c21b)' }}>
+                  {totals.reserved} <span style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', fontWeight: 400 }}>{currentItem.unitOfMeasure}</span>
                 </div>
               </div>
               <div style={{ width: '1px', height: '2rem', background: 'var(--cds-border-subtle, #e0e0e0)' }} />
               <div style={{ textAlign: 'center', minWidth: '5rem' }}>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>Available</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: totals.available > 0 ? 'var(--cds-support-success, #24a148)' : 'var(--cds-text-muted, #8d8d8d)' }}>
-                  {totals.available} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>{currentItem.unitOfMeasure}</span>
+                <div style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', textTransform: 'uppercase', color: 'var(--cds-text-secondary, #525252)' }}>Available</div>
+                <div style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 700, color: totals.available > 0 ? 'var(--cds-support-success, #24a148)' : 'var(--cds-text-muted, #8d8d8d)' }}>
+                  {totals.available} <span style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', fontWeight: 400 }}>{currentItem.unitOfMeasure}</span>
                 </div>
               </div>
 
@@ -474,7 +474,7 @@ export function StockLookupSection({
             )}
           />
 
-          <p style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)', marginBlockStart: '0.5rem' }}>
+          <p style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)', marginBlockStart: '0.5rem' }}>
             Available quantity is on-hand less reserved stock. It may include expired batches and does not by itself
             confirm that stock is eligible for dispensing.
           </p>

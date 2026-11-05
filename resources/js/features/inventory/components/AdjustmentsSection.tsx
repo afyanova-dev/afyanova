@@ -199,7 +199,7 @@ export function AdjustmentsSection({
             }
             if (adjustment.requestedByUserId === currentUserId) {
               return (
-                <span style={{ color: 'var(--cds-text-secondary, #525252)', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--cds-text-secondary, #525252)', fontSize: 'var(--cds-body-01-font-size, 0.875rem)' }}>
                   Awaiting another approver
                 </span>
               );

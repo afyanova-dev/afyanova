@@ -73,10 +73,10 @@ export function InventoryLocationsTable({
     <section aria-labelledby="inventory-locations-heading" style={{ marginBlockStart: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBlockEnd: '1rem' }}>
         <div>
-          <h3 id="inventory-locations-heading" style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+          <h3 id="inventory-locations-heading" style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600, margin: 0 }}>
             Locations at this facility
           </h3>
-          <p style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
+          <p style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)', margin: 0 }}>
             Facility-scoped stock locations such as central stores, wards, labs, and pharmacies.
           </p>
         </div>
@@ -144,7 +144,7 @@ export function InventoryLocationsTable({
         renderCell={(cell, row) => {
           if (cell.info.header === 'code') {
             return (
-              <code style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--cds-text-primary, #161616)' }}>
+              <code style={{ fontSize: 'var(--cds-code-02-font-size, 0.875rem)', fontWeight: 600, color: 'var(--cds-text-primary, #161616)' }}>
                 {String(cell.value)}
               </code>
             );

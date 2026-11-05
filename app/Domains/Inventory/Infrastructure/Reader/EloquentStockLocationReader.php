@@ -19,6 +19,9 @@ final class EloquentStockLocationReader implements StockLocationReader
         return $this->toSummary($location);
     }
 
+    /**
+     * @param  list<string>|null  $departmentIds
+     */
     public function listForFacility(
         string $facilityId,
         ?bool $active = null,

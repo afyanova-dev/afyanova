@@ -36,7 +36,7 @@ final readonly class SetStockLocationActive implements Auditable, AuditFacilityA
         return null;
     }
 
-    public function auditFacilityId(): ?string
+    public function auditFacilityId(): string
     {
         return $this->facilityId;
     }

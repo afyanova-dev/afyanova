@@ -20,7 +20,9 @@ use App\Shared\Domain\NotFound;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator as EloquentLengthAwarePaginator;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 final class EloquentStockBalanceReader implements StockBalanceReader
 {
@@ -73,9 +75,22 @@ final class EloquentStockBalanceReader implements StockBalanceReader
             default => 'inv_items.code',
         };
 
-        /** @var LengthAwarePaginator<int, object> $pageOfTotals */
+        /** @var EloquentLengthAwarePaginator<int, object{
+         *     item_id: mixed,
+         *     item_code: mixed,
+         *     item_name: mixed,
+         *     uom: mixed,
+         *     on_hand_qty: mixed,
+         *     reserved_qty: mixed,
+         *     available_qty: mixed
+         * }> $pageOfTotals
+         */
         $pageOfTotals = $aggregate
-            ->orderBy($sortColumn, $sortDirection)
+            ->orderBy($sortColumn, match ($sortDirection) {
+                'asc' => 'asc',
+                'desc' => 'desc',
+                default => throw new InvalidArgumentException('Stock balance sort direction must be asc or desc.'),
+            })
             ->orderBy('inv_items.id')
             ->paginate($perPage, ['*'], 'page', $page);
         $totals = $pageOfTotals->getCollection();
@@ -97,7 +112,7 @@ final class EloquentStockBalanceReader implements StockBalanceReader
             $batchesByItem[$balance->itemId][] = $balance;
         }
 
-        $pageOfTotals->setCollection($totals->map(fn (object $row): LocationItemStockSummary => new LocationItemStockSummary(
+        $locationItems = $totals->map(fn ($row): LocationItemStockSummary => new LocationItemStockSummary(
             itemId: (string) $row->item_id,
             itemCode: (string) $row->item_code,
             itemName: (string) $row->item_name,
@@ -106,9 +121,15 @@ final class EloquentStockBalanceReader implements StockBalanceReader
             availableQty: Quantity::sub((string) $row->on_hand_qty, (string) $row->reserved_qty),
             uom: (string) $row->uom,
             batches: $batchesByItem[(string) $row->item_id] ?? [],
-        )));
+        ));
 
-        return $pageOfTotals;
+        return new EloquentLengthAwarePaginator(
+            $locationItems,
+            $pageOfTotals->total(),
+            $pageOfTotals->perPage(),
+            $pageOfTotals->currentPage(),
+            $pageOfTotals->getOptions(),
+        );
     }
 
     public function stockAtLocation(string $locationId): array
@@ -166,6 +187,10 @@ final class EloquentStockBalanceReader implements StockBalanceReader
         })->all());
     }
 
+    /**
+     * @param  list<string>|null  $departmentIds
+     * @return LengthAwarePaginator<int, StockBalanceSummary>
+     */
     public function forFacility(
         string $facilityId,
         int $page,
@@ -186,7 +211,7 @@ final class EloquentStockBalanceReader implements StockBalanceReader
             default => 'inv_items.code',
         };
 
-        /** @var LengthAwarePaginator<int, StockBalance> $paginated */
+        /** @var EloquentLengthAwarePaginator<int, StockBalance> $paginated */
         $paginated = StockBalance::query()
             ->select('inv_stock_balances.*')
             ->join('inv_items', 'inv_items.id', '=', 'inv_stock_balances.item_id')
@@ -205,15 +230,25 @@ final class EloquentStockBalanceReader implements StockBalanceReader
                     ->orWhereRaw('LOWER(inv_items.name) LIKE ?', [$searchLike])
                     ->orWhereRaw('LOWER(inv_stock_locations.code) LIKE ?', [$searchLike])
                     ->orWhereRaw('LOWER(inv_stock_locations.name) LIKE ?', [$searchLike])))
-            ->orderBy($sortColumn, $sortDirection)
+            ->orderBy($sortColumn, match ($sortDirection) {
+                'asc' => 'asc',
+                'desc' => 'desc',
+                default => throw new InvalidArgumentException('Facility stock sort direction must be asc or desc.'),
+            })
             ->orderBy('inv_stock_balances.item_id')
             ->orderBy('inv_stock_balances.location_id')
             ->orderBy('inv_stock_balances.batch_id')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $paginated->setCollection(collect($this->summariesFor(collect($paginated->items()))));
+        $summaries = $this->summariesFor(collect($paginated->items()));
 
-        return $paginated;
+        return new EloquentLengthAwarePaginator(
+            collect($summaries),
+            $paginated->total(),
+            $paginated->perPage(),
+            $paginated->currentPage(),
+            $paginated->getOptions(),
+        );
     }
 
     public function expiringForFacility(string $facilityId, int $windowDays): array
@@ -390,12 +425,14 @@ final class EloquentStockBalanceReader implements StockBalanceReader
         return $out;
     }
 
+    /**
+     * @param  list<string>|null  $departmentIds
+     */
     public function availableForItem(
         string $itemId,
         string $facilityId,
         ?array $departmentIds = null,
-    ): AvailableStockSummary
-    {
+    ): AvailableStockSummary {
         $item = Item::query()->whereKey($itemId)->first()
             ?? throw NotFound::aggregate(Item::class, $itemId);
 

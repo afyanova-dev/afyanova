@@ -121,7 +121,7 @@ export function FacilityStockSection({
   return (
     <div style={{ marginBlockEnd: '2rem' }}>
       <div style={{ marginBlockEnd: '1.25rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+        <h2 style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600 }}>
           Stock on hand
         </h2>
         <p style={{ color: 'var(--cds-text-secondary, #525252)' }}>
@@ -198,7 +198,7 @@ export function FacilityStockSection({
         />
       ) : null}
 
-      <p style={{ fontSize: '0.875rem', color: 'var(--cds-text-secondary, #525252)', marginBlockStart: '0.5rem' }}>
+      <p style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)', color: 'var(--cds-text-secondary, #525252)', marginBlockStart: '0.5rem' }}>
         Available quantity is on-hand less reserved stock. It may include expired batches and does not
         by itself confirm that stock is eligible for dispensing.
       </p>

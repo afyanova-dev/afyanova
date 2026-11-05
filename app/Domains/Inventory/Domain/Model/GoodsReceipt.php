@@ -230,7 +230,8 @@ final class GoodsReceipt extends AggregateRoot
      *     uom: string,
      *     batchNumber: string|null,
      *     expiryDate: string|null,
-     *     condition: string
+     *     condition: string,
+     *     substitutedForItemId: string|null
      * }>  $lines
      */
     public function markPosted(array $lines): void

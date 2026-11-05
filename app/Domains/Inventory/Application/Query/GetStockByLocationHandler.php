@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Inventory\Application\Query;
 
+use App\Domains\Inventory\Contracts\Dto\LocationItemStockSummary;
 use App\Domains\Inventory\Domain\Model\StockBalance;
 use App\Domains\Inventory\Domain\StockBalanceReader;
 use App\Domains\Inventory\Domain\StockLocationReader;
@@ -24,6 +25,8 @@ final class GetStockByLocationHandler
 
     /**
      * Returns a sorted page of per-item totals and the included batch balances.
+     *
+     * @return LengthAwarePaginator<int, LocationItemStockSummary>
      */
     public function __invoke(GetStockByLocation $query): LengthAwarePaginator
     {

@@ -18,6 +18,7 @@ interface StockLocationReader
     /**
      * The stock locations at a facility, optionally filtered by active flag.
      *
+     * @param  list<string>|null  $departmentIds
      * @return list<StockLocationSummary>
      */
     public function listForFacility(

@@ -42,7 +42,7 @@ final readonly class AttachGoodsReceiptInvoice implements Auditable, AuthorizesA
         return 'updateInvoice';
     }
 
-    public function subjectId(): ?string
+    public function subjectId(): string
     {
         return $this->goodsReceiptId;
     }

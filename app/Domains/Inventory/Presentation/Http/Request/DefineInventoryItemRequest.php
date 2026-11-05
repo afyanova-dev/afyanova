@@ -38,6 +38,7 @@ final class DefineInventoryItemRequest extends FormRequest
         ]);
     }
 
+    /** @return array<string, list<string|\Stringable>> */
     public function rules(): array
     {
         return [
@@ -56,6 +57,7 @@ final class DefineInventoryItemRequest extends FormRequest
         ];
     }
 
+    /** @return list<callable(Validator): void> */
     public function after(): array
     {
         return [

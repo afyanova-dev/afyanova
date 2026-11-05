@@ -39,4 +39,42 @@ final class EloquentBatchRepository extends EloquentRepository implements BatchR
             ->where('batch_number', $batchNumber)
             ->first();
     }
+
+    public function nextGeneratedBatchNumber(string $tenantId, string $itemId, string $itemCode, int $year): string
+    {
+        $prefix = $this->normalizedItemPrefix($itemCode);
+        $batchPrefix = $prefix.'-'.$year;
+
+        $numbers = Batch::query()
+            ->where('tenant_id', $tenantId)
+            ->where('item_id', $itemId)
+            ->where('batch_number', 'like', $batchPrefix.'%')
+            ->pluck('batch_number');
+
+        $next = 1;
+        foreach ($numbers as $number) {
+            if (preg_match('/-(\d{4})(\d{2})$/', (string) $number, $match) === 1
+                && (int) $match[1] === $year) {
+                $next = max($next, (int) $match[2] + 1);
+            }
+        }
+
+        return $batchPrefix.str_pad((string) $next, 2, '0', STR_PAD_LEFT);
+    }
+
+    public function isGeneratedBatchNumber(string $itemCode, string $batchNumber, int $year): bool
+    {
+        $prefix = $this->normalizedItemPrefix($itemCode).'-'.$year;
+
+        return preg_match('/^'.preg_quote($prefix, '/').'\d{2}$/', strtoupper(trim($batchNumber))) === 1;
+    }
+
+    private function normalizedItemPrefix(string $itemCode): string
+    {
+        $code = strtoupper(trim($itemCode));
+        $prefix = preg_replace('/([A-Z])-(?=\d)/', '$1', $code) ?? $code;
+        $prefix = preg_replace('/\s+/', '', $prefix) ?? $prefix;
+
+        return str_replace('_', '-', $prefix);
+    }
 }

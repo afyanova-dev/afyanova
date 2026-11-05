@@ -17,6 +17,7 @@ final class DefineStockLocationRequest extends FormRequest
         return $this->user()?->can('inventory.locations.manage') ?? false;
     }
 
+    /** @return array<string, list<string|\Stringable>> */
     public function rules(): array
     {
         return [
@@ -26,6 +27,7 @@ final class DefineStockLocationRequest extends FormRequest
         ];
     }
 
+    /** @return list<callable(Validator): void> */
     public function after(): array
     {
         return [

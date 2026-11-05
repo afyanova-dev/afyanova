@@ -148,8 +148,20 @@ final class RecordGoodsReceiptHandler
                 ? trim($line->batchNumber)
                 : null;
 
-            if ($item->trackBatch && $batchNumber === null) {
-                throw InventoryItemNotStockable::batchNumberRequired($item->itemId);
+            if ($item->trackBatch && (
+                $batchNumber === null
+                || $this->batches->isGeneratedBatchNumber(
+                    (string) $item->code,
+                    $batchNumber,
+                    (int) $receivedAt->format('Y'),
+                )
+            )) {
+                $batchNumber = $this->batches->nextGeneratedBatchNumber(
+                    $tenantId,
+                    $item->itemId,
+                    (string) $item->code,
+                    (int) $receivedAt->format('Y'),
+                );
             }
 
             if ($item->trackBatch && $item->trackExpiry) {

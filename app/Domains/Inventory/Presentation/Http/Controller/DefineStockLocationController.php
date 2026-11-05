@@ -9,6 +9,7 @@ use App\Domains\Inventory\Presentation\Http\Request\DefineStockLocationRequest;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\DomainException;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -25,11 +26,12 @@ final class DefineStockLocationController
         $facilityId = $this->context->facilityId();
         abort_if($facilityId === null || $facilityId === '', 403, 'No active facility context.');
         $data = $request->validated();
+        $actor = $request->user() ?? throw new AuthenticationException;
 
         try {
             $this->commands->dispatch(new DefineStockLocation(
                 locationId: (string) Str::uuid7(),
-                actorId: (string) $request->user()->id,
+                actorId: (string) $actor->getAuthIdentifier(),
                 facilityId: $facilityId,
                 code: $data['code'],
                 name: $data['name'],

@@ -58,15 +58,17 @@ final class EloquentStockBalanceRepository extends EloquentRepository implements
 
     public function listAtLocation(string $locationId): array
     {
-        return StockBalance::query()
-            ->where('location_id', $locationId)
-            ->where(static fn (Builder $query): Builder => $query
-                ->where('on_hand_qty', '<>', 0)
-                ->orWhere('reserved_qty', '<>', 0))
-            ->orderBy('item_id')
-            ->orderBy('batch_id')
-            ->get()
-            ->all();
+        return array_values(
+            StockBalance::query()
+                ->where('location_id', $locationId)
+                ->where(static fn (Builder $query): Builder => $query
+                    ->where('on_hand_qty', '<>', 0)
+                    ->orWhere('reserved_qty', '<>', 0))
+                ->orderBy('item_id')
+                ->orderBy('batch_id')
+                ->get()
+                ->all()
+        );
     }
 
     public function forUpdateOrCreate(

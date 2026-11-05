@@ -8,6 +8,7 @@ use App\Domains\Inventory\Application\Command\DefineInventoryItem;
 use App\Domains\Inventory\Presentation\Http\Request\DefineInventoryItemRequest;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\DomainException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -19,11 +20,12 @@ final class DefineInventoryItemController
     public function __invoke(DefineInventoryItemRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $actor = $request->user() ?? throw new AuthenticationException;
 
         try {
             $this->commands->dispatch(new DefineInventoryItem(
                 itemId: (string) Str::uuid7(),
-                actorId: (string) $request->user()->id,
+                actorId: (string) $actor->getAuthIdentifier(),
                 code: $data['code'],
                 name: $data['name'],
                 itemType: $data['item_type'],

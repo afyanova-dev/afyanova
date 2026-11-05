@@ -206,7 +206,7 @@ export function ReceiptsSection({
       />
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.875rem' }}>
+        <span style={{ fontSize: 'var(--cds-body-01-font-size, 0.875rem)' }}>
           Page {pagination.currentPage} of {pagination.lastPage} · {pagination.total} receipt{pagination.total === 1 ? '' : 's'}
         </span>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
