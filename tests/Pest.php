@@ -6,7 +6,7 @@ declare(strict_types=1);
 |--------------------------------------------------------------------------
 | Pest bootstrap  (IMPLEMENTATION-CONTRACTS.md §17)
 |--------------------------------------------------------------------------
-| Feature tests hit the real PostgreSQL test database (afyanovav4_test) —
+| Feature tests hit the real PostgreSQL test database (afyanova_test) —
 | never SQLite (§17.1). Unit tests are plain.
 */
 

@@ -41,6 +41,7 @@ test('EncounterApi exposes only methods with current consumers', function () {
         'encounterExists',
         'findActiveEncounterForPatient',
         'getEncounterContext',
+        'getPatientEncounters',
         'recordEncounterRelationship',
     ]);
 

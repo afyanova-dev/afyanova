@@ -16,7 +16,7 @@ use InvalidArgumentException;
  *
  * The operational fulfilment task. Class-level authorization (`create`) — the
  * handler adds the ADR-133 per-facility refinement at the prescription's
- * ORIGINATING facility. One non-terminal order per prescription (the partial
+ * ORIGINATING facility in the current context. One non-terminal order per prescription (the partial
  * unique index; `PharmacyOrderAlreadyExists` on the race).
  *
  * `priority` is open-coded (ROUTINE | URGENT | STAT), behaviour-neutral.

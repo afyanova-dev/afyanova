@@ -2,13 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Domains\Pharmacy\Application\Command\CancelPrescription;
 use App\Domains\Pharmacy\Application\Command\CreatePharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\HoldPharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\RejectPharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\ReleasePharmacyOrderHold;
 use App\Domains\Pharmacy\Application\Command\ValidatePharmacyOrder;
+use App\Domains\Pharmacy\Application\Query\GetPatientPrescriptions;
 use App\Domains\Pharmacy\Application\Query\GetPharmacyOrder;
+use App\Domains\Pharmacy\Application\Query\GetPrescription;
 use App\Domains\Pharmacy\Application\Query\SearchPharmacyOrders;
+use App\Domains\Pharmacy\Application\Query\SearchPickups;
+use App\Domains\Pharmacy\Application\Query\SearchPrescriptions;
 use App\Domains\Pharmacy\Contracts\Event\PharmacyOrderRejected;
 use App\Domains\Pharmacy\Contracts\Event\PharmacyOrderValidated;
 use App\Domains\Pharmacy\Domain\Exception\IllegalPharmacyOrderStatusTransition;
@@ -27,18 +32,26 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /**
- * @return array{t: string, f: string, a: string, prescription: string, patient: string}
+ * @return array{t: string, f: string, a: string, prescription: string, patient: string, organization: string, roleId: string}
  */
 function orderSetup(): array
 {
-    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = pharmacyFixture();
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facility, 'user' => $user, 'role_id' => $roleId] = pharmacyFixture();
     $t = (string) $tenant->id;
     $f = (string) $facility->id;
     $a = (string) $user->id;
 
     ['prescriptionId' => $rx, 'patientId' => $patient] = pharmacyAcceptedPrescription($t, $f, $a);
 
-    return ['t' => $t, 'f' => $f, 'a' => $a, 'prescription' => $rx, 'patient' => $patient];
+    return [
+        't' => $t,
+        'f' => $f,
+        'a' => $a,
+        'prescription' => $rx,
+        'patient' => $patient,
+        'organization' => (string) $organization->id,
+        'roleId' => (string) $roleId,
+    ];
 }
 
 function createOrder(string $t, string $f, string $a, string $prescriptionId): string
@@ -68,6 +81,60 @@ test('CreatePharmacyOrder from an ACTIVE prescription lands RECEIVED with an RXO
     test()->assertDatabaseHas('shared_audit_log', [
         'tenant_id' => $t, 'action' => 'pharmacy.pharmacy_order_created',
     ]);
+});
+
+test('pharmacy order creation is denied when the prescription belongs to another active facility', function () {
+    ['t' => $t, 'f' => $facilityAId, 'a' => $a, 'prescription' => $rx, 'organization' => $organizationId, 'roleId' => $roleId] = orderSetup();
+    $facilityBId = pharmacyFacilityForUser($t, $organizationId, $a, $roleId);
+    $orderId = (string) Str::uuid7();
+
+    expect(fn () => dispatchRx($t, $facilityBId, new CreatePharmacyOrder(
+        pharmacyOrderId: $orderId,
+        actorId: $a,
+        prescriptionId: $rx,
+    )))->toThrow(NotFound::class);
+
+    expect(Tenancy::run($t, fn (): bool => DB::table('rx_pharmacy_orders')->where('id', $orderId)->exists()))
+        ->toBeFalse();
+});
+
+test('pharmacy reads and searches do not expose another active facility', function () {
+    ['t' => $t, 'f' => $facilityAId, 'a' => $a, 'prescription' => $rx, 'patient' => $patient, 'organization' => $organizationId, 'roleId' => $roleId] = orderSetup();
+    $orderId = createOrder($t, $facilityAId, $a, $rx);
+    $facilityBId = pharmacyFacilityForUser($t, $organizationId, $a, $roleId);
+
+    expect(fn () => queryRx($t, $facilityBId, new GetPharmacyOrder($orderId)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => queryRx($t, $facilityBId, new GetPrescription($rx)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => queryRx($t, $facilityBId, new SearchPharmacyOrders($facilityAId)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => queryRx($t, $facilityBId, new SearchPrescriptions($facilityAId)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => queryRx($t, $facilityBId, new SearchPickups($facilityAId)))
+        ->toThrow(NotFound::class);
+
+    expect(queryRx($t, $facilityBId, new GetPatientPrescriptions($patient)))->toBe([]);
+
+});
+
+test('pharmacy lifecycle writes are denied when their record belongs to another active facility', function () {
+    ['t' => $t, 'f' => $facilityAId, 'a' => $a, 'prescription' => $rx, 'organization' => $organizationId, 'roleId' => $roleId] = orderSetup();
+    $orderId = createOrder($t, $facilityAId, $a, $rx);
+    $facilityBId = pharmacyFacilityForUser($t, $organizationId, $a, $roleId);
+
+    expect(fn () => dispatchRx($t, $facilityBId, new ValidatePharmacyOrder(
+        pharmacyOrderId: $orderId,
+        actorId: $a,
+    )))->toThrow(AuthorizationException::class)
+        ->and(fn () => dispatchRx($t, $facilityBId, new CancelPrescription(
+            prescriptionId: $rx,
+            actorId: $a,
+            reason: 'entered in error',
+        )))->toThrow(AuthorizationException::class);
+
+    expect(rxPharmacyOrder($t, $orderId)->status)->toBe(PharmacyOrder::STATUS_RECEIVED)
+        ->and(rxPrescription($t, $rx)->status)->toBe(Prescription::STATUS_ACTIVE);
 });
 
 test('CreatePharmacyOrder is rejected when the prescription is not ACTIVE, and only one non-terminal order per prescription is allowed', function () {

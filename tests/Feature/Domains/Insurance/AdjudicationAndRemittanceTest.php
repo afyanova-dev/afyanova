@@ -22,7 +22,9 @@ use App\Domains\Insurance\Domain\ValueObject\ClaimDenialReason;
 use App\Domains\Insurance\Domain\ValueObject\ClaimStatus;
 use App\Domains\Insurance\Domain\ValueObject\RemittanceLineStatus;
 use App\Domains\Insurance\Domain\ValueObject\RemittanceStatus;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -687,4 +689,69 @@ test('multi-tenant isolation: adjudications and remittances cannot be accessed a
 
     expect(fn () => queryInsurance($t2, $f2, new GetRemittance($remId)))
         ->toThrow(RemittanceNotFound::class);
+});
+
+test('facility B cannot access facility A adjudications and remittances', function (): void {
+    ['t' => $tenantId, 'f' => $facilityAId, 'a' => $actorId, 'payer' => $payerId, 'claimId' => $claimId, 'claimLineId' => $claimLineId, 'claimedAmount' => $claimedAmount] = adjudicationSetup();
+
+    $adjudicationId = insuranceRecordAdjudication(
+        tenantId: $tenantId,
+        facilityId: $facilityAId,
+        actorId: $actorId,
+        claimId: $claimId,
+        status: AdjudicationStatus::APPROVED,
+        adjudicationDate: '2026-03-01',
+        lines: [[
+            'claimLineId' => $claimLineId,
+            'status' => AdjudicationLineStatus::APPROVED,
+            'claimedAmount' => $claimedAmount,
+            'approvedAmount' => $claimedAmount,
+            'deniedAmount' => '0.00',
+            'patientResponsibility' => '0.00',
+            'contractualAdjustment' => '0.00',
+        ]],
+    );
+    $remittanceId = insuranceRecordRemittance(
+        tenantId: $tenantId,
+        facilityId: $facilityAId,
+        actorId: $actorId,
+        payerId: $payerId,
+        paymentReference: 'EFT-CONTEXT-01',
+        totalAmount: $claimedAmount,
+        remittanceDate: '2026-03-02',
+    );
+    $facilityA = DB::table('org_facilities')->where('id', $facilityAId)->first();
+    $roleId = DB::table('idn_access_assignments')
+        ->where('user_id', $actorId)
+        ->where('facility_id', $facilityAId)
+        ->value('role_id');
+
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $facilityA, $actorId, $roleId): string {
+        $facilityB = Facility::factory()->forTenant($tenantId, (string) $facilityA->organization_id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $actorId,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetAdjudication($adjudicationId)))
+        ->toThrow(AdjudicationNotFound::class);
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetClaimAdjudication($claimId)))
+        ->toThrow(AdjudicationNotFound::class);
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetRemittance($remittanceId)))
+        ->toThrow(RemittanceNotFound::class);
+
+    expect(queryInsurance($tenantId, $facilityBId, new SearchRemittances(payerId: $payerId)))->toBe([]);
 });

@@ -115,8 +115,10 @@
 
 .afyanova-auth-setup__requirements li > span:last-child {
   color: var(--afy-text-primary);
-  font-size: 0.875rem;
-  line-height: 1.45;
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  font-weight: var(--cds-body-01-font-weight, 400);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+  letter-spacing: var(--cds-body-01-letter-spacing, 0.16px);
 }
 
 /* Stepper: compact horizontal progress across the three setup stages. */
@@ -135,9 +137,10 @@
   gap: 0.4375rem;
   min-inline-size: 0;
   color: var(--afy-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
   white-space: nowrap;
 }
 
@@ -162,9 +165,10 @@
   border: 1px solid var(--afy-border);
   border-radius: 50%;
   background: var(--afy-surface-field);
-  font-size: 0.6875rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
   font-weight: 600;
-  line-height: 1;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
 }
 
 .afyanova-auth-setup__stepper li[data-state='current'] .afyanova-auth-setup__step-badge {
@@ -259,9 +263,11 @@
   border: 1px solid var(--afy-hairline);
   border-radius: var(--afy-radius);
   background: var(--afy-surface-field);
-  font-family: var(--cds-code-01-font-family, 'SF Mono', Menlo, Consolas, monospace);
-  font-size: 0.8125rem;
-  letter-spacing: 0.05em;
+  font-family: var(--cds-code-01-font-family, 'IBM Plex Mono', Menlo, Consolas, monospace);
+  font-size: var(--cds-code-02-font-size, 0.875rem);
+  font-weight: var(--cds-code-02-font-weight, 400);
+  line-height: var(--cds-code-02-line-height, 1.42857);
+  letter-spacing: var(--cds-code-02-letter-spacing, 0.32px);
   text-align: center;
 }
 

@@ -18,9 +18,7 @@ use InvalidArgumentException;
 final readonly class AcceptTranscription implements Auditable, AuthorizesAgainst
 {
     /**
-     * @param  array<string, string|null>  $medication  typed from the paper:
-     *   inventory_item_id, dose, frequency, duration, prescribed_quantity,
-     *   dosing_instruction, route, urgency.
+     * @param  array{inventory_item_id: string, dose?: ?string, frequency?: ?string, duration?: ?string, prescribed_quantity?: ?string, dosing_instruction?: ?string, route?: ?string, urgency?: ?string}  $medication
      */
     public function __construct(
         public string $prescriptionId,
@@ -32,7 +30,7 @@ final readonly class AcceptTranscription implements Auditable, AuthorizesAgainst
             throw new InvalidArgumentException('AcceptTranscription ids must be UUIDs (IC §3).');
         }
 
-        $itemId = (string) ($medication['inventory_item_id'] ?? '');
+        $itemId = $medication['inventory_item_id'];
         if (! Str::isUuid($itemId)) {
             throw new InvalidArgumentException('AcceptTranscription requires a catalog inventory_item_id UUID.');
         }
@@ -56,7 +54,7 @@ final readonly class AcceptTranscription implements Auditable, AuthorizesAgainst
             targetType: 'prescription',
             targetId: $this->prescriptionId,
             metadata: [
-                'inventory_item_id' => $this->medication['inventory_item_id'] ?? null,
+                'inventory_item_id' => $this->medication['inventory_item_id'],
             ],
         );
     }

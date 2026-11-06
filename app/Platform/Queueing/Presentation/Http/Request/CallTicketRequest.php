@@ -22,7 +22,7 @@ final class CallTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'room' => ['required', 'uuid', 'exists:org_rooms,id'],
+            'room' => ['nullable', 'uuid', 'exists:org_rooms,id'],
             'return_to' => ['nullable', 'string', 'max:500'],
         ];
     }

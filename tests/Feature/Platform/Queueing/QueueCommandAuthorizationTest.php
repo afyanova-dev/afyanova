@@ -37,7 +37,9 @@ use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 uses(RefreshDatabase::class);
 
@@ -96,7 +98,12 @@ test('user-initiated queue commands carry bus authorization', function (): void 
     expect(new PauseQueueCommand($queueId, 'reason'))->toBeInstanceOf(AuthorizesAgainst::class);
     expect(new ResumeQueueCommand($queueId))->toBeInstanceOf(AuthorizesAgainst::class);
     expect(new CloseQueueCommand($queueId))->toBeInstanceOf(AuthorizesAgainst::class);
-    expect(new RegisterQueueCommand('f', 'C', 'N'))->toBeInstanceOf(AuthorizesAgainst::class);
+    expect(new RegisterQueueCommand(
+        facilityId: (string) Str::uuid7(),
+        code: 'C',
+        name: 'N',
+        actorId: (string) Str::uuid7(),
+    ))->toBeInstanceOf(AuthorizesAgainst::class);
 });
 
 test('system and internal commands stay outside bus authorization', function (): void {
@@ -160,6 +167,53 @@ test('a viewer cannot mutate tickets through the bus', function (): void {
         $facilityId,
         fn (): string => QueueEntry::query()->where('id', $entry->id)->value('status')->value,
     ))->toBe('WAITING');
+});
+
+test('a queue manager cannot register a queue outside the active facility', function (): void {
+    $fixture = queueingFixture();
+    $tenantId = (string) $fixture['tenant']->id;
+    $activeFacilityId = (string) $fixture['facility']->id;
+    $otherFacility = queueTestSecondFacility(
+        $tenantId,
+        (string) $fixture['organization']->id,
+        (string) $fixture['user']->id,
+        (string) $fixture['role_id'],
+    );
+    $command = new RegisterQueueCommand(
+        facilityId: (string) $otherFacility->id,
+        code: 'OUTSIDE-CONTEXT',
+        name: 'Outside context',
+        actorId: (string) $fixture['user']->id,
+    );
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $activeFacilityId,
+        fn () => app(CommandBus::class)->dispatch($command),
+    ))->toThrow(AuthorizationException::class);
+
+    expect(TenantContextScope::run(
+        $tenantId,
+        null,
+        fn (): bool => DB::table('qms_queues')->where('code', 'OUTSIDE-CONTEXT')->exists(),
+    ))->toBeFalse();
+    expect(TenantContextScope::run(
+        $tenantId,
+        null,
+        fn (): bool => DB::table('shared_audit_log')
+            ->where('action', 'queue.configuration.saved')
+            ->where('target_id', 'OUTSIDE-CONTEXT')
+            ->exists(),
+    ))->toBeFalse();
+});
+
+test('queue registration requires a UUID actor for audit attribution', function (): void {
+    expect(fn () => new RegisterQueueCommand(
+        facilityId: (string) Str::uuid7(),
+        code: 'INVALID-ACTOR',
+        name: 'Invalid actor',
+        actorId: 'not-a-uuid',
+    ))->toThrow(InvalidArgumentException::class);
 });
 
 test('calling an entry from another facility is denied at the bus', function (): void {

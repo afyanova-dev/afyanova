@@ -7,6 +7,8 @@ namespace App\Domains\Pharmacy;
 use App\Domains\Clinical\Contracts\Event\PrescriptionIssued;
 use App\Domains\Pharmacy\Application\Command\AcceptPrescription;
 use App\Domains\Pharmacy\Application\Command\AcceptPrescriptionHandler;
+use App\Domains\Pharmacy\Application\Command\AcceptTranscription;
+use App\Domains\Pharmacy\Application\Command\AcceptTranscriptionHandler;
 use App\Domains\Pharmacy\Application\Command\CancelPharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\CancelPharmacyOrderHandler;
 use App\Domains\Pharmacy\Application\Command\CancelPickup;
@@ -21,10 +23,6 @@ use App\Domains\Pharmacy\Application\Command\HoldPharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\HoldPharmacyOrderHandler;
 use App\Domains\Pharmacy\Application\Command\IngestPrescription;
 use App\Domains\Pharmacy\Application\Command\IngestPrescriptionHandler;
-use App\Domains\Pharmacy\Application\Command\TranscribePaperPrescription;
-use App\Domains\Pharmacy\Application\Command\TranscribePaperPrescriptionHandler;
-use App\Domains\Pharmacy\Application\Command\AcceptTranscription;
-use App\Domains\Pharmacy\Application\Command\AcceptTranscriptionHandler;
 use App\Domains\Pharmacy\Application\Command\MarkPickupNotCollected;
 use App\Domains\Pharmacy\Application\Command\MarkPickupNotCollectedHandler;
 use App\Domains\Pharmacy\Application\Command\RecordPickup;
@@ -35,9 +33,12 @@ use App\Domains\Pharmacy\Application\Command\ReleasePharmacyOrderHold;
 use App\Domains\Pharmacy\Application\Command\ReleasePharmacyOrderHoldHandler;
 use App\Domains\Pharmacy\Application\Command\ReverseDispensing;
 use App\Domains\Pharmacy\Application\Command\ReverseDispensingHandler;
+use App\Domains\Pharmacy\Application\Command\TranscribePaperPrescription;
+use App\Domains\Pharmacy\Application\Command\TranscribePaperPrescriptionHandler;
 use App\Domains\Pharmacy\Application\Command\ValidatePharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\ValidatePharmacyOrderHandler;
 use App\Domains\Pharmacy\Application\Listener\OnPrescriptionIssued;
+use App\Domains\Pharmacy\Application\PharmacyApiService;
 use App\Domains\Pharmacy\Application\Query\GetDispensing;
 use App\Domains\Pharmacy\Application\Query\GetDispensingHandler;
 use App\Domains\Pharmacy\Application\Query\GetPatientPrescriptions;
@@ -58,6 +59,7 @@ use App\Domains\Pharmacy\Application\Query\SearchPrescriptions;
 use App\Domains\Pharmacy\Application\Query\SearchPrescriptionsHandler;
 use App\Domains\Pharmacy\Authorization\PharmacyOrderPolicy;
 use App\Domains\Pharmacy\Authorization\PrescriptionPolicy;
+use App\Domains\Pharmacy\Contracts\PharmacyApi;
 use App\Domains\Pharmacy\Domain\DispensingReader;
 use App\Domains\Pharmacy\Domain\DispensingRepository;
 use App\Domains\Pharmacy\Domain\DispensingReversalRepository;
@@ -113,6 +115,8 @@ final class PharmacyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(PharmacyApi::class, PharmacyApiService::class);
+
         $this->app->bind(PrescriptionRepository::class, EloquentPrescriptionRepository::class);
         $this->app->bind(PrescriptionReader::class, EloquentPrescriptionReader::class);
 

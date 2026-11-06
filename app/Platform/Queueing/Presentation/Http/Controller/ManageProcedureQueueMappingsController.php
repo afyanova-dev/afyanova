@@ -52,15 +52,7 @@ final class ManageProcedureQueueMappingsController
                         ->where('tenant_id', $tenantId)
                         ->where('facility_id', $facilityId)
                         ->where('service_capability', 'PROCEDURE')
-                        ->where('is_active', true)
-                        ->whereExists(function ($query) use ($facilityId): void {
-                            $query->selectRaw('1')
-                                ->from('qms_queue_rooms')
-                                ->join('org_rooms', 'org_rooms.id', '=', 'qms_queue_rooms.room_id')
-                                ->whereColumn('qms_queue_rooms.queue_id', 'qms_queues.id')
-                                ->where('qms_queue_rooms.facility_id', $facilityId)
-                                ->where('org_rooms.status', 'ACTIVE');
-                        }),
+                        ->where('is_active', true),
                 ),
             ],
         ]);
@@ -114,7 +106,7 @@ final class ManageProcedureQueueMappingsController
         });
 
         return redirect()
-            ->route('service-queues.index')
+            ->route('service-queues.manage')
             ->with('status', 'Procedure queue routing updated.');
     }
 }

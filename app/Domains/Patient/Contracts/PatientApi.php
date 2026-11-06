@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Patient\Contracts;
 
 use App\Domains\Patient\Contracts\Dto\PatientNotificationContactDto;
+use App\Domains\Patient\Contracts\Dto\PatientProfileData;
 use App\Domains\Patient\Contracts\Dto\PatientSearchDetails;
 use App\Domains\Patient\Contracts\Dto\PatientSearchResult;
 use App\Domains\Patient\Contracts\Dto\PatientSummary;
@@ -38,6 +39,11 @@ interface PatientApi
      * authorization exception if the caller lacks patient.patients.read.
      */
     public function getPatientSummary(string $patientId): PatientSummary;
+
+    public function getPatientProfile(string $patientId, string $facilityId): PatientProfileData;
+
+    /** Protected facility-scoped reference check for whether a photo is on record. */
+    public function patientHasPhoto(string $patientId, string $facilityId): bool;
 
     /**
      * Protected bulk read (IC §6.2; ADR-125) — returns an associative map of

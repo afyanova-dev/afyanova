@@ -224,7 +224,6 @@ final class CreatePurchaseOrderHandler
         $expected = array_map(fn (array $line): string => $this->resolvedLineSignature($line), $resolved);
         sort($expected);
 
-        /** @var list<PurchaseOrder> $candidates */
         $candidates = PurchaseOrder::query()
             ->where('facility_id', $command->facilityId)
             ->where('supplier_id', $command->supplierId)
@@ -242,7 +241,7 @@ final class CreatePurchaseOrderHandler
             ->orderByDesc('id')
             ->get();
 
-        if ($candidates === []) {
+        if ($candidates->isEmpty()) {
             return;
         }
 

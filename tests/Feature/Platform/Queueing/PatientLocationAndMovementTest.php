@@ -49,6 +49,7 @@ it('tracks patient operational location on place, call, transfer, and manual mov
     $patientId = (string) Str::uuid();
     $room1Id = (string) Str::uuid();
     $doctorStaffId = (string) Str::uuid();
+    $this->travelTo(now()->startOfSecond());
 
     // 1. Initially, no location recorded
     $initialLoc = TenantContextScope::run($tenantId, $facilityId, fn () => $api->getCurrentLocation($encounterId));
@@ -68,6 +69,7 @@ it('tracks patient operational location on place, call, transfer, and manual mov
         ->and($locAfterPlace->currentState)->toBe('WAITING')
         ->and($locAfterPlace->encounterId)->toBe($encounterId);
 
+    $this->travel(250)->milliseconds();
     // 3. Call ticket to Room 1 -> movement to Room 1
     TenantContextScope::run($tenantId, $facilityId, fn () => $api->callNext(new CallNextDto(
         queueId: $triageQueue->id,
@@ -80,6 +82,7 @@ it('tracks patient operational location on place, call, transfer, and manual mov
         ->and($locAfterCall->currentWorkArea)->toBe($room1Id)
         ->and($locAfterCall->fromArea)->toBe('Triage Station');
 
+    $this->travel(250)->milliseconds();
     // 4. Transfer to Consultation Queue -> movement to Consultation Room Area
     TenantContextScope::run($tenantId, $facilityId, fn () => $api->transfer(new TransferQueueDto(
         entryId: $placed->id,
@@ -91,6 +94,7 @@ it('tracks patient operational location on place, call, transfer, and manual mov
     expect($locAfterTransfer)->not->toBeNull()
         ->and($locAfterTransfer->currentWorkArea)->toBe('Consultation Room Area');
 
+    $this->travel(250)->milliseconds();
     // 5. Manual patient movement (e.g. sent to X-Ray waiting bench)
     TenantContextScope::run($tenantId, $facilityId, fn () => $commandBus->dispatch(new RecordPatientMovementCommand(
         encounterId: $encounterId,

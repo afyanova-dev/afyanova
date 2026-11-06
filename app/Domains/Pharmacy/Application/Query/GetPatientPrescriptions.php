@@ -13,7 +13,8 @@ use InvalidArgumentException;
 /**
  * One patient's prescriptions (16-pharmacy-domain.md §19, §260; ADR-181 D-F).
  * Optional status filter; deterministic order (recorded_at DESC, id); NO
- * pagination (the ADR-140 D-L precedent). `view` gates on `pharmacy.access`.
+ * pagination (the ADR-140 D-L precedent). `view` gates on `pharmacy.access`;
+ * the handler restricts rows to facilities authorized in the current context.
  */
 #[ProtectedQuery(ability: 'view', subjectType: Prescription::class)]
 final readonly class GetPatientPrescriptions

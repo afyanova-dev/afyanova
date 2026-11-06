@@ -13,6 +13,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final readonly class RxOrderItem
 {
+    /** @param list<RxDispensingItem> $dispensings */
     public function __construct(
         public string $pharmacyOrderId,
         public string $orderNumber,

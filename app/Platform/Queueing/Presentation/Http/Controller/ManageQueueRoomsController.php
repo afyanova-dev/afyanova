@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Platform\Queueing\Presentation\Http\Controller;
 
 use App\Models\User;
+use App\Platform\Queueing\Domain\Enum\QueueStatus;
 use App\Platform\Queueing\Domain\Model\Queue;
 use App\Shared\Audit\AuditLogger;
 use App\Shared\Tenancy\TenantContext;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 final class ManageQueueRoomsController
 {
@@ -50,7 +52,36 @@ final class ManageQueueRoomsController
         ]);
 
         DB::transaction(function () use ($validated, $target, $tenantId, $facilityId, $user, $audit): void {
+            if ((DB::table('qms_queue_entries')
+                ->where('tenant_id', $tenantId)
+                ->where('facility_id', $facilityId)
+                ->where('queue_id', $target->id))
+                ->whereIn('status', [
+                    QueueStatus::CALLED->value,
+                    QueueStatus::IN_SERVICE->value,
+                    QueueStatus::NO_RESPONSE->value,
+                    QueueStatus::SKIPPED->value,
+                ])
+                ->whereNotNull('called_room_id')
+                ->whereNotIn('called_room_id', $validated['room_ids'])
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'room_ids' => 'Keep the called room assigned until its outstanding tickets are resolved.',
+                ]);
+            }
+
+            $staffAssignments = DB::table('qms_queue_room_staff')
+                ->where('tenant_id', $tenantId)
+                ->where('facility_id', $facilityId)
+                ->where('queue_id', $target->id);
+            if ($validated['room_ids'] !== []) {
+                $staffAssignments->whereNotIn('room_id', $validated['room_ids']);
+            }
+            $staffAssignments->delete();
+
             DB::table('qms_queue_rooms')
+                ->where('tenant_id', $tenantId)
+                ->where('facility_id', $facilityId)
                 ->where('queue_id', $target->id)
                 ->delete();
 
@@ -84,7 +115,7 @@ final class ManageQueueRoomsController
         });
 
         return redirect()
-            ->route('service-queues.index')
+            ->route('service-queues.manage')
             ->with('status', "Room routing updated for {$target->name}.");
     }
 }

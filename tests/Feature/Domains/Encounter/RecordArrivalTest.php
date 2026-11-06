@@ -233,6 +233,36 @@ test('the same patient MAY arrive a PLANNED encounter at a facility where they h
     expect(Tenancy::run((string) $tenant->id, fn () => DB::table('enc_encounters')->where('id', $plannedId)->value('status')))->toBe('ARRIVED');
 });
 
+test('recording arrival is denied when the encounter facility is not active', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user] =
+        arrivalFixture(['encounter.encounters.update']);
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user): Facility {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+        $roleId = DB::table('idn_access_assignments')->where('user_id', $user->id)->value('role_id');
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => (string) $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $facility;
+    });
+    $plannedId = seedPlannedEncounter($tenantId, $facilityAId);
+
+    expect(fn () => dispatchRecordArrival($tenantId, (string) $facilityB->id, $plannedId, (string) $user->id))
+        ->toThrow(AuthorizationException::class);
+    expect(Tenancy::run($tenantId, fn () => DB::table('enc_encounters')->where('id', $plannedId)->value('status')))
+        ->toBe('PLANNED');
+});
+
 // ── authorization ────────────────────────────────────────────────────
 
 test('it denies a caller without encounter.encounters.update (default deny)', function () {

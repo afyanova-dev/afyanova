@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Platform\Queueing\Authorization;
 
 use App\Models\User;
+use App\Platform\Queueing\Application\Command\RegisterQueueCommand;
 use App\Platform\Queueing\Domain\Model\Queue;
 use App\Shared\Authorization\BasePolicy;
 
@@ -43,9 +44,11 @@ final class QueuePolicy extends BasePolicy
             && $this->permits($user, 'queue.ticket.place');
     }
 
-    public function register(User $user): bool
+    public function register(User $user, ?RegisterQueueCommand $command = null): bool
     {
-        return $this->coarse($user, 'queue.definition.manage');
+        return $command !== null
+            && $this->coarse($user, 'queue.definition.manage')
+            && $this->inActiveFacility($command->facilityId);
     }
 
     public function call(User $user): bool

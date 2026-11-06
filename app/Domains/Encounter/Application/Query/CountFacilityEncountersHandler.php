@@ -7,6 +7,7 @@ namespace App\Domains\Encounter\Application\Query;
 use App\Domains\Encounter\Domain\EncounterReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
@@ -16,6 +17,7 @@ final class CountFacilityEncountersHandler
     public function __construct(
         private readonly EncounterReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(CountFacilityEncounters $query): int
@@ -25,10 +27,11 @@ final class CountFacilityEncountersHandler
             throw new RuntimeException('CountFacilityEncounters dispatched without an authenticated user.');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $query->facilityId,
             'encounter.encounters.read',
-            $this->scope->effectivePermissions($user, $query->facilityId),
-            true,
         )) {
             throw new AuthorizationException("User does not hold encounter.encounters.read at facility {$query->facilityId}");
         }

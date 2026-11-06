@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Platform\Queueing\Presentation\Http\Controller;
 
-use App\Domains\Organization\Domain\Model\Room;
+use App\Domains\Organization\Contracts\Dto\RoomSummary;
+use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Domains\Patient\Contracts\Dto\PatientSummary;
 use App\Domains\Patient\Contracts\PatientApi;
+use App\Models\User;
 use App\Platform\Queueing\Domain\Enum\QueueStatus;
 use App\Platform\Queueing\Domain\Model\Queue;
 use App\Platform\Queueing\Domain\Model\QueueEntry;
@@ -131,19 +133,82 @@ trait PresentsQueueEntries
     /**
      * @return array<int, array{id: string, name: string, code: string}>
      */
-    protected function presentRooms(string $facilityId): array
+    protected function presentRooms(string $facilityId, OrganizationApi $organizationApi): array
     {
-        return Room::query()
-            ->where('facility_id', $facilityId)
-            ->where('status', 'ACTIVE')
-            ->orderBy('name')
-            ->get(['id', 'name', 'code'])
-            ->map(static fn (Room $room): array => [
+        return array_map(
+            static fn (RoomSummary $room): array => [
                 'id' => $room->id,
                 'name' => $room->name,
                 'code' => $room->code,
-            ])
+            ],
+            $organizationApi->activeRoomsForFacility($facilityId),
+        );
+    }
+
+    /**
+     * @return list<array{id: string, name: string, code: string}>
+     */
+    protected function callRoomsFor(QueueEntry $ticket, User $user, OrganizationApi $organizationApi): array
+    {
+        $configuredRoomIds = DB::table('qms_queue_rooms')
+            ->where('tenant_id', $ticket->tenant_id)
+            ->where('facility_id', $ticket->facility_id)
+            ->where('queue_id', $ticket->queue_id)
+            ->pluck('room_id')
+            ->map(static fn ($roomId): string => (string) $roomId)
             ->all();
+
+        if ($configuredRoomIds === []) {
+            return [];
+        }
+
+        $staffByRoom = DB::table('qms_queue_room_staff')
+            ->where('tenant_id', $ticket->tenant_id)
+            ->where('facility_id', $ticket->facility_id)
+            ->where('queue_id', $ticket->queue_id)
+            ->get(['room_id', 'user_id'])
+            ->groupBy('room_id');
+
+        $rooms = [];
+        foreach ($organizationApi->activeRoomsForFacility((string) $ticket->facility_id) as $room) {
+            if (! in_array($room->id, $configuredRoomIds, true)) {
+                continue;
+            }
+
+            $assignedStaff = $staffByRoom->get($room->id);
+            if ($assignedStaff !== null && ! $assignedStaff->contains('user_id', (string) $user->getAuthIdentifier())) {
+                continue;
+            }
+
+            $rooms[] = [
+                'id' => $room->id,
+                'name' => $room->name,
+                'code' => $room->code,
+            ];
+        }
+
+        return $rooms;
+    }
+
+    protected function hasRoomStaffRestrictions(QueueEntry $ticket): bool
+    {
+        return DB::table('qms_queue_room_staff')
+            ->where('tenant_id', $ticket->tenant_id)
+            ->where('facility_id', $ticket->facility_id)
+            ->where('queue_id', $ticket->queue_id)
+            ->exists();
+    }
+
+    protected function userCanAccessLocation(QueueEntry $ticket, string $userId): bool
+    {
+        $staffAssignments = DB::table('qms_queue_room_staff')
+            ->where('tenant_id', $ticket->tenant_id)
+            ->where('facility_id', $ticket->facility_id)
+            ->where('queue_id', $ticket->queue_id)
+            ->where('room_id', $ticket->called_room_id);
+
+        return ! (clone $staffAssignments)->exists()
+            || (clone $staffAssignments)->where('user_id', $userId)->exists();
     }
 
     /**
@@ -167,11 +232,17 @@ trait PresentsQueueEntries
     }
 
     /**
-     * @return array<int, array{queueId: string, queue: string, code: string, roomIds: array<int, string>}>
+     * @return array<int, array{queueId: string, queue: string, code: string, roomIds: array<int, string>, restrictedRoomIds: array<int, string>}>
      */
     protected function presentQueueRoomAssignments(string $facilityId): array
     {
         $assignments = DB::table('qms_queue_rooms')
+            ->where('facility_id', $facilityId)
+            ->orderBy('queue_id')
+            ->orderBy('room_id')
+            ->get(['queue_id', 'room_id'])
+            ->groupBy('queue_id');
+        $restrictedRooms = DB::table('qms_queue_room_staff')
             ->where('facility_id', $facilityId)
             ->orderBy('queue_id')
             ->orderBy('room_id')
@@ -189,6 +260,12 @@ trait PresentsQueueEntries
                 'roomIds' => $assignments->get($queue->id, collect())
                     ->pluck('room_id')
                     ->map(static fn ($roomId): string => (string) $roomId)
+                    ->values()
+                    ->all(),
+                'restrictedRoomIds' => $restrictedRooms->get($queue->id, collect())
+                    ->pluck('room_id')
+                    ->map(static fn ($roomId): string => (string) $roomId)
+                    ->unique()
                     ->values()
                     ->all(),
             ])
@@ -253,14 +330,21 @@ trait PresentsQueueEntries
             ->orderBy('user_id')
             ->get(['queue_id', 'room_id', 'user_id'])
             ->groupBy(static fn ($assignment): string => "{$assignment->queue_id}:{$assignment->room_id}")
-            ->map(static fn ($assignments): array => [
-                'queueId' => (string) $assignments->first()->queue_id,
-                'roomId' => (string) $assignments->first()->room_id,
-                'userIds' => $assignments->pluck('user_id')
-                    ->map(static fn ($userId): string => (string) $userId)
-                    ->values()
-                    ->all(),
-            ])
+            ->map(static function ($assignments): array {
+                $firstAssignment = $assignments->first();
+                if ($firstAssignment === null) {
+                    throw new \LogicException('Queue room staff assignment groups cannot be empty.');
+                }
+
+                return [
+                    'queueId' => (string) $firstAssignment->queue_id,
+                    'roomId' => (string) $firstAssignment->room_id,
+                    'userIds' => $assignments->pluck('user_id')
+                        ->map(static fn ($userId): string => (string) $userId)
+                        ->values()
+                        ->all(),
+                ];
+            })
             ->values()
             ->all();
     }

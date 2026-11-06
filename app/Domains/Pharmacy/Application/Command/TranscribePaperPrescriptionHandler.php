@@ -34,10 +34,7 @@ final class TranscribePaperPrescriptionHandler
         $facilityId = $this->context->requireFacilityId();
         if ($command->facilityId !== $facilityId
             || ! $this->patients->patientIsRegisteredAtFacility($command->patientId, $facilityId)) {
-            throw new TranscriptionContextUnresolved(
-                $command->patientId,
-                $facilityId,
-            );
+            throw new TranscriptionContextUnresolved;
         }
 
         $tenantId = $this->context->tenantId();

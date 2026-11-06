@@ -78,6 +78,21 @@ test('a queue id from another facility is not found', function (): void {
         ->assertNotFound();
 });
 
+test('the service queue board returns 403 without an active facility context', function (): void {
+    $fixture = queueingFixture();
+
+    queueTestSecondFacility(
+        (string) $fixture['tenant']->id,
+        (string) $fixture['organization']->id,
+        (string) $fixture['user']->id,
+        (string) $fixture['role_id'],
+    );
+
+    $this->actingAs($fixture['user'])
+        ->get(route('service-queues.index'))
+        ->assertForbidden();
+});
+
 test('guests are redirected to login from the queue detail page', function (): void {
     $this->get(route('service-queues.show', ['queue' => (string) Str::uuid7()]))
         ->assertRedirect(route('login'));

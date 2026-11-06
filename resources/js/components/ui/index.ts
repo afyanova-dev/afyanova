@@ -14,7 +14,6 @@ export type { CheckboxFilterOption } from './CheckboxFilterPopover';
 export { ErrorState } from './ErrorState';
 export { FormErrors } from './FormErrors';
 export { Status } from './Status';
-export { QuickActionsRail } from './QuickActionsRail';
 export { StatisticsCards } from './StatisticsCards';
 export type { StatisticsCardItem } from './StatisticsCards';
 export { OverviewLinkList } from './OverviewLinkList';

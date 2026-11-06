@@ -129,8 +129,23 @@ final class AdminAuditController
             ->exists();
 
         $requestedFacilityId = $validated['facility_id'] ?? null;
-        if ($requestedFacilityId !== null && ! in_array($requestedFacilityId, $allowedFacilityIds, true)) {
-            abort(403, 'You are not authorized to view audit events for this facility.');
+        if ($requestedFacilityId !== null) {
+            abort_unless(
+                in_array($requestedFacilityId, $allowedFacilityIds, true)
+                    && ($isOrganizationScoped
+                        || $context->facilityId() === null
+                        || $requestedFacilityId === $context->facilityId()),
+                403,
+                'You are not authorized to view audit events for this facility.',
+            );
+        }
+
+        if (! $isOrganizationScoped && $context->facilityId() !== null) {
+            $activeFacilityId = $context->facilityId();
+            $facilities = array_values(array_filter(
+                $facilities,
+                static fn (array $facility): bool => $facility['id'] === $activeFacilityId,
+            ));
         }
 
         $facilityFilter = null;

@@ -47,6 +47,9 @@ use Illuminate\Support\Str;
  *
  * @property RelationshipRole $role
  * @property RelationshipStatus $status
+ * @property string $related_name
+ * @property string|null $relationship_label
+ * @property string|null $related_phone
  * @property CarbonImmutable|null $removed_at
  */
 final class PatientRelationship extends AggregateRoot

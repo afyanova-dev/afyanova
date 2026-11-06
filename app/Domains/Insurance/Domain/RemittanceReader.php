@@ -18,5 +18,9 @@ interface RemittanceReader
     /**
      * @return list<RemittanceSummary>
      */
-    public function search(?string $payerId = null, ?string $status = null): array;
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<RemittanceSummary>
+     */
+    public function search(array $facilityIds, ?string $payerId = null, ?string $status = null): array;
 }

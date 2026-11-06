@@ -13,6 +13,7 @@ use App\Domains\Patient\Domain\Model\Patient;
 use App\Domains\Patient\Domain\Model\PatientRegistration;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -40,6 +41,33 @@ it('protects the Patients Inertia page with authentication and patient read perm
         ->get('/workspaces/patient')
         ->assertForbidden();
 });
+
+it('returns 403 for facility-only patient reads in General', function (string $path): void {
+    ['tenant' => $tenant, 'organization' => $organization, 'user' => $user, 'role_id' => $roleId] = makeTenantWithUser([
+        'patient.patients.read',
+    ]);
+
+    TenantContextScope::run((string) $tenant->id, null, function () use ($organization, $user, $roleId): void {
+        DB::table('idn_roles')
+            ->where('id', $roleId)
+            ->update(['scope_type' => 'ORG']);
+        DB::table('idn_access_assignments')
+            ->where('user_id', $user->id)
+            ->where('role_id', $roleId)
+            ->update([
+                'facility_id' => null,
+                'organization_id' => $organization->id,
+            ]);
+    });
+
+    $this->actingAs($user)
+        ->withSession(['facility_context_mode' => 'general'])
+        ->get($path)
+        ->assertForbidden();
+})->with([
+    'Patients page' => ['/workspaces/patient'],
+    'search API' => ['/workspaces/patient/api/search?q=Joshua'],
+]);
 
 it('renders paginated browse and search snapshots on the Patients Inertia page', function (): void {
     ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = makeTenantWithUser(['patient.patients.read']);

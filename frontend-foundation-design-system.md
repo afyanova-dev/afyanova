@@ -82,12 +82,15 @@ still resolve on any theme class Carbon emits.
 
 The **expression layer** aliases (`--afy-canvas`, `--afy-surface`,
 `--afy-surface-interactive`, `--afy-hairline`, `--afy-elevation-rest/hover`)
-implement the "soft clinical" look: a gray canvas with raised cards in light
-themes, near-black canvas with raised layers in dark themes. Because this
-inverts Carbon's white-theme layering direction, those five tokens are
-re-mapped per Carbon theme class at the bottom of `tokens.css`
-(`.cds--g10/.cds--g90/.cds--g100` — `.cds--white` uses the defaults). Adding
-a theme = adding it to those selectors.
+implement the "soft clinical" look: raised surfaces float on the workspace
+canvas in every theme. `canvas`/`surface` map to Carbon's native tokens
+(`--cds-background` / `--cds-layer`) in all four themes, so custom components
+and stock Carbon components layer identically everywhere — including the
+White theme, where Carbon's spec deliberately puts a gray-10 layer on the
+white page (see carbon themes docs: `$field-01` = Gray 10). Dark themes
+keep their lighter-step canvas→surface ramp and chrome overrides at the
+bottom of `tokens.css` (`.cds--g90/.cds--g100`). Adding a theme = adding an
+override there only if its layering bends.
 
 | Group | Tokens | Meaning |
 |---|---|---|

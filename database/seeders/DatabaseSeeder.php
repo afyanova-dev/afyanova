@@ -23,6 +23,7 @@ final class DatabaseSeeder extends Seeder
         $this->call([
             GlobalReferenceDataSeeder::class,
             TenantTanzaniaMedicineCatalogSeeder::class,
+            TanzaniaDiagnosisCatalogSeeder::class,
         ]);
     }
 }

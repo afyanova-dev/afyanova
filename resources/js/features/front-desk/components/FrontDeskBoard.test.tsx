@@ -230,19 +230,16 @@ describe('FrontDeskBoard Today view', () => {
     expect(times).toEqual(['2026-10-03T08:15:00+03:00', '2026-10-03T09:00:00+03:00']);
   });
 
-  it('opens a visit summary popover from the roster encounter number', () => {
-    render(<FrontDeskBoard {...baseProps()} />);
+  it('shows the encounter number as a plain badge without a visit summary popover', () => {
+    const { container } = render(<FrontDeskBoard {...baseProps()} />);
 
-    expect(screen.queryByText('Visit number')).not.toBeInTheDocument();
+    const badge = Array.from(container.querySelectorAll('.cds--tag'))
+      .find((tag) => tag.textContent?.includes('ENC-0001'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Visit summary for ENC-0001' }));
-
-    const summary = document.querySelector('.front-desk-visit-summary__panel');
-    expect(summary).not.toBeNull();
-    expect(within(summary as HTMLElement).getByText('Visit number')).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText('ENC-0001')).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText('Outpatient')).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText('03-Oct-2026, 08:15 GMT+3')).toBeInTheDocument();
+    expect(badge).toBeDefined();
+    expect(badge).toHaveTextContent('ENC-0001 · OUTPATIENT');
+    expect(within(badge as HTMLElement).queryByRole('button')).not.toBeInTheDocument();
+    expect(container.querySelector('.front-desk-visit-summary__panel')).toBeNull();
   });
 
   it('shows the live queue status and permitted clinical documentation indicators', () => {
@@ -678,9 +675,8 @@ describe('FrontDeskBoard Today view', () => {
       target: { value: 'q-1' },
     });
 
-    const destination = within(workspace).getByText('Called only to: Consultation Room 1.');
-    expect(destination).toBeInTheDocument();
-    expect(destination.closest('.cds--inline-notification')).toHaveClass('front-desk-queue-destination');
+    expect(within(workspace).queryByText(/Available service locations:/)).not.toBeInTheDocument();
+    expect(within(workspace).queryByRole('region', { name: 'Selected initial destination' })).not.toBeInTheDocument();
 
     fireEvent.change(department, { target: { value: 'department-2' } });
     expect((queue as HTMLSelectElement).value).toBe('');
@@ -689,6 +685,37 @@ describe('FrontDeskBoard Today view', () => {
       expect(refreshedOptions).toContain('Emergency (ER) · TRIAGE');
       expect(refreshedOptions).not.toContain('General OPD (OPD) · CONSULTATION');
     });
+  });
+
+  it('allows selecting a queue without configured service locations', async () => {
+    state.canRoute = true;
+    const props = baseProps();
+    props.availableQueues = props.availableQueues.map((queue) => (
+      queue.id === 'q-1' ? { ...queue, roomNames: [] } : queue
+    ));
+    render(<FrontDeskBoard {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check in walk-in patient' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search patients' }), {
+      target: { value: 'Walk' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Walk In/ }));
+
+    const workspace = screen.getByRole('dialog', { name: 'Check in walk-in patient' });
+    fireEvent.change(within(workspace).getByLabelText('Encounter type'), { target: { value: 'OUTPATIENT' } });
+    fireEvent.change(await within(workspace).findByLabelText('Department'), {
+      target: { value: 'department-1' },
+    });
+
+    const queue = await within(workspace).findByLabelText('Place into queue (optional)');
+    const unroutedQueueOption = within(queue).getByRole('option', {
+      name: 'General OPD (OPD) · CONSULTATION · No specific location',
+    });
+    expect(unroutedQueueOption).toBeEnabled();
+
+    fireEvent.change(queue, { target: { value: 'q-1' } });
+    expect(within(workspace).queryByText(/specific service location/)).not.toBeInTheDocument();
+    expect(within(workspace).queryByRole('region', { name: 'Selected initial destination' })).not.toBeInTheDocument();
   });
 
   it('hides walk-in check-in without patient read permission', () => {

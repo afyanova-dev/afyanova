@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\HR\Presentation\Http\Controller;
 
-use App\Domains\Authentication\Application\PlatformAdministrationService;
 use App\Domains\Authentication\Contracts\AccountDirectoryApi;
+use App\Domains\Authentication\Contracts\FacilityUserInvitationApi;
 use App\Domains\Authentication\Contracts\FacilityUserRoleCatalog;
 use App\Domains\HR\Application\Command\DefineCadre;
 use App\Domains\HR\Application\Command\DefinePosition;
@@ -33,8 +33,8 @@ use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Models\User;
 use App\Platform\Documents\Contracts\DocumentsApi;
 use App\Platform\Documents\Contracts\DTO\UploadDocumentDto;
-use App\Platform\Documents\Domain\Enum\ConfidentialityLevel;
-use App\Platform\Documents\Domain\Enum\DocumentType;
+use App\Platform\Documents\Contracts\Enum\ConfidentialityLevel;
+use App\Platform\Documents\Contracts\Enum\DocumentType;
 use App\Shared\Audit\AuditLogger;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Bus\CommandBus;
@@ -217,7 +217,7 @@ final class FacilityStaffController
         ScopeChecker $scopeChecker,
         FacilityStaffDirectoryService $directory,
         OrganizationAdminApi $organizationAdminApi,
-        PlatformAdministrationService $administration,
+        FacilityUserInvitationApi $administration,
     ): Response|RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -355,7 +355,7 @@ final class FacilityStaffController
         IdentityApi $identity,
         OrganizationAdminApi $organizationAdminApi,
         FacilityStaffDirectoryService $directory,
-        PlatformAdministrationService $administration,
+        FacilityUserInvitationApi $administration,
         StaffQualificationService $qualifications,
         string $staff,
     ): Response|RedirectResponse {
@@ -410,17 +410,17 @@ final class FacilityStaffController
             );
         $setupInvitationExpired = $pendingSetupInvitation !== null
             && $pendingSetupInvitation->emailVerifiedAt === null
-            && $pendingSetupInvitation->isExpired();
+            && $pendingSetupInvitation->isExpired;
         $canResendInvitation = $mayInviteUser
             && $hasCurrentFacilityAssignment
             && in_array((string) $row->staff_status, ['PROSPECT', 'ACTIVE'], true)
             && $pendingSetupInvitation !== null
-            && $pendingSetupInvitation->canResend();
+            && $pendingSetupInvitation->canResend;
         $canRevokeInvitation = $mayInviteUser
             && $hasCurrentFacilityAssignment
             && in_array((string) $row->staff_status, ['PROSPECT', 'ACTIVE'], true)
             && $pendingSetupInvitation !== null
-            && $pendingSetupInvitation->canRevoke();
+            && $pendingSetupInvitation->canRevoke;
         $canManageStaffAccess = $this->hasAll(
             $permissions,
             ['hr.staff.manage', 'hr.staff_user_link.manage'],
@@ -1510,7 +1510,7 @@ final class FacilityStaffController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        PlatformAdministrationService $administration,
+        FacilityUserInvitationApi $administration,
         FacilityStaffDirectoryService $directory,
         string $staff,
     ): RedirectResponse {
@@ -1562,7 +1562,7 @@ final class FacilityStaffController
             $linkedUserId,
         );
         abort_unless($invitation !== null && $invitation->userId === $linkedUserId, 404);
-        if (! $invitation->canResend()) {
+        if (! $invitation->canResend) {
             throw ValidationException::withMessages([
                 'invitation' => 'Only an unused, unaccepted setup invitation for an active account that has not verified its email can be resent.',
             ]);
@@ -1625,7 +1625,7 @@ final class FacilityStaffController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        PlatformAdministrationService $administration,
+        FacilityUserInvitationApi $administration,
         FacilityStaffDirectoryService $directory,
         string $staff,
     ): RedirectResponse {
@@ -1658,7 +1658,7 @@ final class FacilityStaffController
             $linkedUserId,
         );
         abort_unless($invitation !== null, 404);
-        if (! $invitation->canRevoke()) {
+        if (! $invitation->canRevoke) {
             throw ValidationException::withMessages([
                 'invitation' => 'This invitation can no longer be revoked. It may already be accepted, replaced or revoked.',
             ]);
@@ -1694,7 +1694,7 @@ final class FacilityStaffController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        PlatformAdministrationService $administration,
+        FacilityUserInvitationApi $administration,
         FacilityStaffDirectoryService $directory,
         IdentityApi $identity,
         OrganizationAdminApi $organizationAdminApi,
@@ -1746,7 +1746,7 @@ final class FacilityStaffController
             ]);
         }
 
-        if ($invitation->canRevoke()) {
+        if ($invitation->canRevoke) {
             $administration->revokeFacilityInvitation(
                 tenantId: $context->tenantId(),
                 facilityId: $facilityId,

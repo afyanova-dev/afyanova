@@ -17,7 +17,11 @@ interface PayerContractReader
     /**
      * @return list<PayerContractSummary>
      */
-    public function forPayer(string $payerId, ?string $status = null): array;
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<PayerContractSummary>
+     */
+    public function forPayer(string $payerId, array $facilityIds, ?string $status = null): array;
 
     /**
      * Finds the active contract effective on the given date and facility scope.

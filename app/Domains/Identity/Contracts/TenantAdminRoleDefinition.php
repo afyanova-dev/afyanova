@@ -43,5 +43,8 @@ final class TenantAdminRoleDefinition
         // bundle deliberately does not carry — the Tenant Admin never becomes
         // a procurement actor (§24 / §228 different-actor guards untouched).
         'procurement.access',
+        // Tenant-wide catalog oversight without exposing patient laboratory
+        // orders or granting catalog authoring access.
+        'laboratory.catalog.read',
     ];
 }

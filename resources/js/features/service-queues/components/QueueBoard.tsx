@@ -1,6 +1,4 @@
 import {
-  Accordion,
-  AccordionItem,
   Button,
   ComboButton,
   InlineNotification,
@@ -20,7 +18,7 @@ import { router } from '@inertiajs/react';
 import { routes } from '@/app/routes';
 import { CarbonDataTable, ContainedTabList, EmptyState, IconTab, StatisticsCards, Status } from '@/components/ui';
 import { usePersistentTab } from '@/hooks/usePersistentTab';
-import { Notification, Pending, Renew, Task, Time, WarningAlt } from '@/icons';
+import { Building, Notification, Pending, Renew, Task, Time, WarningAlt } from '@/icons';
 import { permissions, useCan } from '@/lib/authorization';
 import type { QueueBoardEntry, QueueBoardProps } from '../types/queue-board';
 
@@ -48,7 +46,7 @@ const CALLED_HEADERS = [
   { key: 'patient', header: 'Patient' },
   { key: 'queue', header: 'Queue' },
   { key: 'priority', header: 'Priority' },
-  { key: 'room', header: 'Room' },
+  { key: 'room', header: 'Service location' },
   { key: 'action', header: 'Action' },
 ];
 
@@ -57,7 +55,7 @@ const IN_SERVICE_HEADERS = [
   { key: 'patient', header: 'Patient' },
   { key: 'queue', header: 'Queue' },
   { key: 'priority', header: 'Priority' },
-  { key: 'room', header: 'Room' },
+  { key: 'room', header: 'Service location' },
   { key: 'action', header: 'Action' },
 ];
 
@@ -80,7 +78,7 @@ const RECALLABLE_HEADERS = [
 ];
 
 const BOARD_REFRESH_INTERVAL = 15_000;
-const QUEUE_BOARD_TABS = ['waiting', 'called', 'in-service', 'on-hold', 'needs-recall'] as const;
+const QUEUE_BOARD_TABS = ['overview', 'waiting', 'called', 'in-service', 'on-hold', 'needs-recall'] as const;
 const BOARD_REFRESH_PROPS = [
   'asOf',
   'totals',
@@ -202,8 +200,16 @@ function QueueEntriesTable({
   };
   const eligibleRooms = (entry: QueueBoardEntry) => {
     const assignedRoomIds = new Set(mappedAssignedRoomIds.get(entry.queueId) ?? []);
-    return configuredRooms(entry).filter((room) => assignedRoomIds.has(room.id));
+    const restrictedRoomIds = new Set(
+      queueRoomAssignments.find((assignment) => assignment.queueId === entry.queueId)?.restrictedRoomIds ?? [],
+    );
+    return configuredRooms(entry).filter((room) => (
+      !restrictedRoomIds.has(room.id) || assignedRoomIds.has(room.id)
+    ));
   };
+  const canCallWithoutLocation = (entry: QueueBoardEntry) => (
+    (queueRoomAssignments.find((assignment) => assignment.queueId === entry.queueId)?.restrictedRoomIds ?? []).length === 0
+  );
   const rows = entries.map((entry) => ({
     id: entry.id,
     ticketNumber: entry.ticketNumber,
@@ -211,7 +217,7 @@ function QueueEntriesTable({
     queue: entry.queue,
     priority: entry.priority,
     wait: formatMinutes(entry.waitMinutes),
-    room: entry.calledRoomId ? roomNames.get(entry.calledRoomId) ?? '—' : '—',
+    room: entry.calledRoomId ? roomNames.get(entry.calledRoomId) ?? 'Unavailable' : 'In queue',
     action: '',
   }));
   const title = kind === 'waiting'
@@ -223,10 +229,9 @@ function QueueEntriesTable({
         : kind === 'recallable'
           ? 'Needs Recall'
         : 'In Service';
-  const showRoutingAlert = (kind === 'waiting' || kind === 'recallable') &&
-    entries.some((entry) => configuredRooms(entry).length === 0);
   const hasRoomMismatch = kind === 'called' && entries.some(
-    (entry) => !entry.calledRoomId || !configuredRooms(entry).some((room) => room.id === entry.calledRoomId),
+    (entry) => entry.calledRoomId !== null
+      && !configuredRooms(entry).some((room) => room.id === entry.calledRoomId),
   );
 
   function returnTo(): string {
@@ -251,12 +256,12 @@ function QueueEntriesTable({
   }
 
   function callSelectedEntry(): void {
-    if (!actionDialog || selectedRoom === '') return;
+    if (!actionDialog) return;
     setActionError(null);
     setBusyEntryId(actionDialog.entry.id);
     router.post(
       routes.workspaces.ticketCall(actionDialog.entry.id),
-      { room: selectedRoom, return_to: returnTo() },
+      { room: selectedRoom || null, return_to: returnTo() },
       {
         preserveScroll: true,
         onSuccess: closeActionDialog,
@@ -348,7 +353,14 @@ function QueueEntriesTable({
   }
 
   function openActionDialog(action: TicketAction, entry: QueueBoardEntry): void {
-    setSelectedRoom('');
+    const availableRooms = eligibleRooms(entry);
+    const previousRoomIsAvailable = entry.calledRoomId !== null
+      && availableRooms.some((room) => room.id === entry.calledRoomId);
+    setSelectedRoom(
+      action === 'recall' && previousRoomIsAvailable
+        ? entry.calledRoomId ?? ''
+        : availableRooms[0]?.id ?? '',
+    );
     setHoldReason('');
     setHoldProvenance('');
     setClearanceProvenance('');
@@ -361,7 +373,7 @@ function QueueEntriesTable({
 
   const activeDialogAction = actionDialog?.action;
   const dialogCanSubmit = activeDialogAction === 'call'
-    ? selectedRoom !== ''
+    ? selectedRoom !== '' || Boolean(actionDialog && canCallWithoutLocation(actionDialog.entry))
     : activeDialogAction === 'hold'
       ? holdReason !== '' && holdProvenance.trim() !== ''
       : activeDialogAction === 'release'
@@ -369,10 +381,12 @@ function QueueEntriesTable({
         : activeDialogAction === 'transfer'
           ? transferDestination !== ''
           : activeDialogAction === 'recall'
-            ? selectedRoom !== '' || Boolean(
-                actionDialog?.entry.calledRoomId &&
-                eligibleRooms(actionDialog.entry).some((room) => room.id === actionDialog.entry.calledRoomId),
-              )
+            ? selectedRoom !== '' || Boolean(actionDialog && (
+                (actionDialog.entry.calledRoomId !== null
+                  && eligibleRooms(actionDialog.entry).some((room) => room.id === actionDialog.entry.calledRoomId))
+                || (actionDialog.entry.calledRoomId === null
+                  && canCallWithoutLocation(actionDialog.entry))
+              ))
             : actionDialog !== null;
   const dialogTitle = actionDialog
     ? `${actionDialog.action === 'call'
@@ -398,7 +412,7 @@ function QueueEntriesTable({
       (queue) => queue.queueId !== entry.queueId,
     );
 
-    if (kind === 'waiting' && canCall && eligibleRooms(entry).length > 0) {
+    if (kind === 'waiting' && canCall && (eligibleRooms(entry).length > 0 || canCallWithoutLocation(entry))) {
       rowActions.push({
         id: 'call',
         label: 'Call',
@@ -430,10 +444,8 @@ function QueueEntriesTable({
         onSelect: () => openActionDialog('transfer', entry),
       });
     }
-    const calledRoomMatchesQueue = Boolean(
-      entry.calledRoomId &&
-      eligibleRooms(entry).some((room) => room.id === entry.calledRoomId),
-    );
+    const calledRoomMatchesQueue = entry.calledRoomId === null
+      || eligibleRooms(entry).some((room) => room.id === entry.calledRoomId);
     if (
       kind === 'called'
       && canService
@@ -446,7 +458,11 @@ function QueueEntriesTable({
         onSelect: () => postAction(entry, 'start'),
       });
     }
-    if (kind === 'recallable' && canCall && eligibleRooms(entry).length > 0) {
+    if (
+      kind === 'recallable'
+      && canCall
+      && (eligibleRooms(entry).length > 0 || canCallWithoutLocation(entry))
+    ) {
       rowActions.unshift({
         id: 'recall',
         label: 'Recall',
@@ -463,8 +479,8 @@ function QueueEntriesTable({
     if (
       kind === 'in-service'
       && canService
-      && entry.calledRoomId !== null
-      && eligibleRooms(entry).some((room) => room.id === entry.calledRoomId)
+      && (entry.calledRoomId === null
+        || eligibleRooms(entry).some((room) => room.id === entry.calledRoomId))
     ) {
       rowActions.push({
         id: 'complete',
@@ -520,17 +536,11 @@ function QueueEntriesTable({
 
   return (
     <>
-      {showRoutingAlert || hasRoomMismatch ? (
+      {hasRoomMismatch ? (
         <InlineNotification
           kind="warning"
-          title={hasRoomMismatch
-            ? 'A called ticket is assigned to a room that does not match its queue'
-            : kind === 'waiting'
-              ? 'Room routing is not configured for every waiting queue'
-              : 'Room routing is not configured for every recallable queue'}
-          subtitle={hasRoomMismatch
-            ? 'Do not start service until the room is corrected or the ticket is transferred to the appropriate queue.'
-            : 'A queue administrator must assign rooms before tickets in those queues can be called.'}
+          title="A called ticket has a service location that is no longer assigned to its queue"
+          subtitle="Update the queue's service locations or transfer the ticket before starting service."
           lowContrast
           className="service-queues__routing-alert"
         />
@@ -585,7 +595,7 @@ function QueueEntriesTable({
           if (cell.info.header === 'holdReason') return entry.holdReason?.replaceAll('_', ' ') ?? '—';
           if (cell.info.header === 'status') return entry.status.replaceAll('_', ' ');
           if (cell.info.header === 'room') {
-            return entry.calledRoomId ? roomNames.get(entry.calledRoomId) ?? '—' : '—';
+            return entry.calledRoomId ? roomNames.get(entry.calledRoomId) ?? 'Unavailable' : 'In queue';
           }
           if (cell.info.header === 'action') return renderActions(entry);
           return cell.value;
@@ -623,7 +633,7 @@ function QueueEntriesTable({
               <>
                 <p>
                   {activeDialogAction === 'call'
-                    ? `Call ${actionDialog.entry.patientName} (${actionDialog.entry.patientNumber}) to a room.`
+                    ? `Call ${actionDialog.entry.patientName} (${actionDialog.entry.patientNumber}) to a service location, or call them in the queue if no location is needed.`
                     : activeDialogAction === 'hold'
                       ? `Place ${actionDialog.entry.patientName}'s ticket on hold.`
                       : activeDialogAction === 'release'
@@ -636,22 +646,24 @@ function QueueEntriesTable({
                 </p>
                 {activeDialogAction === 'call' || activeDialogAction === 'recall' ? (
                   <Select
-                      id={activeDialogAction === 'call' ? 'service-queues-call-room' : 'service-queues-recall-room'}
-                      labelText={activeDialogAction === 'call' ? 'Room' : 'Room (optional)'}
-                      value={selectedRoom}
-                      onChange={(event) => setSelectedRoom(event.currentTarget.value)}
+                    id={activeDialogAction === 'call' ? 'service-queues-call-room' : 'service-queues-recall-room'}
+                    labelText="Service location"
+                    value={selectedRoom}
+                    onChange={(event) => setSelectedRoom(event.currentTarget.value)}
                   >
-                      <SelectItem
-                        value=""
-                        text={
-                          activeDialogAction === 'call' || !actionDialog.entry.calledRoomId
-                            ? 'Select a room'
-                            : 'Keep previous room'
-                        }
-                      />
-                      {eligibleRooms(actionDialog.entry).map((room) => (
-                        <SelectItem key={room.id} value={room.id} text={`${room.name} (${room.code})`} />
-                      ))}
+                    <SelectItem
+                      value=""
+                      text={
+                        activeDialogAction === 'call' || !actionDialog.entry.calledRoomId
+                          ? canCallWithoutLocation(actionDialog.entry)
+                            ? 'No specific location'
+                            : 'Select a service location'
+                          : 'Keep previous location'
+                      }
+                    />
+                    {eligibleRooms(actionDialog.entry).map((room) => (
+                      <SelectItem key={room.id} value={room.id} text={`${room.name} (${room.code})`} />
+                    ))}
                   </Select>
                 ) : null}
                 {activeDialogAction === 'transfer' ? (
@@ -730,7 +742,6 @@ function QueueEntriesTable({
 
 export function QueueBoard({
   asOf,
-  totals,
   queues,
   waitingEntries,
   calledEntries,
@@ -791,7 +802,8 @@ export function QueueBoard({
   const visibleRecallable = selectedQueue
     ? recallableEntries.filter((entry) => entry.queueCode === selectedQueue.code)
     : recallableEntries;
-  const queueRows = queues.map((queue) => ({
+  const visibleQueues = selectedQueue ? [selectedQueue] : queues;
+  const queueRows = visibleQueues.map((queue) => ({
     ...queue,
     id: queue.queueId,
     averageWait: queue.averageWaitMinutes,
@@ -800,32 +812,13 @@ export function QueueBoard({
   return (
     <div>
       <StatisticsCards
-        label="Facility queue totals"
+        label="Facility-wide activity"
         cards={[
-          {
-            id: 'waiting',
-            label: 'Waiting',
-            value: waitingEntries.length,
-            detail: (
-              <>
-                Average wait {formatMinutes(totals.averageWaitMinutes)}
-                {totals.longestWaitPatient
-                  ? ` · Longest ${formatMinutes(totals.longestWaitMinutes)} (${totals.longestWaitPatient})`
-                  : ''}
-              </>
-            ),
-          },
           {
             id: 'called',
             label: 'Called',
             value: calledEntries.length,
-            detail: 'Patients called to a service room',
-          },
-          {
-            id: 'in-service',
-            label: 'In service',
-            value: inServiceEntries.length,
-            detail: 'Patients currently receiving service',
+            detail: 'Patients called to a service location or from the queue',
           },
           {
             id: 'on-hold',
@@ -842,49 +835,12 @@ export function QueueBoard({
         ]}
       />
 
-      <section className="service-queues__overview" aria-label="Facility overview">
-        <Accordion className="service-queues__overview-accordion" size="sm">
-          <AccordionItem title="Facility overview">
-            <CarbonDataTable
-              rows={queueRows}
-              headers={QUEUE_HEADERS}
-              title="Facility overview"
-              ariaLabel="Facility queues"
-              emptyState={(
-                <EmptyState
-                  title="No queues are available"
-                  description="There are no queues configured for this facility."
-                />
-              )}
-              renderCell={(cell, row) => {
-                const queue = queues.find((item) => item.queueId === row.id);
-                if (!queue) return cell.value;
-                if (cell.info.header === 'queue') {
-                  return (
-                    <>
-                      <span style={{ display: 'block' }}>{queue.queue}</span>
-                      <span>
-                        {queue.code}
-                      </span>
-                    </>
-                  );
-                }
-                if (cell.info.header === 'operatingStatus') return operatingStatus(queue.operatingStatus);
-                if (cell.info.header === 'averageWait') return formatMinutes(queue.averageWaitMinutes);
-                if (cell.info.header === 'longestWait') return formatMinutes(queue.longestWaitMinutes);
-                return cell.value;
-              }}
-            />
-          </AccordionItem>
-        </Accordion>
-      </section>
-
       <div className="service-queues__flow">
         <div className="service-queues__flow-heading">
           <h2>Patient flow</h2>
           <Select
             id="service-queues-filter"
-            labelText="Filter patient lists by queue"
+            labelText="Filter by queue"
             value={selectedQueueId}
             onChange={(event) => setSelectedQueueId(event.currentTarget.value)}
             size="sm"
@@ -906,6 +862,7 @@ export function QueueBoard({
           <Tabs selectedIndex={selectedTab} onChange={({ selectedIndex }) => setSelectedTab(selectedIndex)}>
             <div className="service-queues__tab-bar">
               <ContainedTabList aria-label="Patient flow status" className="service-queues__tab-list">
+                <IconTab icon={Building}>Overview ({visibleQueues.length})</IconTab>
                 <IconTab icon={Time}>Waiting ({visibleWaiting.length})</IconTab>
                 <IconTab icon={Notification}>Called ({visibleCalled.length})</IconTab>
                 <IconTab icon={Task}>In Service ({visibleInService.length})</IconTab>
@@ -927,6 +884,36 @@ export function QueueBoard({
               />
             </div>
             <TabPanels>
+              <TabPanel>
+                <CarbonDataTable
+                  rows={queueRows}
+                  headers={QUEUE_HEADERS}
+                  title="Facility overview"
+                  ariaLabel="Facility queues"
+                  emptyState={(
+                    <EmptyState
+                      title="No queues are available"
+                      description="There are no queues configured for this facility."
+                    />
+                  )}
+                  renderCell={(cell, row) => {
+                    const queue = visibleQueues.find((item) => item.queueId === row.id);
+                    if (!queue) return cell.value;
+                    if (cell.info.header === 'queue') {
+                      return (
+                        <>
+                          <span style={{ display: 'block' }}>{queue.queue}</span>
+                          <span>{queue.code}</span>
+                        </>
+                      );
+                    }
+                    if (cell.info.header === 'operatingStatus') return operatingStatus(queue.operatingStatus);
+                    if (cell.info.header === 'averageWait') return formatMinutes(queue.averageWaitMinutes);
+                    if (cell.info.header === 'longestWait') return formatMinutes(queue.longestWaitMinutes);
+                    return cell.value;
+                  }}
+                />
+              </TabPanel>
               <TabPanel>
                 <QueueEntriesTable
                   entries={visibleWaiting}

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Theatre\Application\Command\AmendOperativeNote;
 use App\Domains\Theatre\Application\Command\CreateOperativeNote;
 use App\Domains\Theatre\Application\Command\ReviewOperativeNote;
@@ -17,10 +18,13 @@ use App\Domains\Theatre\Domain\Exception\OperativeNoteAlreadyExistsForCase;
 use App\Domains\Theatre\Domain\Exception\SurgicalCaseNotEligibleForOperativeNote;
 use App\Domains\Theatre\Domain\Model\OperativeNote;
 use App\Domains\Theatre\Domain\Model\SurgicalCase;
+use App\Models\User;
+use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContext;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -284,4 +288,89 @@ test('GetOperativeNote hides a note at a facility outside the reader scope', fun
 
     expect(fn () => TenantContextScope::run((string) $other->id, (string) $otherFacility->id, fn () => app(QueryBus::class)->dispatch(new GetOperativeNote($noteId))))
         ->toThrow(NotFound::class);
+});
+
+test('a reader in facility B cannot read an operative note from facility A', function (): void {
+    ['tenantId' => $tenantId, 'facilityId' => $facilityAId, 'actorId' => $actorId, 'caseId' => $caseId] = seedEligibleCase();
+    $noteId = (string) Str::uuid7();
+    dispatchCmd($tenantId, $facilityAId, new CreateOperativeNote(
+        noteId: $noteId,
+        caseId: $caseId,
+        actorId: $actorId,
+    ));
+
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $facilityAId, $actorId): string {
+        $organizationId = (string) DB::table('org_facilities')
+            ->where('id', $facilityAId)
+            ->value('organization_id');
+        $facilityB = Facility::factory()->forTenant($tenantId, $organizationId)->create();
+        $roleId = (string) DB::table('idn_access_assignments')
+            ->where('user_id', $actorId)
+            ->value('role_id');
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $actorId,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new GetOperativeNote($noteId)),
+    ))->toThrow(NotFound::class);
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new GetOperativeNoteForCase($caseId)),
+    ))->toThrow(NotFound::class);
+});
+
+test('facility reads in General require an authorized explicit target and unresolved context denies', function (): void {
+    ['tenantId' => $tenantId, 'facilityId' => $facilityId, 'actorId' => $actorId] = seedEligibleCase();
+
+    [$generalTargetAllowed, $generalFacilityIds] = TenantContextScope::run(
+        $tenantId,
+        null,
+        function (TenantContext $context) use ($actorId, $facilityId): array {
+            $user = User::query()->findOrFail($actorId);
+            $scope = app(ScopeChecker::class);
+
+            return [
+                $scope->hasFacilityPermissionInContext($user, $context, $facilityId, 'theatre.access'),
+                $scope->facilityIdsWithPermissionInContext($user, $context, 'theatre.access'),
+            ];
+        },
+    );
+
+    $unresolvedTargetAllowed = TenantContextScope::run(
+        $tenantId,
+        $facilityId,
+        function () use ($tenantId, $actorId, $facilityId): bool {
+            $user = User::query()->findOrFail($actorId);
+            $context = new TenantContext;
+            $context->establish($tenantId, null);
+
+            return app(ScopeChecker::class)->hasFacilityPermissionInContext(
+                $user,
+                $context,
+                $facilityId,
+                'theatre.access',
+            );
+        },
+    );
+
+    expect($generalTargetAllowed)->toBeTrue()
+        ->and($generalFacilityIds)->toBe([$facilityId])
+        ->and($unresolvedTargetAllowed)->toBeFalse();
 });

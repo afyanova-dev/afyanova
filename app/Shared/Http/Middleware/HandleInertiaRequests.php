@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Http\Middleware;
 
+use App\Domains\Identity\Contracts\IdentityApi;
 use App\Models\User;
 use App\Shared\Authorization\OrganizationPermissionScope;
 use App\Shared\Authorization\PermissionRegistry;
@@ -80,6 +81,7 @@ final class HandleInertiaRequests extends Middleware
                 'activeFacility' => null,
                 'contextMode' => 'unresolved',
                 'canUseGeneral' => false,
+                'isTenantAdmin' => false,
                 'isPlatformSuperAdmin' => false,
             ];
         }
@@ -134,6 +136,8 @@ final class HandleInertiaRequests extends Middleware
             'activeFacility' => $activeFacility,
             'contextMode' => $context->isGeneral() ? 'general' : ($activeFacility !== null ? 'facility' : 'unresolved'),
             'canUseGeneral' => $scope->canUseGeneralContext($user),
+            'isTenantAdmin' => $context->hasTenant()
+                && app(IdentityApi::class)->isTenantAdmin($context->tenantId(), (string) $user->getKey()),
             'isPlatformSuperAdmin' => $user->isPlatformSuperAdmin(),
         ];
     }

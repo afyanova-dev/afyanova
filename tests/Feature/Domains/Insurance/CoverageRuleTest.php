@@ -13,7 +13,10 @@ use App\Domains\Insurance\Domain\Model\PlanCoverageRule;
 use App\Domains\Insurance\Domain\ValueObject\CoverageConfidence;
 use App\Domains\Insurance\Domain\ValueObject\CoverageDecisionStatus;
 use App\Domains\Insurance\Domain\ValueObject\CoverageSource;
+use App\Domains\Organization\Domain\Model\Facility;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -199,6 +202,40 @@ test('a user without insurance.coverage.manage cannot set a rule; without .acces
     test()->actingAs($nobody);
     expect(fn () => queryInsurance($t, $f, new EvaluateCoverage(patientId: $patient, planId: $plan, serviceCategory: 'LABORATORY')))
         ->toThrow(AuthorizationException::class);
+});
+
+test('EvaluateCoverage cannot target a different facility than the active context', function (): void {
+    ['t' => $tenantId, 'f' => $facilityAId, 'a' => $actorId, 'patient' => $patientId, 'plan' => $planId] = coverageRuleSetup();
+    $facilityA = DB::table('org_facilities')->where('id', $facilityAId)->first();
+    $roleId = DB::table('idn_access_assignments')
+        ->where('user_id', $actorId)
+        ->where('facility_id', $facilityAId)
+        ->value('role_id');
+
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $facilityA, $actorId, $roleId): string {
+        $facilityB = Facility::factory()->forTenant($tenantId, (string) $facilityA->organization_id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $actorId,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new EvaluateCoverage(
+        patientId: $patientId,
+        planId: $planId,
+        serviceCategory: 'LABORATORY',
+        facilityId: $facilityAId,
+    )))->toThrow(NotFound::class);
 });
 
 test('coverage rules are tenant-isolated', function () {

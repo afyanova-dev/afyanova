@@ -147,6 +147,13 @@ deliverable is completed.
 
 ### W2.1 Finish Admin Phase 2 identity and organization administration
 
+**Current progress:** A tenant-scoped, permission-gated, read-only role
+catalogue is delivered as an initial W2.1 slice. It exposes role status, scope,
+protection, and assigned permission keys; it does not permit role or permission
+changes. W2.1 and W2 remain open: no permissions are currently eligible for
+delegation, so permission editing must wait for owning-domain opt-ins and the
+required independent policy approval.
+
 Deliver and verify the remaining approved workflows:
 
 - Role and permission-bundle management using the Identity permission
@@ -332,9 +339,9 @@ Do not mark this plan complete until every row is signed off:
 
 | Gate | Required evidence | Status |
 |---|---|---|
-| W1 Backend stability | Full Pest, PHPStan, conformance, and relevant formatting results; security follow-up disposition | In progress — last full Pest: 3,462 passed / 4 failed (architecture boundaries); Organization Admin controller has no direct DB facade or Organization model imports; Clinical and Pharmacy boundary extractions verified (25 tests / 341 assertions); Patient search details use a protected Patient API reader (34 tests / 141 assertions); HR staff-photo assignment lookup uses the HR API/reader (4 tests / 31 assertions); Patient registration drafts use Patient application/reader/writer surfaces (35 tests / 429 assertions); Authentication facility-invitation resend lookup now uses an Authentication reader (11 tests / 161 assertions); focused PHPStan and Pint pass for these slices; latest architecture run still has four failing rules: direct DB use in five other domain controllers plus remaining domain/domain, domain/platform, and platform/domain imports; full Pest pending; project PHPStan baseline 242 errors; conformance 18 failures; no Git provenance |
+| W1 Backend stability | Full Pest, PHPStan, conformance, and relevant formatting results; security follow-up disposition | Complete for the identified workspace snapshot — full Pest: 3,533 passed / 21,326 assertions; configured PHPStan, isolated-test-database conformance, Pint, frontend lint, TypeScript, and Vitest pass. Inviter-authority and immediate session-revocation follow-up regressions are covered in `SECURITY-REVIEW.md`. |
 | W2 Admin workflows | Phase 2 exit criteria and approved Phase 3 setting register/UI acceptance | In progress — scope register approved; implementation open |
-| W3 Frontend loading | Type/lint/test/build results, route checks, before/after bundle measurements | In progress — tests pass but runner exits on worker timeout |
+| W3 Frontend loading | Type/lint/test/build results, route checks, before/after bundle measurements | In progress — 54 lazy page entries and direct/internal route checks pass. Current eager JS dependency set is 337,070 bytes (app entry: 14,696 bytes) and CSS is 1,135,026 bytes; the largest page entry is 184,832 bytes, but a shared Carbon `Button` chunk remains 2,027,491 bytes (467.11 kB gzip) and triggers Vite's size warning. Optimize or explicitly disposition this payload before closing W3. |
 | W4 Browser acceptance | Isolated database proof and all four required E2E journeys passing | In progress — safe harness passes; domain journeys remain |
 | W5 Procurement rollout | Load/UAT, training, pilot/rollback, reconciliation, and owner sign-off | Not started |
 
@@ -366,6 +373,13 @@ fully complete while any required workstream or final gate remains open.
   Queueing, Scheduling, Bed/Ward, Theatre, and Organization. Admin is the
   entry/readiness surface; owning domains retain a single authoritative
   writer. No Admin backend or UI implementation has been made yet.
+- **W2 — Bed/Ward lifecycle verified:** Ward decommissioning now locks the
+  ward and refuses while any REQUESTED or HELD reservation remains. New bed
+  setup, room setup, assignments, and reservation requests require an active
+  ward; available-bed queries always exclude non-active wards. Existing
+  occupancies remain releasable after decommissioning. The Bed/Ward feature
+  suite passes (71 tests, 283 assertions). Scheduling and Theatre acceptance
+  items and the overall W2 gate remain open.
 - **W3 — Implementation done; verification gate open:** Replaced eager
   Inertia page loading with asynchronous page imports. The production build
   now emits 50 dynamic page imports; the app entry is 14,355 bytes versus the
@@ -756,3 +770,143 @@ fully complete while any required workstream or final gate remains open.
   to two transaction wrappers: initial staff creation and account invitation
   plus linking. W1 and the architecture gate remain open until those
   workflows are extracted and the gate is rerun.
+
+### 2026-10-31
+
+- **W1.0 — Current baseline recorded:** The repository is on `main` at
+  `a5db9623b2b54ada260132d54248831e9ec62c11`; the working tree has 344
+  modified/untracked entries, so changes remain uncommitted and must not be
+  treated as a clean baseline. Runtime is PHP 8.5.4 / Laravel 13.29.0. The
+  default local database connection is PostgreSQL; PHPUnit uses `.env.testing`
+  and the isolated `afyanova_test` database.
+- **W1.1 — Full backend suite:** `php artisan test --compact` passes with
+  **3,533 tests and 21,319 assertions**. This includes the facility-context
+  deep-link regression. No tests were skipped.
+- **W1.2 — PHPStan remains open:** The full configured analysis currently
+  reports **65 errors** (down from the historical 242-error baseline and the
+  165-error count recorded earlier in this log).
+  Focused PHPStan for `AuthenticationServiceProvider.php` passes with no
+  errors. A focused analysis of the Pest context test reports 18
+  `Pest\PendingCalls\TestCall` method-resolution errors; do not rewrite its
+  established test style solely to suppress these diagnostics.
+- **W1.3 — Conformance environment requires reconciliation:** The conformance
+  command against the default local PostgreSQL database reports eight missing
+  `version` columns. A read-only migration-status check shows five pending
+  migrations that add version columns to the affected Identity, Inventory,
+  Clinical, HR, and Patient tables. The backend tests use `.env.testing` and
+  pass; do not apply pending migrations to the local developer database
+  without authorization. Rerun conformance against an approved, fully migrated
+  disposable PostgreSQL database before classifying these as schema defects.
+- **W1.4 / frontend checks remain open:** `composer conform` stops at Pint
+  because multiple project files fail formatting; focused Pint passes for the
+  changed context files. Full PHPStan remains open as noted above.
+  `npm run lint --silent` and `npm run types --silent` pass. Vitest reports
+  **607 passing tests** but exits with two `onTaskUpdate` worker timeouts on
+  both concurrent and isolated runs. `git diff --check` passes. No commit or
+  push was made.
+- **W1.1 — Backend rerun after quality fixes:** The full suite reported
+  **3,532 passed / 1 failed** (21,324 assertions). The failure was an
+  Organization capability audit-order expectation; its isolated rerun passed,
+  so treat this as an unresolved ordering-sensitive suite failure rather than
+  a clean full-suite result.
+- **W1.2 — Continued PHPStan triage:** Focused analysis now passes for the
+  Procurement purchase-order reader, contract repository, supplier model and
+  order handler, plus the Patient profile reader and relationship model.
+  Procurement regression runs passed (23 tests / 236 assertions; 14 tests /
+  39 assertions; 19 tests / 134 assertions). The Patient workspace suite passed
+  (29 tests / 382 assertions). The profile regression exposed and now verifies
+  reading relationship values from their actual persisted column names.
+  Full PHPStan passed analysis with `--debug` and reports 65 remaining errors;
+  ordinary full invocations hit a Larastan bootstrap-constant error.
+- **W1.1–W1.4 — Latest quality-gate verification:** The full backend suite now
+  passes (**3,533 tests / 21,326 assertions**). A prior retry reported 11
+  Clinical failures while core tables were missing; the focused Clinical
+  rerun passed (**23 tests / 158 assertions**) and the subsequent full rerun
+  passed. The configured project PHPStan command reports **no errors**, and
+  `php artisan afyanova:conformance --env=testing` passes. The test database
+  is `afyanova_test` as configured in `.env.testing`; its disposable status
+  was confirmed before the rerun.
+- **W1.4 — Remaining frontend/style blockers:** `npm run lint` and
+  `npm run types` pass. Vitest reports **609 passing tests** but still exits
+  non-zero with one unhandled `onTaskUpdate` timeout. Isolating the Queueing
+  hold/release interaction reproduces a CPU-bound JSDOM/Carbon Popover hang;
+  no safe fix has been established. Focused Pint passes for the final
+  Queueing edits, while project-wide Pint still reports unrelated existing
+  formatting findings. `git diff --check` passes.
+- **W1.4 — Frontend test worker stability (2026-10-31):** The updated full
+  suite reports **610 tests across 65 files**. The default worker count
+  reproduced the unhandled `onTaskUpdate` timeout, while running with two
+  workers passed without unhandled errors. Set Vitest's default `maxWorkers`
+  to 2; the documented `npm test` command then passed with all 610 tests.
+  This stabilizes the frontend test gate without skipping coverage. Project-
+  wide Pint findings remain open.
+- **W1.4 — Security follow-up revalidation (2026-10-31):** Inspected the
+  tenant-wide termination controller/service path and reran
+  `php artisan test --compact tests/Feature/Security/StaffTerminationRevocationTest.php --filter='revokes all facility access tenant-wide when linked staff is terminated'`;
+  it passes (**1 test / 16 assertions**). Ordinary linked-account assignments
+  are revoked across facilities, sessions are revoked, and privileged-role
+  changes remain subject to independent approval. Updated `SECURITY-REVIEW.md`
+  with current repository/test evidence.
+- **W1.1–W1.4 — Backend and formatting rerun (2026-10-31):** With owner
+  approval, ran `vendor/bin/pint --dirty --format agent` to resolve the
+  recorded project-wide formatting findings; a repeat run passes. Full
+  `vendor/bin/phpstan analyse --no-progress` reports no errors, and
+  `php artisan afyanova:conformance --env=testing` passes. The full
+  `php artisan test --compact` rerun passes (**3,533 tests / 21,326
+  assertions**). The privileged-assignment suspension policy is documented
+  in `SECURITY-REVIEW.md`; the suspension regression passes (**1 test / 46
+  assertions**). W1 is complete for this identified workspace snapshot.
+- **W3 — Lazy-loading and route verification (2026-10-31):** Extracted the
+  Inertia resolver into a testable helper and added coverage for the legacy
+  `Patient/Register` alias, direct page resolution, and explicit failure for
+  a missing page. Added a browser check for internal Inertia navigation to the
+  forgot-password page. The production manifest contains 54 dynamic page
+  entries. The app entry is 14,696 bytes and its static JS dependency set
+  totals 337,070 bytes. Initial CSS is 1,135,026 bytes. The largest page entry
+  is 184,832 bytes.
+  The largest shared chunk is Carbon `Button` at 2,027,491 bytes (467.11 kB
+  gzip), which triggers the 500 kB warning. Source-map inspection traced the
+  chunk to Carbon's side-effectful root entry and icon registry; per-icon
+  imports did not reduce it and were reverted. Focused resolver tests pass
+  (**3 tests**), the browser route set passes (**7 tests**), the full frontend
+  suite passes (**613 tests / 66 files**), and type/lint/build checks pass.
+  W3 remains open pending a safe resolution or explicit acceptance of the
+  shared-chunk size.
+- **W1.4 — Security regression coverage follow-up (2026-10-31):** Confirmed
+  the existing inviter-authority bootstrap test passes and verifies that a
+  revoked inviter cannot complete setup. Added active-session assertions for
+  ordinary assignment revocation, HR assignment suspension/revocation, and
+  independently approved Facility Admin revocation. Focused security tests
+  pass (**4 tests / 106 assertions**); targeted Pint and `git diff --check`
+  pass. Updated `SECURITY-REVIEW.md` to replace the now-resolved test-gap
+  claims. W1 remains complete for the identified snapshot; W2–W5 remain open.
+- **W2.2 — Queue registration authorization and audit (2026-10-31):**
+  `RegisterQueueCommand` now requires `queue.definition.manage` in the trusted
+  active facility that matches its target, and writes a transactional audit
+  event with actor and facility attribution. A cross-facility regression
+  asserts that neither queue nor audit row is created. Follow-up inspection
+  (2026-11-01) found that room and room-staff updates replace their current
+  assignments without changing existing queue-entry snapshots. Call and recall
+  require the room to remain currently routed; start and complete require the
+  acting user to remain currently assigned to the ticket's called room.
+  Implemented the selected policy: reject room/staff replacements that would
+  strand outstanding tickets, while allowing transfer to another eligible
+  staff member and immediately revoking the removed member's access. Procedure
+  mapping replacement affects future route events; already-issued entries
+  remain in their original queue, and duplicate route events return the
+  existing entry. Focused replacement, routing, and audit regressions pass
+  (**11 tests / 82 assertions**), including rejection of an inactive-only
+  staff destination; the full Queueing feature suite passes (**104 tests / 789
+  assertions**). W2 remains in progress on the other Phase 3 acceptance items.
+- **W2.2 — Theatre setup and case lifecycle verification (2026-11-01):**
+  Confirmed `CreateOperatingRoom` is registered through CommandBus, requires
+  facility-scoped `theatre.rooms.manage`, validates its Organization room
+  reference against the target facility, and records transactional audit.
+  Added regressions for authorization denial/no writes, cross-facility room
+  rejection, and releasing the reserved room when its scheduled case is
+  cancelled. Theatre feature tests pass (**42 tests / 173 assertions**);
+  focused PHPStan and Pint pass. Existing lifecycle tests cover room
+  reservation, in-use, cleaning, and abort transitions. No standalone
+  operating-room status writer or web configuration surface exists. Theatre's
+  verification gate is done; Scheduling, setup-readiness UI, and other W2
+  acceptance items remain open.

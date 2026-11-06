@@ -8,10 +8,12 @@ use App\Domains\Patient\Application\Command\RegisterPatient;
 use App\Domains\Patient\Application\Command\RegisterPatientAtFacility;
 use App\Domains\Patient\Application\Command\RegisterPatientResult;
 use App\Domains\Patient\Application\Command\RegisterPatientReview;
+use App\Domains\Patient\Application\Query\GetPatientProfile;
 use App\Domains\Patient\Application\Query\GetPatientSummaries;
 use App\Domains\Patient\Application\Query\GetPatientSummary;
 use App\Domains\Patient\Application\Query\SearchPatients;
 use App\Domains\Patient\Contracts\Dto\PatientNotificationContactDto;
+use App\Domains\Patient\Contracts\Dto\PatientProfileData;
 use App\Domains\Patient\Contracts\Dto\PatientSearchDetails;
 use App\Domains\Patient\Contracts\Dto\PatientSearchResult;
 use App\Domains\Patient\Contracts\Dto\PatientSummary;
@@ -75,6 +77,20 @@ final class PatientApiService implements PatientApi
     {
         /** @var PatientSummary */
         return $this->queryBus->dispatch(new GetPatientSummary($patientId));
+    }
+
+    public function getPatientProfile(string $patientId, string $facilityId): PatientProfileData
+    {
+        /** @var PatientProfileData */
+        return $this->queryBus->dispatch(new GetPatientProfile($patientId, $facilityId));
+    }
+
+    public function patientHasPhoto(string $patientId, string $facilityId): bool
+    {
+        /** @var PatientProfileData $profile */
+        $profile = $this->queryBus->dispatch(new GetPatientProfile($patientId, $facilityId));
+
+        return $profile->photoDocumentId !== null;
     }
 
     /**

@@ -16,6 +16,7 @@ use App\Domains\Encounter\Contracts\EncounterApi;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
@@ -40,6 +41,7 @@ final class LinkEncounterToEpisodeHandler
         private readonly EncounterApi $encounters,
         private readonly CareEpisodeLifecycle $lifecycle,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(LinkEncounterToEpisode $command): CareEpisodeEncounter
@@ -93,10 +95,11 @@ final class LinkEncounterToEpisodeHandler
             throw new RuntimeException('LinkEncounterToEpisode dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'care_coordination.episode.manage',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(CareEpisode::class, $linkId);
         }

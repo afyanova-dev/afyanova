@@ -16,11 +16,10 @@ use InvalidArgumentException;
  *
  * Tenant-scoped, mutable, integer-versioned reference data — NOT the ADR-132
  * clinical-record shape (no patient / encounter / facility / author / clinical
- * time). Authoring is the `laboratory:define-test` console command ONLY
- * (ADR-157 D-C) — there is NO HTTP `DefineLabTest` bus command and NO
- * `laboratory.catalog.manage` permission key in Lab.1. Catalog approval /
- * maker-checker / effective-dating is deferred (working name Lab.0), exactly as
- * CP.1 deferred it to CP.0.
+ * time). Tenant-wide authoring is available in the catalog workspace to
+ * individually assigned editors; the console command remains an operator path.
+ * Catalog approval / maker-checker / effective-dating is deferred (working
+ * name Lab.0), exactly as CP.1 deferred it to CP.0.
  *
  * NOT immutable / NOT superseding: {@see revise()} bumps `version` in place.
  * Historical integrity is the ORDER ITEM's `test_definition_version` SNAPSHOT
@@ -46,7 +45,7 @@ use InvalidArgumentException;
  * @property string|null $description
  * @property string|null $specimen_type
  * @property string|null $container_type
- * @property list<array{code: string, name?: string|null, unit?: string|null}>|null $parameters
+ * @property list<array<string, mixed>>|null $parameters
  * @property string|null $required_capability_code
  * @property string $availability_status
  * @property int|null $turnaround_target_minutes
@@ -99,10 +98,10 @@ final class LabTestDefinition extends AggregateRoot
     }
 
     /**
-     * Define a new catalog entry (ADR-157 D-C — the console write path).
+     * Define a new catalog entry.
      * `$id` is client-minted (a UUIDv7). `version` starts at 1.
      *
-     * @param  list<array{code: string, name?: string|null, unit?: string|null}>|null  $parameters
+     * @param  list<array<string, mixed>>|null  $parameters
      */
     public static function define(
         string $id,
@@ -137,15 +136,14 @@ final class LabTestDefinition extends AggregateRoot
     }
 
     /**
-     * Update this definition in place (ADR-157 D-C — the console write path
-     * ONLY). Bumps `version`. `null` for an optional parameter leaves the
+     * Update this definition in place. Bumps `version`. `null` for an optional parameter leaves the
      * current value unchanged; pass an explicit value to change it.
      *
      * Named `revise()`, not `update()` — `update()` is Eloquent
      * `Model::update(array, array)` and cannot take an incompatible signature
      * (the CP.1 `ProcedureDefinition::revise()` precedent).
      *
-     * @param  list<array{code: string, name?: string|null, unit?: string|null}>|null  $parameters
+     * @param  list<array<string, mixed>>|null  $parameters
      */
     public function revise(
         ?string $name = null,
@@ -197,7 +195,7 @@ final class LabTestDefinition extends AggregateRoot
     public function isOrderable(): bool
     {
         return (bool) $this->active
-            && $this->availability_status !== self::AVAILABILITY_DISABLED;
+            && $this->availability_status === self::AVAILABILITY_AVAILABLE;
     }
 
     private static function assertCode(string $code): string

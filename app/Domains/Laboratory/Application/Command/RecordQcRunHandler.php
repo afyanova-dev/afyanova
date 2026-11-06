@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Laboratory\Application\Command;
 
+use App\Domains\Laboratory\Domain\LabFacilityInstrumentReader;
 use App\Domains\Laboratory\Domain\LabQcRunRepository;
 use App\Domains\Laboratory\Domain\LabResultReader;
 use App\Domains\Laboratory\Domain\LabResultRepository;
@@ -16,6 +17,7 @@ use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 /**
@@ -37,6 +39,7 @@ final class RecordQcRunHandler
         private readonly LabResultRepository $results,
         private readonly LabResultReader $resultReader,
         private readonly LabTestDefinitionReader $definitions,
+        private readonly LabFacilityInstrumentReader $instruments,
         private readonly LabQcRunLifecycle $lifecycle,
         private readonly ScopeChecker $scope,
         private readonly TenantContext $context,
@@ -48,9 +51,16 @@ final class RecordQcRunHandler
 
         $this->assertActorScopedToFacility($facilityId, $command->qcRunId);
 
+        $instrument = $this->instruments->activeForFacility($command->instrumentId, $facilityId);
         $testCode = null;
         if ($command->testDefinitionId !== null) {
             $testCode = $this->definitions->summary($command->testDefinitionId)->code; // NotFound if unknown
+
+            if (! $this->instruments->supportsTestDefinition($command->instrumentId, $command->testDefinitionId)) {
+                throw ValidationException::withMessages([
+                    'instrument_id' => 'The selected instrument is not configured for an active method of this test.',
+                ]);
+            }
         }
 
         $status = $this->lifecycle->classify($command->observedValue, $command->expectedLow, $command->expectedHigh);
@@ -59,7 +69,8 @@ final class RecordQcRunHandler
             'qcRunId' => $command->qcRunId,
             'tenantId' => $this->context->tenantId(),
             'facilityId' => $facilityId,
-            'analyzerRef' => trim($command->analyzerRef),
+            'instrumentId' => $command->instrumentId,
+            'analyzerRef' => $instrument->identifier,
             'testDefinitionId' => $command->testDefinitionId,
             'testCode' => $testCode,
             'controlMaterial' => trim($command->controlMaterial),

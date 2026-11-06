@@ -8,6 +8,7 @@ use App\Domains\Encounter\Domain\Enum\EncounterDisposition;
 use App\Domains\Encounter\Domain\Enum\EncounterStatus;
 use App\Domains\Encounter\Domain\Enum\EncounterType;
 use App\Domains\Encounter\Domain\Model\Encounter;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
@@ -241,6 +242,34 @@ test('a caller holding encounter.encounters.read at facility A cannot read an en
     } catch (NotFound $e) {
         expect($e->httpStatus())->toBe(404);
     }
+});
+
+test('a caller cannot read an encounter in facility A while facility B is active', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user] =
+        getEncounterFixture(['encounter.encounters.read']);
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user): Facility {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+        $roleId = DB::table('idn_access_assignments')->where('user_id', $user->id)->value('role_id');
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => (string) $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $facility;
+    });
+    $encounterId = seedEncounterForGet($tenantId, $facilityAId, EncounterStatus::Active);
+
+    expect(fn () => dispatchGetEncounter($tenantId, (string) $facilityB->id, $encounterId))
+        ->toThrow(NotFound::class);
 });
 
 // ── PHI boundary ────────────────────────────────────────────────────

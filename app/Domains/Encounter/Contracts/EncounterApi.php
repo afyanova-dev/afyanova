@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Encounter\Contracts;
 
 use App\Domains\Encounter\Contracts\Dto\EncounterContext;
+use App\Domains\Encounter\Contracts\Dto\EncounterSummary;
 
 /**
  * The ONLY Encounter surface other modules may import (IC §2.1; ADR-124,
@@ -56,18 +57,25 @@ interface EncounterApi
      * Find the active encounter (ARRIVED or ACTIVE) for a patient at a given facility.
      * Backs ADR-121 Invariant 12b active attendance check.
      */
-    public function findActiveEncounterForPatient(string $facilityId, string $patientId): ?Dto\EncounterSummary;
+    public function findActiveEncounterForPatient(string $facilityId, string $patientId): ?EncounterSummary;
 
     /**
      * Active encounters (ARRIVED by default) across a facility, oldest first.
      * First consumer: the Attention board's "arrived, not queued" list.
      *
      * @param  list<string>  $statuses
-     * @return list<Dto\EncounterSummary>
+     * @return list<EncounterSummary>
      */
     public function activeEncountersForFacility(
         string $facilityId,
         array $statuses = ['ARRIVED'],
         int $limit = 200,
     ): array;
+
+    /**
+     * Read a patient's encounters within a facility.
+     *
+     * @return list<EncounterSummary>
+     */
+    public function getPatientEncounters(string $patientId, string $facilityId): array;
 }

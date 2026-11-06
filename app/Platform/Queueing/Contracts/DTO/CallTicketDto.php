@@ -8,7 +8,7 @@ final readonly class CallTicketDto
 {
     public function __construct(
         public string $entryId,
-        public string $roomId,
+        public ?string $roomId,
         public ?string $staffId = null,
     ) {}
 }

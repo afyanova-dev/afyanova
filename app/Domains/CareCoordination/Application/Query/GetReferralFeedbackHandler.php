@@ -11,6 +11,7 @@ use App\Domains\CareCoordination\Domain\ReferralReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -20,6 +21,7 @@ final class GetReferralFeedbackHandler
         private readonly ReferralReader $referrals,
         private readonly ReferralFeedbackReader $feedback,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -34,7 +36,7 @@ final class GetReferralFeedbackHandler
             throw new RuntimeException('GetReferralFeedback dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! in_array('care_coordination.access', $this->scope->effectivePermissions($user, $referral->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $referral->facilityId, 'care_coordination.access')) {
             throw NotFound::aggregate(Referral::class, $query->referralId);
         }
 

@@ -64,6 +64,7 @@ final class ManageQueueRoomStaffController
 
         DB::transaction(function () use ($validated, $tenantId, $facilityId, $target, $room, $user, $audit): void {
             DB::table('qms_queue_room_staff')
+                ->where('tenant_id', $tenantId)
                 ->where('facility_id', $facilityId)
                 ->where('queue_id', $target->id)
                 ->where('room_id', $room)
@@ -100,7 +101,7 @@ final class ManageQueueRoomStaffController
         });
 
         return redirect()
-            ->route('service-queues.index')
+            ->route('service-queues.manage')
             ->with('status', "Staff assignments updated for {$target->name}.");
     }
 }

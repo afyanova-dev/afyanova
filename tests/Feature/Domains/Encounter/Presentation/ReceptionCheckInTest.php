@@ -140,7 +140,7 @@ it('successfully checks in a walk-in patient directly to ARRIVED and issues queu
 
 });
 
-it('rejects queue check-in when the selected queue has no assigned active room', function (): void {
+it('allows queue check-in when the selected queue has no assigned service location', function (): void {
     $fx = receptionCheckInFixture();
     $tenantId = (string) $fx['tenant']->id;
     $facilityId = (string) $fx['facility']->id;
@@ -159,23 +159,30 @@ it('rejects queue check-in when the selected queue has no assigned active room',
     ]);
     TenantContextScope::run($tenantId, $facilityId, fn () => app(QueueRepository::class)->save($queue));
 
-    $this->actingAs($fx['user'])
+    $response = $this->actingAs($fx['user'])
         ->withSession(['active_facility_id' => $facilityId])
         ->post('/workspaces/reception/check-in', [
             'patient_id' => $patientId,
             'encounter_type' => EncounterType::Outpatient->value,
             'queue_id' => $queue->id,
             'return_to' => '/workspaces/reception',
-        ])
-        ->assertRedirect('/workspaces/reception')
-        ->assertSessionHasErrors('queue_id');
+        ]);
 
-    $encounterCount = TenantContextScope::run(
-        $tenantId,
-        $facilityId,
-        fn (): int => DB::table('enc_encounters')->where('patient_id', $patientId)->count(),
-    );
-    expect($encounterCount)->toBe(0);
+    $response->assertRedirect('/workspaces/reception')
+        ->assertSessionHas('status', fn ($message): bool => str_contains((string) $message, 'Queue ticket #'));
+
+    $encounter = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('enc_encounters')
+        ->where('patient_id', $patientId)
+        ->first());
+    expect($encounter)->not->toBeNull();
+
+    $queueEntry = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('qms_queue_entries')
+        ->where('encounter_id', $encounter->id)
+        ->first());
+    expect($queueEntry)->not->toBeNull()
+        ->and($queueEntry->queue_id)->toBe($queue->id)
+        ->and($queueEntry->status)->toBe('WAITING')
+        ->and($queueEntry->called_room_id)->toBeNull();
 });
 
 it('successfully checks in without queue assignment when queue_id is omitted', function (): void {
@@ -286,6 +293,10 @@ it('reports when a queue fails after encounter creation without claiming check-i
                 roomNames: ['Triage Room'],
             ),
         ]);
+    $queueingApi->shouldReceive('serviceCapabilityRequiresOrderProvenance')
+        ->once()
+        ->with('TRIAGE')
+        ->andReturn(false);
     $queueingApi->shouldReceive('place')
         ->once()
         ->with(\Mockery::on(static fn ($dto): bool => $dto instanceof PlaceInQueueDto

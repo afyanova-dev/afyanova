@@ -35,6 +35,7 @@ final class EloquentPatientMovementRepository implements PatientMovementReposito
         $latest = PatientMovement::query()
             ->where('encounter_id', $encounterId)
             ->orderBy('occurred_at', 'desc')
+            ->orderBy('id', 'desc')
             ->first();
 
         return $latest;

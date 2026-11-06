@@ -38,10 +38,11 @@ final class EloquentImagingOrderReader implements ImagingOrderReader
     /**
      * @return list<ImagingOrderSummary>
      */
-    public function forPatient(string $patientId): array
+    public function forPatient(string $patientId, array $facilityIds): array
     {
         $orders = ImagingOrder::query()
             ->where('patient_id', $patientId)
+            ->whereIn('facility_id', $facilityIds)
             ->orderByDesc('recorded_at')
             ->get();
 

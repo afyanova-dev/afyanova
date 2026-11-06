@@ -8,6 +8,7 @@ use App\Domains\HR\Presentation\Http\Controller\FacilityPeopleSearchController;
 use App\Domains\HR\Presentation\Http\Controller\FacilityStaffController;
 use App\Domains\HR\Presentation\Http\Controller\StaffPhotoController;
 use App\Domains\HR\Presentation\Http\Controller\StaffQualificationController;
+use App\Domains\Identity\Presentation\Http\Controller\AdminRoleCatalogController;
 use App\Domains\Identity\Presentation\Http\Controller\AdminRolePromotionController;
 use App\Domains\Organization\Presentation\Http\Controller\AdminOrganizationController;
 use App\Domains\Procurement\Presentation\Http\Controller\AdminProcurementLimitsController;
@@ -202,6 +203,10 @@ Route::middleware(['auth', 'verified', RequireApprovedAdministrativeAccess::clas
     Route::get('/workspaces/admin/identity/role-promotions', [AdminRolePromotionController::class, 'index'])
         ->middleware(RequireAdminWorkspace::class)
         ->name('admin.identity.role-promotions');
+
+    Route::get('/workspaces/admin/identity/roles', AdminRoleCatalogController::class)
+        ->middleware(RequireAdminWorkspace::class)
+        ->name('admin.identity.role-catalog');
 
     Route::post('/workspaces/admin/identity/role-promotions', [AdminRolePromotionController::class, 'store'])
         ->middleware(RequireAdminWorkspace::class)

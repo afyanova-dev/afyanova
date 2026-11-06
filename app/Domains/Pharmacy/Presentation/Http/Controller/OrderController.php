@@ -85,6 +85,7 @@ final class OrderController
 
     /**
      * @param  array<string, mixed>  $rules
+     * @return array<string, mixed>|string
      */
     private function guard(Request $request, TenantContext $context, string $pharmacyOrderId, array $rules): array|string
     {
@@ -127,7 +128,7 @@ final class OrderController
             ));
         } catch (AuthorizationException) {
             return back()->withErrors(['order' => 'Not authorized to manage pharmacy orders.']);
-        } catch (DomainException | InvalidArgumentException $e) {
+        } catch (DomainException|InvalidArgumentException $e) {
             return back()->withErrors(['order' => $e->getMessage()]);
         }
 
@@ -159,7 +160,7 @@ final class OrderController
             ));
         } catch (AuthorizationException) {
             return back()->withErrors(['order' => 'Not authorized to manage pharmacy orders.']);
-        } catch (DomainException | InvalidArgumentException $e) {
+        } catch (DomainException|InvalidArgumentException $e) {
             return back()->withErrors(['order' => $e->getMessage()]);
         }
 
@@ -186,7 +187,7 @@ final class OrderController
             ));
         } catch (AuthorizationException) {
             return back()->withErrors(['order' => 'Not authorized to manage pharmacy orders.']);
-        } catch (DomainException | InvalidArgumentException $e) {
+        } catch (DomainException|InvalidArgumentException $e) {
             return back()->withErrors(['order' => $e->getMessage()]);
         }
 
@@ -218,7 +219,7 @@ final class OrderController
             ));
         } catch (AuthorizationException) {
             return back()->withErrors(['order' => 'Not authorized to manage pharmacy orders.']);
-        } catch (DomainException | InvalidArgumentException $e) {
+        } catch (DomainException|InvalidArgumentException $e) {
             return back()->withErrors(['order' => $e->getMessage()]);
         }
 

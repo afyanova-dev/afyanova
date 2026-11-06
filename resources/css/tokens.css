@@ -8,10 +8,9 @@
  * Chosen expression ("soft clinical", see frontend-foundation-design-system.md):
  * Carbon owns structure — spacing rhythm, IBM Plex type scale, support colors,
  * focus ring, interaction states. The expression layer humanizes surfaces:
- * a soft gray canvas with raised (white) cards, rounded corners, and diffuse
- * hairline+shadow elevation. This inverts Carbon's white-theme layering
- * direction, so canvas/surface/hairline/elevation aliases are re-mapped per
- * theme below (dark themes naturally raise surfaces already).
+ * rounded corners, diffuse hairline+shadow elevation, and canvas/surface
+ * aliases that track Carbon's native layering in every theme (including the
+ * White theme's gray-on-white edge case).
  *
  * Note: tokens are defined on :root, so --cds-* references resolve against
  * the theme class on <html> (see CarbonThemeProvider). They do not re-resolve
@@ -33,11 +32,15 @@
   /* ------------------------------------------------------------------
    * Surfaces — the two-tier expression. `canvas` is the workspace
    * backdrop; `surface` is the raised card/panel color painted on it.
-   * White theme maps (layer gray → canvas, background white → surface);
-   * every other theme re-maps in the override block at the bottom.
+   * Mapping follows Carbon's native layer tokens in every theme:
+   * canvas = theme background, surface = the layer components paint.
+   * White is the edge case Carbon defines (its layer is gray-10 on the
+   * white page — see the Themes docs, $field-01 = Gray 10): the earlier
+   * gray-canvas/white-cards inversion matched native g10 but fought
+   * every stock Carbon component on white, flattening the page.
    * ------------------------------------------------------------------ */
-  --afy-canvas: var(--cds-layer, #f4f4f4);
-  --afy-surface: var(--cds-background, #ffffff);
+  --afy-canvas: var(--cds-background, #ffffff);
+  --afy-surface: var(--cds-layer, #f4f4f4);
   --afy-surface-interactive: color-mix(
     in srgb,
     var(--afy-canvas) 55%,
@@ -47,7 +50,7 @@
   /* Shell chrome — the rail must sit one step off the canvas in every
      theme (Carbon ships `.cds--side-nav` and content in the same
      background color, which merges them). Remapped per theme below. */
-  --afy-rail: var(--cds-background, #ffffff);
+  --afy-rail: var(--cds-layer-01, #f4f4f4);
 
   /* Compatibility aliases — Carbon layer semantics for the few patterns
    * that must follow the raw layer stack (fields, inverse chips). */
@@ -145,32 +148,13 @@
   --afy-z-sheet: 9000;
 }
 
-/* Theme re-mapping for the two-tier expression.
+/* Theme remapping for the two-tier expression.
  *
- * .cds--g10: background #f4f4f4 / layer #ffffff → gray canvas, white cards.
- * .cds--g90: background #262626 / layer #393939 → near-black canvas, raised layer.
- * .cds--g100: background #161616 / layer #262626 → deepest canvas, raised layer.
- * (.cds--white needs no re-map: defaults above already give gray canvas /
- * white cards.)
+ * Canvas/surface now follow the native tokens in every theme (see the
+ * Surfaces block), so the theme classes need no canvas/surface re-map.
+ * Dark themes keep chrome overrides below; g10 needs none — its native
+ * layer-01 already floats the rail one step off the gray canvas.
  */
-.cds--g10,
-.cds--g90,
-.cds--g100 {
-  --afy-canvas: var(--cds-background, #161616);
-  --afy-surface: var(--cds-layer, #262626);
-  --afy-surface-interactive: color-mix(
-    in srgb,
-    var(--afy-canvas) 55%,
-    var(--afy-surface)
-  );
-}
-
-/* Rail chrome per theme. g10 flips to Carbon's own inverse: white rail on
- * the gray canvas (mirrors the white theme). Dark themes raise the rail
- * one layer above the canvas (like dark-code-editor chrome). */
-.cds--g10 {
-  --afy-rail: var(--cds-layer-01, #ffffff);
-}
 
 /* Dark themes elevate by surface lightness instead of shadows. */
 .cds--g90,

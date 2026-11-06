@@ -18,8 +18,9 @@ use InvalidArgumentException;
  * The `#[ProtectedQuery]` gate is the COARSE tenant + `encounter.encounters.read`
  * check (`EncounterPolicy::view`, class-level — `App\Shared\Bus\Middleware\
  * AuthorizeQuery` never loads a subject). `GetEncounterHandler` applies the
- * per-encounter facility refinement (R-1): an encounter at a facility outside
- * the caller's scope resolves as `NotFound`, never an authorization disclosure.
+ * per-encounter context and facility refinement (R-1): an encounter outside
+ * the active facility, or an unauthorized explicit General target, resolves as
+ * `NotFound`, never an authorization disclosure.
  *
  * `$encounterId` is the whole payload — no facility / tenant input (they come
  * from `TenantContext` / the caller's scope, never the query — Invariant 12).

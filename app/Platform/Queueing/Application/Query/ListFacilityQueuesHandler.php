@@ -41,11 +41,10 @@ final class ListFacilityQueuesHandler
                 ticketPrefix: $queue->ticket_prefix,
                 isActive: $queue->is_active,
                 createdAt: $queue->created_at,
-                roomNames: $roomNames->get($queue->id, collect())
+                roomNames: array_values($roomNames->get($queue->id, collect())
                     ->pluck('name')
                     ->map(static fn ($name): string => (string) $name)
-                    ->values()
-                    ->all(),
+                    ->all()),
             ),
             $queues
         );

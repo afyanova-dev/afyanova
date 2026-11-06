@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Billing\Contracts\BillingApi;
 use App\Domains\Pharmacy\Application\Command\CancelPickup;
 use App\Domains\Pharmacy\Application\Command\CreatePharmacyOrder;
 use App\Domains\Pharmacy\Application\Command\Dispense;
@@ -11,10 +12,9 @@ use App\Domains\Pharmacy\Application\Command\ReverseDispensing;
 use App\Domains\Pharmacy\Application\Command\ValidatePharmacyOrder;
 use App\Domains\Pharmacy\Application\Query\GetPickup;
 use App\Domains\Pharmacy\Application\Query\SearchPickups;
-use App\Domains\Pharmacy\Domain\Exception\DispensingPaymentNotCleared;
 use App\Domains\Pharmacy\Contracts\Event\MedicationPickedUp;
-use App\Domains\Billing\Contracts\BillingApi;
 use App\Domains\Pharmacy\Domain\Exception\DispensingNotReversible;
+use App\Domains\Pharmacy\Domain\Exception\DispensingPaymentNotCleared;
 use App\Domains\Pharmacy\Domain\Exception\IllegalPickupTransition;
 use App\Domains\Pharmacy\Domain\Model\Pickup;
 use App\Shared\Tenancy\Tenancy;
@@ -26,12 +26,12 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /**
- * @return array{t: string, f: string, a: string, order: string, item: string, loc: string}
+ * @return array{t: string, f: string, a: string, order: string, item: string, loc: string, organization: string, roleId: string}
  */
 function pickupSetup(): array
 {
     $fixture = pharmacyFixture();
-    $billing = \Mockery::mock(BillingApi::class);
+    $billing = Mockery::mock(BillingApi::class);
     $billing->shouldReceive('dispensingClearedForHandover')->andReturn(true);
     app()->instance(BillingApi::class, $billing);
     $t = (string) $fixture['tenant']->id;
@@ -45,7 +45,16 @@ function pickupSetup(): array
     dispatchRx($t, $f, new ValidatePharmacyOrder(pharmacyOrderId: $order, actorId: $a));
     ['itemId' => $item, 'locationId' => $loc] = pharmacyStockedItem($t, $f, '100');
 
-    return ['t' => $t, 'f' => $f, 'a' => $a, 'order' => $order, 'item' => $item, 'loc' => $loc];
+    return [
+        't' => $t,
+        'f' => $f,
+        'a' => $a,
+        'order' => $order,
+        'item' => $item,
+        'loc' => $loc,
+        'organization' => (string) $fixture['organization']->id,
+        'roleId' => (string) $fixture['role_id'],
+    ];
 }
 
 function dispenseOne(string $t, string $f, string $a, string $order, string $item, string $loc, string $qty = '10'): string
@@ -60,6 +69,30 @@ function rxPickupFor(string $t, string $dispensingId): object
 {
     return Tenancy::run($t, fn () => DB::table('rx_pickups')->where('dispensing_id', $dispensingId)->first());
 }
+
+test('pickup and reversal are denied when their order belongs to another active facility', function () {
+    ['t' => $t, 'f' => $facilityAId, 'a' => $a, 'order' => $orderId, 'item' => $item, 'loc' => $locationId, 'organization' => $organizationId, 'roleId' => $roleId] = pickupSetup();
+    $dispensingId = dispenseOne($t, $facilityAId, $a, $orderId, $item, $locationId);
+    $facilityBId = pharmacyFacilityForUser($t, $organizationId, $a, $roleId);
+
+    expect(fn () => dispatchRx($t, $facilityBId, new RecordPickup(
+        actorId: $a,
+        pharmacyOrderId: $orderId,
+        dispensingId: $dispensingId,
+        recipientType: 'PATIENT',
+    )))->toThrow(AuthorizationException::class)
+        ->and(fn () => dispatchRx($t, $facilityBId, new ReverseDispensing(
+            reversalId: (string) Str::uuid7(),
+            actorId: $a,
+            pharmacyOrderId: $orderId,
+            dispensingId: $dispensingId,
+            reasonCode: 'DISPENSING_ERROR',
+        )))->toThrow(AuthorizationException::class);
+
+    expect(rxPickupFor($t, $dispensingId)->status)->toBe(Pickup::STATUS_READY_FOR_PICKUP)
+        ->and(Tenancy::run($t, fn (): int => DB::table('rx_dispensing_reversals')->where('dispensing_id', $dispensingId)->count()))
+        ->toBe(0);
+});
 
 test('Dispense auto-creates a READY_FOR_PICKUP pickup in the same transaction', function () {
     ['t' => $t, 'f' => $f, 'a' => $a, 'order' => $order, 'item' => $item, 'loc' => $loc] = pickupSetup();
@@ -81,7 +114,7 @@ test('RecordPickup refuses handover while the dispensing bill is unpaid or uncon
     ['t' => $t, 'f' => $f, 'a' => $a, 'order' => $order, 'item' => $item, 'loc' => $loc] = pickupSetup();
     $d = dispenseOne($t, $f, $a, $order, $item, $loc);
 
-    $billing = \Mockery::mock(BillingApi::class);
+    $billing = Mockery::mock(BillingApi::class);
     $billing->shouldReceive('dispensingClearedForHandover')->with($d)->andReturn(false);
     app()->instance(BillingApi::class, $billing);
 

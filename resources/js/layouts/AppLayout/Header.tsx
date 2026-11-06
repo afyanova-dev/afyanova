@@ -54,7 +54,7 @@ function primaryIcon(id: string): ReactNode {
  *
  * 1 Main menu — toggles contextual SideNav only, rendered when sidebar exists.
  * 2 Header name + facility context — app identity and active facility (left).
- * 3 Primary icon actions — permission-filtered patient tasks beside utilities.
+ * 3 Primary icon action — the patient-registration shortcut beside utilities.
  * 5 Utilities — expandable patient search, account.
  * 6 Switcher — 9-dot app menu for switching between permitted workspaces.
  */
@@ -71,9 +71,11 @@ export function AppHeader({
 }: AppHeaderProps): ReactNode {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const { theme, setTheme } = useCarbonTheme();
+  const isAdminOnly = workspaces.some(({ id }) => id === 'admin')
+    && workspaces.every(({ id }) => id === 'admin' || id === 'laboratoryCatalogEditors');
   const homeHref = isPlatformSuperAdmin
     ? routes.platformAdmin.index
-    : workspaces.length === 1 && workspaces[0]?.id === 'admin'
+    : isAdminOnly
       ? routes.workspaces.admin
       : routes.dashboard;
 
@@ -147,7 +149,7 @@ export function AppHeader({
             />
           </IconMenuButton>
         ) : null}
-        {appMenuItems.length > 1 ? (
+        {appMenuItems.length > 0 ? (
           <HeaderGlobalAction
             aria-label="App menu"
             tooltipAlignment="end"
@@ -158,7 +160,7 @@ export function AppHeader({
           </HeaderGlobalAction>
         ) : null}
       </HeaderGlobalBar>
-      {appMenuItems.length > 1 ? (
+      {appMenuItems.length > 0 ? (
         <HeaderPanel
           expanded={switcherOpen}
           onHeaderPanelFocus={() => setSwitcherOpen(false)}

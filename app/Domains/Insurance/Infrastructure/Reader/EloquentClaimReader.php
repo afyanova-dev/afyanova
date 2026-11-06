@@ -29,11 +29,16 @@ final class EloquentClaimReader implements ClaimReader
         return $claim !== null ? $this->toSummary($claim) : null;
     }
 
-    public function getPatientClaims(string $patientId, ?string $status = null): array
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<ClaimSummary>
+     */
+    public function getPatientClaims(string $patientId, array $facilityIds, ?string $status = null): array
     {
         $query = Claim::query()
             ->with('lines')
             ->where('patient_id', $patientId)
+            ->whereIn('facility_id', $facilityIds)
             ->orderByDesc('created_at');
 
         if ($status !== null) {
@@ -43,11 +48,16 @@ final class EloquentClaimReader implements ClaimReader
         return array_values($query->get()->map(fn (Claim $c) => $this->toSummary($c))->all());
     }
 
-    public function getPayerClaims(string $payerId, ?string $status = null): array
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<ClaimSummary>
+     */
+    public function getPayerClaims(string $payerId, array $facilityIds, ?string $status = null): array
     {
         $query = Claim::query()
             ->with('lines')
             ->where('payer_id', $payerId)
+            ->whereIn('facility_id', $facilityIds)
             ->orderByDesc('created_at');
 
         if ($status !== null) {

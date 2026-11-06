@@ -15,6 +15,14 @@ test('the login screen renders through the Inertia lifecycle', async ({ page }) 
     await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
 });
 
+test('Inertia navigation loads the forgot-password page', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('link', { name: 'Forgot your password?' }).click();
+
+    await expect(page).toHaveURL(/\/forgot-password$/);
+    await expect(page.getByRole('heading', { name: 'Reset password' })).toBeVisible();
+});
+
 test('invalid credentials show the generic backend error', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel('Email').fill('unknown@example.com');

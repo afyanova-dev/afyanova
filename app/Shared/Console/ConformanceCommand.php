@@ -133,7 +133,7 @@ final class ConformanceCommand extends Command
      *
      * @var list<string>
      */
-    private const RLS_EXEMPT = ['users', 'aut_auth_events'];
+    private const RLS_EXEMPT = ['users', 'aut_auth_events', 'aut_admin_bootstrap_tokens'];
 
     /**
      * Tenant-scoped tables that deliberately omit the `version` column: they are
@@ -149,6 +149,15 @@ final class ConformanceCommand extends Command
      *                            `published_at` / `attempts`, not via an aggregate.
      * - `shared_idempotency_keys` claim ledger; a `status` transition, not an
      *                            optimistic-locked aggregate write.
+     * - `aut_admin_bootstrap_tokens` one-time credentials; completion resolves
+     *                                the hash before tenant context, then locks
+     *                                the row for its single-use state transition.
+     * - `aut_facility_invitation_events` and `inv_supplier_return_lines` are
+     *                                    append-only records.
+     * - `qms_queue_rooms`, `qms_queue_room_staff` and
+     *   `qms_procedure_queue_mappings` are relationship tables, not aggregates.
+     * - `idn_staff_access_suspension_assignments` links suspension and
+     *   assignment aggregates, recording the assignment version it targets.
      *
      * @var list<string>
      */
@@ -160,6 +169,13 @@ final class ConformanceCommand extends Command
         'shared_dead_letters',
         'shared_outbox_events',
         'shared_idempotency_keys',
+        'aut_admin_bootstrap_tokens',
+        'aut_facility_invitation_events',
+        'inv_supplier_return_lines',
+        'qms_queue_rooms',
+        'qms_queue_room_staff',
+        'qms_procedure_queue_mappings',
+        'idn_staff_access_suspension_assignments',
         // Platform service transport & append-only operational tables
         'qms_queues',
         'qms_ticket_counters',

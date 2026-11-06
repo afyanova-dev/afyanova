@@ -19,8 +19,8 @@ tables to make a screen appear scoped.
 
 ## Implementation status
 
-**In progress.** The first shared-context and Inventory slice has been
-implemented:
+**In progress. Phases 0–5 are complete; Phase 6 verification is underway.**
+The shared-context and Inventory implementation includes:
 
 - General, selected-facility, and unresolved context modes are represented in
   the request context and shared frontend props.
@@ -46,13 +46,20 @@ implemented:
   writes while a facility was selected were replaced with context-based
   General-context tests (`tests/Feature/Domains/Inventory/ItemMasterControlledVocabularyTest.php`).
 
-**Not complete:** stale and revoked-context regression cases are covered for
-the shared context (see `tests/Feature/Security/TenantContextTest.php`);
-migration of every other facility-bound workspace is inventoried in
-[`context-consumer-inventory.md`](./context-consumer-inventory.md) but its
-per-domain HTTP-denial evidence pass and full release verification remain
-(Phases 5–6). Do not call application-wide facility-context alignment
-complete until those items pass their phase exit criteria.
+**Not complete:** the application-side work for Phases 0–5 is complete.
+Phase 6's full backend suite passes after the deep-link regression (3,533
+tests, 21,319 assertions), and frontend lint and TypeScript checks pass.
+Release verification remains blocked by project-wide Pint formatting issues,
+165 PHPStan errors, and two Vitest worker-update timeouts despite 607 passing
+frontend tests. The conformance check against the default local PostgreSQL
+database reports eight missing `version` columns, while migration status shows
+five pending migrations that add those columns; rerun against an approved,
+fully migrated disposable PostgreSQL database before treating this as a schema
+defect. These broader findings need disposition before Phase 6 can exit.
+Operational-owner sign-off is also required for UAT, training, pilot, and
+reconciliation. The login persistence policy is resolved: users entitled to
+General start in General after successful login, while facility-only users
+with one current assignment still enter that facility automatically.
 
 ## Desired behavior
 
@@ -373,12 +380,27 @@ before meeting this exit.**
 **Exit:** Every facility-bound surface in the inventory has an agreed scope,
 server-side enforcement, correctly attributed audit trail, and test evidence.
 
+**Status: Complete.** The remaining non-HTTP review classified all console
+commands, scheduled tasks, registered outbox listeners, and queued notification
+delivery. Tenant/facility work establishes an explicit scope; platform bootstrap
+uses `SystemContext`; global maintenance and schema checks are identified as
+such. Focused scope, denial, audit-attribution, and domain regression tests pass.
+
 ### Phase 6 — Regression, security, and rollout verification
 
 1. Run focused shared tenancy/context, authorization, Inertia, Inventory
-   feature, and frontend switcher/workspace tests.
-2. Run the relevant PHP static analysis/style and TypeScript lint/type-check
+   feature, and frontend switcher/workspace tests. **Passed:** shared context
+   and authentication tests (30 tests, 222 assertions); full backend suite
+   (3,533 tests, 21,319 assertions).
+2. Run PHP static analysis/style, conformance, and frontend lint/type-check
    commands, then the broader suite required by repository conventions.
+   **Results:** frontend lint and TypeScript pass; the changed test passes
+   focused Pint and the context-related production auth provider passes
+   focused PHPStan. Project-wide Pint reports formatting issues; full PHPStan
+   reports 165 errors; conformance against the default local PostgreSQL
+   database sees eight missing `version` columns while five matching
+   migrations are pending; Vitest has 607 passing tests but two worker-update
+   timeout errors, including on an isolated rerun.
 3. Use at least two facilities in end-to-end tests. Create distinct data in A
    and B and prove General behavior, A isolation, B isolation, and switch
    reload behavior.
@@ -386,13 +408,16 @@ server-side enforcement, correctly attributed audit trail, and test evidence.
 5. Validate denied requests directly over HTTP; do not rely on hidden UI
    controls as proof of authorization.
 6. Verify the real login flow, stale/revoked facility access, switching to
-   General and back, and deep links after each context transition.
-7. Check existing users with persisted `active_facility_id` sessions. Decide
-   whether to migrate/clear those session values or treat them as an explicit
-   previous user selection; never silently retain an unintended facility
-   selection for accounts meant to start in General.
+   General and back, and deep links after each context transition. A regression
+   now verifies an Inventory deep link resolves the newly selected facility.
+7. Login persistence policy: clear `active_facility_id` and
+   `facility_context_mode` on successful login. Users entitled to General then
+   start in General; facility-only users with one current assignment still
+   enter that facility automatically. Preserve context switching during the
+   session. The policy is implemented and covered by `AuthenticationTest.php`.
 8. Update operational docs and release notes with the context behavior and
-   any required user training.
+   any required user training; obtain operational-owner sign-off for UAT,
+   training, pilot, and reconciliation.
 
 **Exit:** No known path reads or mutates an unintended facility, permission
 state is recalculated on switches, and test evidence covers both permitted

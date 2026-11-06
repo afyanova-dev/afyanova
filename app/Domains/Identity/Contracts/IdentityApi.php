@@ -7,12 +7,21 @@ namespace App\Domains\Identity\Contracts;
 use App\Domains\Identity\Contracts\Dto\ProtectedRoleReference;
 
 /**
- * The ONLY Identity surface other modules may import (IC §2.1). Reads only in
- * PHASE 3. Grows per consumer (IC §26).
+ * The ONLY Identity surface other modules may import (IC §2.1). Grows per
+ * consumer (IC §26).
  */
 interface IdentityApi
 {
     public function isStaff(string $userId): bool;
+
+    public function linkStaffIdentity(
+        string $tenantId,
+        string $userId,
+        string $staffRef,
+        string $staffNumber,
+    ): void;
+
+    public function unlinkStaffIdentity(string $tenantId, string $userId): void;
 
     public function userExists(string $userId): bool;
 
@@ -62,6 +71,40 @@ interface IdentityApi
 
     public function activeProtectedFacilityRoleId(string $tenantId, string $roleKey): ?string;
 
+    /**
+     * Laboratory technicians eligible for the tenant-wide catalog editor grant.
+     *
+     * @return list<array{userId: string, name: string, email: string, isEditor: bool}>
+     */
+    public function laboratoryCatalogEditorCandidates(string $tenantId): array;
+
+    public function isActiveLaboratoryTechnician(string $tenantId, string $userId): bool;
+
+    public function isTenantAdmin(string $tenantId, string $userId): bool;
+
+    public function grantLaboratoryCatalogEditor(string $tenantId, string $actorId, string $userId): void;
+
+    public function revokeLaboratoryCatalogEditor(string $tenantId, string $actorId, string $userId): void;
+
+    /**
+     * @return array{
+     *   data: list<array{
+     *     id: string,
+     *     name: string,
+     *     key: string,
+     *     scope: string,
+     *     status: string,
+     *     isProtected: bool,
+     *     permissions: list<array{key: string, layer: string}>
+     *   }>,
+     *   total: int,
+     *   currentPage: int,
+     *   lastPage: int,
+     *   perPage: int
+     * }
+     */
+    public function roleCatalog(string $tenantId, int $page = 1, int $perPage = 50): array;
+
     public function provisionAccountSetupFacilityRole(
         string $tenantId,
         string $actorId,
@@ -69,7 +112,16 @@ interface IdentityApi
         string $roleKey,
     ): string;
 
+    public function provisionFacilityRole(
+        string $tenantId,
+        string $actorId,
+        string $facilityId,
+        string $roleKey,
+    ): string;
+
     public function provisionAccountSetupTenantAdmin(string $tenantId, string $reason): string;
+
+    public function provisionTenantAdmin(string $tenantId, string $actorId, string $reason): string;
 
     public function provisionFacilityStaffManagerRole(string $tenantId, string $actorId, string $facilityId): string;
 
@@ -106,5 +158,23 @@ interface IdentityApi
         string $facilityId,
         string $organizationId,
         string $userId,
+    ): array;
+
+    /**
+     * Add the configured permission grants for roles and remove explicitly
+     * denied grants from roles that do not include them in their definition.
+     *
+     * @param  array<string, list<string>>  $rolePermissions
+     * @param  list<string>  $removeUnauthorizedPermissions
+     * @return array{
+     *   missingRoles: list<string>,
+     *   changes: list<array{roleKey: string, permissionKey: string, operation: 'attached'|'detached'}>
+     * }
+     */
+    public function synchronizeRolePermissions(
+        string $tenantId,
+        array $rolePermissions,
+        bool $dryRun,
+        array $removeUnauthorizedPermissions = [],
     ): array;
 }

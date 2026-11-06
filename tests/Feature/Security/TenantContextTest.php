@@ -67,7 +67,9 @@ it('accepts a facility the user IS assigned to and stores it in the session', fu
 it('a switched facility is re-resolved as the active context on the next request', function (): void {
     // regression: ResolveTenantContext must read the (RLS-protected)
     // idn_access_assignments table INSIDE tenant context, not before it.
-    ['user' => $user, 'tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'role_id' => $roleId] = makeTenantWithUser();
+    ['user' => $user, 'tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'role_id' => $roleId] = makeTenantWithUser([
+        'inventory.access',
+    ]);
 
     $facilityB = TenantContextScope::run($tenant->id, null, function () use ($tenant, $organization, $user, $roleId) {
         $facility = Facility::factory()->forTenant($tenant->id, (string) $organization->id)->create();
@@ -91,6 +93,12 @@ it('a switched facility is re-resolved as the active context on the next request
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('auth.contextMode', 'facility')
+            ->where('auth.activeFacility', (string) $facilityB->id));
+
+    $this->actingAs($user)->get('/workspaces/inventory')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Inventory/Index')
             ->where('auth.activeFacility', (string) $facilityB->id));
 });
 

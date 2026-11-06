@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Authorization;
 
 use App\Models\User;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -71,6 +72,50 @@ final class ScopeChecker
         $departmentIds = $this->facilityDepartmentScope($user, $facilityId, $permission);
 
         return $departmentIds === null || $departmentIds !== [];
+    }
+
+    /**
+     * Whether a permission is effective for a facility read in the current
+     * working context. General reads may name an authorized target facility;
+     * a selected or unresolved context cannot read another facility.
+     */
+    public function hasFacilityPermissionInContext(
+        User $user,
+        TenantContext $context,
+        string $facilityId,
+        string $permission,
+    ): bool {
+        if (! $context->isGeneral() && $context->facilityId() !== $facilityId) {
+            return false;
+        }
+
+        return in_array($permission, $this->effectivePermissions($user, $facilityId), true);
+    }
+
+    /**
+     * Facility IDs the user may read for this permission in the current
+     * context.
+     *
+     * @return list<string>
+     */
+    public function facilityIdsWithPermissionInContext(
+        User $user,
+        TenantContext $context,
+        string $permission,
+    ): array {
+        $facilityIds = $context->facilityId() !== null
+            ? [$context->facilityId()]
+            : ($context->isGeneral() ? $this->selectableFacilities($user) : []);
+
+        return array_values(array_filter(
+            $facilityIds,
+            fn (string $facilityId): bool => $this->hasFacilityPermissionInContext(
+                $user,
+                $context,
+                $facilityId,
+                $permission,
+            ),
+        ));
     }
 
     /**
@@ -194,13 +239,35 @@ final class ScopeChecker
      */
     public function withinFacilityScope(User $user, string $facilityId): bool
     {
-        return $this->matchedRoleIds($user, $facilityId) !== [];
+        return in_array($facilityId, $this->selectableFacilities($user), true);
     }
 
     public function canUseGeneralContext(User $user): bool
     {
-        return $this->effectivePermissions($user, null) !== []
-            || app(OrganizationPermissionScope::class)->permissions($user) !== [];
+        if (app(OrganizationPermissionScope::class)->permissions($user) !== []) {
+            return true;
+        }
+
+        $generalPermissions = $this->effectivePermissions($user, null);
+
+        // Functional auxiliary permissions (such as catalog editing) granted to
+        // facility staff do not confer General working context.
+        $administrativeOrGeneralKeys = [
+            'admin.workspace.access',
+            'organization.access',
+            'organization.facilities.manage',
+            'organization.facilities.read',
+            'organization.structure.manage',
+            'organization.capabilities.manage',
+            'inventory.items.manage',
+            'inventory.location_types.manage',
+            'identity.access',
+            'identity.users.manage',
+            'identity.roles.manage',
+            'identity.assignments.manage',
+        ];
+
+        return array_intersect($generalPermissions, $administrativeOrGeneralKeys) !== [];
     }
 
     /**
@@ -212,12 +279,14 @@ final class ScopeChecker
      */
     public function selectableFacilities(User $user): array
     {
-        $rows = DB::table('idn_access_assignments')
-            ->where('user_id', $user->getKey())
-            ->where('status', 'ACTIVE')
-            ->where(fn ($q) => $q->whereNull('effective_from')->orWhere('effective_from', '<=', now()))
-            ->where(fn ($q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', now()))
-            ->get(['facility_id', 'organization_id']);
+        $rows = DB::table('idn_access_assignments as aa')
+            ->join('idn_roles as r', 'r.id', '=', 'aa.role_id')
+            ->where('aa.user_id', $user->getKey())
+            ->where('aa.status', 'ACTIVE')
+            ->where('r.status', 'ACTIVE')
+            ->where(fn ($q) => $q->whereNull('aa.effective_from')->orWhere('aa.effective_from', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('aa.effective_to')->orWhere('aa.effective_to', '>=', now()))
+            ->get(['aa.facility_id', 'aa.organization_id', 'r.key as role_key', 'r.id as role_id']);
 
         $explicit = [];
         $orgWide = false;
@@ -227,13 +296,21 @@ final class ScopeChecker
             if ($row->facility_id !== null) {
                 $explicit[(string) $row->facility_id] = true;
             } elseif ($row->organization_id !== null) {
-                $orgIds[(string) $row->organization_id] = true;
+                if ($this->roleConfersFacilitySelection((string) $row->role_id, (string) $row->role_key)) {
+                    $orgIds[(string) $row->organization_id] = true;
+                }
             } else {
-                $orgWide = true;
+                if ($this->roleConfersFacilitySelection((string) $row->role_id, (string) $row->role_key)) {
+                    $orgWide = true;
+                }
             }
         }
 
         $reachable = DB::table('org_facilities')->where('status', 'ACTIVE');
+        if ($user->tenant_id !== null) {
+            $reachable->where('tenant_id', $user->tenant_id);
+        }
+
         if (! $orgWide) {
             if ($explicit === [] && $orgIds === []) {
                 return [];
@@ -249,6 +326,39 @@ final class ScopeChecker
         return array_values($reachable->pluck('id')->map(static fn ($id): string => (string) $id)->all());
     }
 
+    private function roleConfersFacilitySelection(string $roleId, string $roleKey): bool
+    {
+        if ($roleKey === 'tenant_admin') {
+            return true;
+        }
+
+        $permissions = DB::table('idn_permission_role as pr')
+            ->join('idn_permissions as p', 'p.id', '=', 'pr.permission_id')
+            ->where('pr.role_id', $roleId)
+            ->pluck('p.key')
+            ->map(static fn ($k): string => (string) $k)
+            ->all();
+
+        $facilityOversightKeys = [
+            'admin.workspace.access',
+            'organization.access',
+            'organization.facilities.manage',
+            'organization.facilities.read',
+        ];
+
+        if (array_intersect($permissions, $facilityOversightKeys) !== []) {
+            return true;
+        }
+
+        foreach ($permissions as $permission) {
+            if (str_ends_with($permission, '.access')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * The role ids from the user's effective assignments whose scope matches the
      * requested context.
@@ -257,6 +367,21 @@ final class ScopeChecker
      */
     private function matchedRoleIds(User $user, ?string $facilityId, ?string $departmentId = null, ?string $unitId = null): array
     {
+        if ($facilityId !== null) {
+            $facility = DB::table('org_facilities')->where('id', $facilityId)->first(['organization_id', 'tenant_id']);
+            if ($facility === null || ($user->tenant_id !== null && (string) $facility->tenant_id !== (string) $user->tenant_id)) {
+                return [];
+            }
+
+            if (! in_array($facilityId, $this->selectableFacilities($user), true)) {
+                return [];
+            }
+
+            $organizationId = $facility->organization_id;
+        } else {
+            $organizationId = null;
+        }
+
         $query = DB::table('idn_access_assignments as aa')
             ->join('idn_roles as r', 'r.id', '=', 'aa.role_id')
             ->where('aa.user_id', $user->getKey())
@@ -268,9 +393,6 @@ final class ScopeChecker
         // organization level — an org-scoped assignment reaches only the
         // facilities of that organization (`03 §12`). With no facility context
         // only a tenant-wide (organization_id NULL) assignment matches.
-        $organizationId = $facilityId === null
-            ? null
-            : DB::table('org_facilities')->where('id', $facilityId)->value('organization_id');
         $query->where(fn ($q) => $q->whereNull('aa.organization_id')->orWhere('aa.organization_id', $organizationId));
 
         // facility level

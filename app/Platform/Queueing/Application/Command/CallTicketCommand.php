@@ -10,7 +10,7 @@ final readonly class CallTicketCommand implements AuthorizesAgainst
 {
     public function __construct(
         public string $entryId,
-        public string $roomId,
+        public ?string $roomId,
         public ?string $staffId = null,
     ) {}
 

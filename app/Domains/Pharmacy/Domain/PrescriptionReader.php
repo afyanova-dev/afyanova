@@ -18,9 +18,10 @@ interface PrescriptionReader
     /**
      * One patient's prescriptions, newest first; optional status filter.
      *
+     * @param  list<string>  $facilityIds
      * @return list<PrescriptionSummary>
      */
-    public function forPatient(string $patientId, ?string $status): array;
+    public function forPatient(string $patientId, ?string $status, array $facilityIds): array;
 
     /**
      * The prescription queue at one facility; optional status filter.

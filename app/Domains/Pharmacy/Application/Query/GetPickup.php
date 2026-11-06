@@ -11,8 +11,8 @@ use InvalidArgumentException;
 
 /**
  * Read one Medication Pickup (16-pharmacy-domain.md §29; ADR-186 D-F). `view`
- * gates on the coarse `pharmacy.access` (the `GetDispensing` precedent — RLS
- * isolates the tenant).
+ * gates on the coarse `pharmacy.access`; the handler applies current-context
+ * facility authorization.
  */
 #[ProtectedQuery(ability: 'view', subjectType: PharmacyOrder::class)]
 final readonly class GetPickup

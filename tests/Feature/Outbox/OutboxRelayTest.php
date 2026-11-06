@@ -26,7 +26,10 @@ uses(RefreshDatabase::class);
 
 final class RelayEvent
 {
-    public function __construct(public string $message) {}
+    public function __construct(
+        public string $message,
+        public ?string $facilityId = null,
+    ) {}
 }
 
 final class RelayListener
@@ -80,6 +83,22 @@ it('dispatches a queued listener job per tenant and marks the row published', fu
     $rowB = Tenancy::run($tenantB->id, fn () => DB::table('shared_outbox_events')->find($b));
     expect($rowA->published_at)->not->toBeNull()
         ->and($rowB->published_at)->not->toBeNull();
+});
+
+it('preserves the facility context from a facility-scoped outbox event', function (): void {
+    Queue::fake();
+
+    $tenant = Tenant::factory()->create();
+    $facilityId = (string) Str::uuid7();
+    EventRegistry::listen(RelayEvent::class, RelayListener::class);
+    seedOutboxRow($tenant->id, RelayEvent::class, [
+        'message' => 'facility-scoped',
+        'facilityId' => $facilityId,
+    ]);
+
+    $this->artisan('outbox:relay', ['--once' => true])->assertSuccessful();
+
+    Queue::assertPushed(DispatchListenerJob::class, fn (DispatchListenerJob $job): bool => $job->facilityId === $facilityId);
 });
 
 it('writes no audit-bypass row (IC §11.4 — the relay does not use SystemContext)', function () {

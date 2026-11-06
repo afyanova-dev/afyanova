@@ -148,6 +148,7 @@ final class InventoryApiService implements InventoryApi
         ?string $sourceRef = null,
         ?string $batchNumber = null,
         ?string $reservationId = null,
+        ?string $idempotencyKey = null,
     ): void {
         $this->commandBus->dispatch(new RecordConsumption(
             movementId: $movementId,
@@ -159,6 +160,7 @@ final class InventoryApiService implements InventoryApi
             sourceRef: $sourceRef,
             batchNumber: $batchNumber,
             reservationId: $reservationId,
+            idempotencyKey: $idempotencyKey,
         ));
     }
 

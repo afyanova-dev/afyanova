@@ -17,8 +17,8 @@ use InvalidArgumentException;
  * Protected (IC §6.2): encounter metadata is facility-scoped (§114, Invariant 24/25).
  * The `#[ProtectedQuery]` gate enforces coarse tenant + `encounter.encounters.read`
  * (`EncounterPolicy::view`). `GetPatientEncountersHandler` then enforces that the
- * authenticated caller holds `encounter.encounters.read` specifically in the target
- * facility's scope.
+ * target matches the active facility and the caller holds `encounter.encounters.read`
+ * there, or that an explicit General target is authorized.
  *
  * Unauthorized callers are rejected with AuthorizationException (HTTP 403 Forbidden).
  * Zero results for an authorized query return an empty collection (HTTP 200 OK).

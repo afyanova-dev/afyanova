@@ -12,8 +12,8 @@ use InvalidArgumentException;
 /**
  * One laboratory panel — a named bundle of tests (14-laboratory-domain.md
  * §14–§15; ADR-162 D-C). The `LabTestDefinition` catalog precedent: tenant-scoped,
- * mutable, integer-versioned reference data authored ONLY by the
- * `laboratory:define-panel` console command. Members on `lab_panel_members`.
+ * mutable, integer-versioned reference data authored through the catalog
+ * workspace by individually assigned editors. Members on `lab_panel_members`.
  *
  * @domain      Laboratory
  *

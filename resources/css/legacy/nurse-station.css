@@ -1,33 +1,285 @@
-/* Nurse station — moved verbatim from app.css.
- * Source: app.css lines 1411..1444 (mechanical split, no edits).
- */
+/* Nurse station workspaces */
 
+.nurse-station-workspace .afy-card.nurse-station-panel {
+  background-color: var(--cds-layer-01);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.nurse-station-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--afy-space-md);
+}
+
+.nurse-station-context-card {
+  gap: var(--afy-space-sm);
+}
+
+.nurse-station-panel__title,
+.nurse-station-panel__subtitle {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-heading-compact-02-font-size, 1rem);
+  font-weight: 600;
+  line-height: var(--cds-heading-compact-02-line-height, 1.375);
+}
+
+.nurse-station-panel__subtitle {
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+}
+
+.nurse-station-summary__heading,
+.nurse-station-context__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afy-space-xs);
+  min-inline-size: 0;
+}
+
+.nurse-station-panel__description,
+.nurse-station-panel__empty {
+  margin: calc(-1 * var(--afy-space-xs)) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.nurse-station-panel__note {
+  margin: var(--afy-space-xs) 0 0;
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+}
+
+.nurse-station-context__details {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.nurse-station-context__ticket {
+  display: grid;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+  padding-block-end: var(--afy-space-xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.nurse-station-context__ticket > span,
+.nurse-station-vitals__count {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.nurse-station-context__ticket > strong {
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  overflow-wrap: anywhere;
+}
+
+.nurse-station-context__detail {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 0.65fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--afy-space-xs);
+  padding-block: var(--afy-space-xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.nurse-station-context__detail:last-child {
+  border-block-end: 0;
+}
+
+.nurse-station-context__detail dt,
+.nurse-station-triage__details dt,
+.nurse-station-vitals__measurements dt {
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+}
+
+.nurse-station-context__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  overflow-wrap: anywhere;
+}
+
+.nurse-station-triage {
+  display: grid;
+  gap: var(--afy-space-xs);
+}
+
+.nurse-station-triage__complaint {
+  margin: 0;
+  color: var(--afy-text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.nurse-station-triage__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--afy-space-xs);
+  margin: 0;
+}
+
+.nurse-station-triage__details dd {
+  margin: var(--afy-space-2xs) 0 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  overflow-wrap: anywhere;
+}
+
+.nurse-station-triage__recorded,
+.nurse-station-vitals__meta {
+  margin: 0;
+  color: var(--afy-text-helper);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+}
+
+.nurse-station-vitals {
+  display: grid;
+  gap: var(--afy-space-xs);
+  padding-block: var(--afy-space-xs);
+}
+
+.nurse-station-vitals + .nurse-station-vitals {
+  border-block-start: 1px solid var(--afy-hairline);
+}
 
 .nurse-station-status-notification.cds--inline-notification {
   inline-size: 100%;
   max-inline-size: none;
-  margin-block-end: 1rem;
+  margin-block-end: var(--afy-space-md);
 }
 
 .nurse-station-status-notification .cds--inline-notification__text-wrapper {
   flex-wrap: nowrap;
   align-items: baseline;
-  gap: 0.25rem;
+  gap: var(--afy-space-2xs);
 }
 
 .nurse-station-status-notification .cds--inline-notification__subtitle {
   min-inline-size: 0;
 }
 
+.nurse-station-status-notification.cds--actionable-notification {
+  inline-size: 100%;
+  max-inline-size: none;
+  margin-block-end: var(--afy-space-md);
+}
+
+.nurse-station-status-notification .cds--actionable-notification__text-wrapper {
+  align-items: center;
+}
+
+.nurse-station-status-notification .cds--actionable-notification__subtitle {
+  min-inline-size: 0;
+}
+
+.nurse-station-call-notification__room {
+  flex-basis: 100%;
+  margin-block-start: var(--afy-space-sm);
+}
+
 .nurse-station-vitals__measurements {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.625rem 0.75rem;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--afy-hairline);
 }
 
-.nurse-station-vitals__value {
-  display: block;
+.nurse-station-vitals__measurements > div {
+  min-inline-size: 0;
+  padding: var(--afy-space-2xs);
+  border-block-end: 1px solid var(--afy-hairline);
+}
+
+.nurse-station-vitals__measurements > div:not(:nth-child(4n)) {
+  border-inline-end: 1px solid var(--afy-hairline);
+}
+
+.nurse-station-vitals__measurements > div:nth-child(n + 5) {
+  border-block-end: 0;
+}
+
+.nurse-station-vitals__measurements dd {
+  margin: var(--afy-space-2xs) 0 0;
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.nurse-station-vitals__measurements dd small {
+  color: var(--afy-text-secondary);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: 400;
+}
+
+.nurse-station-form-grid {
+  display: grid;
+  gap: var(--afy-space-sm);
+}
+
+.nurse-station-form-grid--vitals {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nurse-station-blood-pressure {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.nurse-station-blood-pressure__values {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--afy-space-2xs);
+  min-inline-size: 0;
+}
+
+.nurse-station-blood-pressure__values > .cds--form-item {
+  min-inline-size: 0;
+}
+
+.nurse-station-blood-pressure__values > span {
+  color: var(--afy-text-secondary);
+}
+
+.nurse-station-form-grid--triage {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+.nurse-station-form__submit {
+  margin-block-start: var(--afy-space-xs);
+}
+
+.nurse-station-form__message {
+  margin: 0;
+  padding: var(--afy-space-xs) var(--afy-space-sm);
+  border-inline-start: 3px solid var(--afy-status-positive);
+  background: var(--afy-surface-accent);
+  color: var(--afy-text-primary);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+}
+
+.nurse-station-form__message--error {
+  border-inline-start-color: var(--afy-status-negative);
 }
 
 @media (max-width: 48rem) {
@@ -37,7 +289,31 @@
 }
 
 @media (max-width: 36rem) {
+  .nurse-station-context__detail {
+    grid-template-columns: minmax(5rem, 0.6fr) minmax(0, 1fr);
+  }
+
   .nurse-station-vitals__measurements {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nurse-station-vitals__measurements > div:not(:nth-child(2n)) {
+    border-inline-end: 1px solid var(--afy-hairline);
+  }
+
+  .nurse-station-vitals__measurements > div:nth-child(2n) {
+    border-inline-end: 0;
+  }
+
+  .nurse-station-vitals__measurements > div:nth-child(n + 5):not(:nth-last-child(-n + 2)) {
+    border-block-end: 1px solid var(--afy-hairline);
+  }
+
+  .nurse-station-vitals__measurements > div:nth-last-child(-n + 2) {
+    border-block-end: 0;
+  }
+
+  .nurse-station-form-grid--vitals {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

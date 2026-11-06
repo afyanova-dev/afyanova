@@ -17,6 +17,7 @@ use App\Domains\CareCoordination\Domain\Model\Referral;
 use App\Domains\Patient\Domain\Model\Patient;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,6 +100,27 @@ test('SearchReferrals returns inbound referral queue for a facility', function (
         ->and(count($inboundQueue))->toBeGreaterThanOrEqual(1)
         ->and($inboundQueue[0]->referralId)->toBe($referralId)
         ->and($inboundQueue[0]->status)->toBe(Referral::STATUS_SENT);
+});
+
+test('facility-scoped referral reads reject a different active facility', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = careCoordinationFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = createFacilityFixture($tenantId, (string) $organization->id);
+    assignUserToFacility($tenantId, (string) $user->id, $roleId, (string) $facilityB->id);
+
+    $patientId = TenantContextScope::run($tenantId, null, fn () => (string) Patient::factory()
+        ->forTenant($tenantId)
+        ->create()->id);
+    $referral = createReferralFixture($tenantId, $facilityAId, $patientId);
+
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(QueryBus::class)->dispatch(
+        new GetReferral((string) $referral->id),
+    )))->toThrow(NotFound::class);
+
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(QueryBus::class)->dispatch(
+        new SearchReferrals($facilityAId),
+    )))->toThrow(NotFound::class);
 });
 
 test('GetPatientReferrals returns all patient referrals tenant-wide', function () {

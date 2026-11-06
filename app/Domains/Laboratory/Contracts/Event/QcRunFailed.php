@@ -16,6 +16,7 @@ final readonly class QcRunFailed
         public string $tenantId,
         public string $facilityId,
         public string $qcRunId,
+        public string $instrumentId,
         public string $analyzerRef,
         public ?string $testDefinitionId,
         public string $occurredAt,

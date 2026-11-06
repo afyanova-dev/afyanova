@@ -6,6 +6,7 @@ namespace App\Domains\Organization\Contracts;
 
 use App\Domains\Organization\Contracts\Dto\FacilityStructure;
 use App\Domains\Organization\Contracts\Dto\InitialTenantStructure;
+use App\Domains\Organization\Contracts\Dto\RoomSummary;
 
 /**
  * The ONLY Organization surface other modules may import (IC §2.1).
@@ -34,6 +35,13 @@ interface OrganizationApi
     public function unitExists(string $facilityId, string $unitId): bool;
 
     public function roomExists(string $facilityId, string $roomId): bool;
+
+    /**
+     * @return list<RoomSummary>
+     */
+    public function activeRoomsForFacility(string $facilityId): array;
+
+    public function activeRoomForFacility(string $facilityId, string $roomId): ?RoomSummary;
 
     public function getFacilityStructure(string $facilityId): ?FacilityStructure;
 

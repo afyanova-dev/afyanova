@@ -98,6 +98,7 @@ test('nurse station lists active triage queue entries and opens the encounter co
             ->component('NurseStation/Index')
             ->has('entries', 1)
             ->where('entries.0.id', $ticket->id)
+            ->where('entries.0.patientId', $fixture['patientId'])
             ->where('entries.0.ticketNumber', $ticket->ticketNumber));
 
     $this->get(route('nurse-station.entries.show', $ticket->id))
@@ -109,8 +110,56 @@ test('nurse station lists active triage queue entries and opens the encounter co
             ->where('patient.photoUrl', null)
             ->where('entry.id', $ticket->id)
             ->where('canStartService', false)
+            ->where('canCall', true)
+            ->where('callRooms', [])
             ->where('canRecordVitals', true)
             ->where('canRecordTriage', true));
+});
+
+test('nurse station calls a waiting patient to an assigned triage location', function () {
+    $fixture = nurseStationFixture();
+    $tenantId = (string) $fixture['tenant']->id;
+    $facilityId = (string) $fixture['facility']->id;
+    $room = TenantContextScope::run($tenantId, $facilityId, fn (): Room => Room::query()->create([
+        'tenant_id' => $tenantId,
+        'facility_id' => $facilityId,
+        'name' => 'Triage Room',
+        'code' => 'TRIAGE-1',
+        'status' => 'ACTIVE',
+    ]));
+    $otherRoom = TenantContextScope::run($tenantId, $facilityId, fn (): Room => Room::query()->create([
+        'tenant_id' => $tenantId,
+        'facility_id' => $facilityId,
+        'name' => 'Second Triage Room',
+        'code' => 'TRIAGE-2',
+        'status' => 'ACTIVE',
+    ]));
+    queueAssignRoom($tenantId, $facilityId, (string) $fixture['queue']->id, (string) $room->id);
+    queueAssignRoom($tenantId, $facilityId, (string) $fixture['queue']->id, (string) $otherRoom->id);
+    queueAssignRoomStaff($tenantId, $facilityId, (string) $fixture['queue']->id, (string) $room->id, (string) $fixture['user']->id);
+    queueAssignRoomStaff($tenantId, $facilityId, (string) $fixture['queue']->id, (string) $otherRoom->id, (string) Str::uuid7());
+
+    $this->get(route('nurse-station.entries.show', $fixture['ticket']->id))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canCall', true)
+            ->has('callRooms', 1)
+            ->where('callRooms.0.id', $room->id)
+            ->where('callRooms.0.name', 'Triage Room')
+            ->where('callRooms.0.code', 'TRIAGE-1'));
+
+    $returnTo = '/workspaces/nurse-station/entries/'.$fixture['ticket']->id;
+    $this->post(route('service-queues.entries.call', ['entry' => $fixture['ticket']->id]), [
+        'room' => $room->id,
+        'return_to' => $returnTo,
+    ])->assertRedirect($returnTo)->assertSessionHasNoErrors();
+
+    $this->get(route('nurse-station.entries.show', $fixture['ticket']->id))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('entry.status', 'CALLED')
+            ->where('canCall', false)
+            ->where('canStartService', true));
 });
 
 test('triage assessment is locked until the called patient is confirmed present and service starts', function () {

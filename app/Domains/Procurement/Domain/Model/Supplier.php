@@ -205,7 +205,8 @@ final class Supplier extends AggregateRoot
     ): void {
         $this->licence_number = self::blankToNull($licenceNumber);
         $this->licence_authority = self::blankToNull($licenceAuthority);
-        $this->licence_expiry_date = self::blankToNull($licenceExpiryDate);
+        $expiryDate = self::blankToNull($licenceExpiryDate);
+        $this->licence_expiry_date = $expiryDate === null ? null : CarbonImmutable::parse($expiryDate);
         $this->version = (int) $this->version + 1;
     }
 

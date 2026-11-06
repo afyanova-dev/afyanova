@@ -24,10 +24,18 @@ final class EloquentPayerContractReader implements PayerContractReader
         return $this->toSummary($contract);
     }
 
-    public function forPayer(string $payerId, ?string $status = null): array
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<PayerContractSummary>
+     */
+    public function forPayer(string $payerId, array $facilityIds, ?string $status = null): array
     {
         $query = PayerContract::query()
             ->where('payer_id', $payerId)
+            ->where(function ($query) use ($facilityIds): void {
+                $query->whereNull('facility_id')
+                    ->orWhereIn('facility_id', $facilityIds);
+            })
             ->orderByDesc('effective_from');
 
         if ($status !== null) {

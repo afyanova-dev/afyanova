@@ -1,5 +1,6 @@
 import { Link, router, useForm } from '@inertiajs/react';
 import {
+  ActionableNotification,
   Button,
   Form,
   IconButton,
@@ -215,6 +216,9 @@ export default function ClinicianShow(props: ClinicianShowProps): ReactNode {
   });
   const [dispositionSaved, setDispositionSaved] = useState(false);
   const [encounterActionError, setEncounterActionError] = useState<string | null>(null);
+  const [callingPatient, setCallingPatient] = useState(false);
+  const [startingConsultationService, setStartingConsultationService] = useState(false);
+  const [selectedCallRoom, setSelectedCallRoom] = useState(() => props.callRooms[0]?.id ?? '');
   const [completing, setCompleting] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [discardTarget, setDiscardTarget] = useState<DocumentationSection | null>(null);
@@ -304,6 +308,10 @@ export default function ClinicianShow(props: ClinicianShowProps): ReactNode {
   const returnTo = typeof window === 'undefined'
     ? routes.workspaces.clinician
     : `${window.location.pathname}${window.location.search}`;
+
+  useEffect(() => {
+    setSelectedCallRoom(props.callRooms[0]?.id ?? '');
+  }, [props.entry.id, props.callRooms]);
 
   const noteDocumentation = useClinicalDocumentationDraft({
     encounterId: props.encounter.encounterId,
@@ -528,8 +536,52 @@ export default function ClinicianShow(props: ClinicianShowProps): ReactNode {
   function startEncounter(): void {
     setEncounterActionError(null);
     router.post(routes.workspaces.receptionStart(props.encounter.encounterId), { return_to: returnTo }, {
+      preserveScroll: true,
       onError: (errors) => setEncounterActionError(errors.start ?? 'The encounter could not be started.'),
     });
+  }
+
+  function callPatient(): void {
+    if (callingPatient) {
+      return;
+    }
+
+    setEncounterActionError(null);
+    setCallingPatient(true);
+    router.post(
+      routes.workspaces.ticketCall(props.entry.id),
+      {
+        room: selectedCallRoom || null,
+        return_to: routes.workspaces.clinicianEntry(props.entry.id),
+      },
+      {
+        preserveScroll: true,
+        onError: (errors) => setEncounterActionError(
+          errors.call ?? errors.room ?? 'The patient could not be called. Check the queue and try again.',
+        ),
+        onFinish: () => setCallingPatient(false),
+      },
+    );
+  }
+
+  function startConsultationService(): void {
+    if (startingConsultationService) {
+      return;
+    }
+
+    setEncounterActionError(null);
+    setStartingConsultationService(true);
+    router.post(
+      routes.workspaces.ticketStart(props.entry.id),
+      { return_to: routes.workspaces.clinicianEntry(props.entry.id) },
+      {
+        preserveScroll: true,
+        onError: (errors) => setEncounterActionError(
+          errors.start ?? 'Consultation service could not be started. Confirm the patient is present and try again.',
+        ),
+        onFinish: () => setStartingConsultationService(false),
+      },
+    );
   }
 
   function addMedicationToBasket(item: MedicationCatalogItem): string {
@@ -1966,10 +2018,82 @@ export default function ClinicianShow(props: ClinicianShowProps): ReactNode {
             <div className="clinician-workspace__main">
               <section id="clinician-start" className="afy-card clinician-panel">
                 <h2 className="clinician-panel__title">Begin consultation</h2>
-                <p className="clinician-panel__description">Start the encounter to document the visit, add orders, and create a care plan.</p>
-                {props.canStartEncounter && props.encounter.status === 'ARRIVED' ? (
+                <p className="clinician-panel__description">Call the patient and confirm they are present before starting the encounter and documenting the visit.</p>
+                {encounterActionError ? (
+                  <InlineNotification
+                    kind="error"
+                    lowContrast
+                    hideCloseButton
+                    title="Consultation action failed"
+                    subtitle={encounterActionError}
+                  />
+                ) : null}
+                {props.entry.status === 'WAITING' && props.canCall ? (
+                  <ActionableNotification
+                    className="clinician-start-notification"
+                    kind="info"
+                    lowContrast
+                    inline
+                    role="status"
+                    hideCloseButton
+                    title="Waiting to be called"
+                    subtitle="Call the patient to the consultation room before continuing."
+                    actionButtonLabel={callingPatient ? 'Calling…' : 'Call patient'}
+                    onActionButtonClick={callPatient}
+                  >
+                    {props.callRooms.length > 1 ? (
+                      <Select
+                        id="clinician-call-room"
+                        labelText="Call to"
+                        value={selectedCallRoom}
+                        onChange={(event) => setSelectedCallRoom(event.currentTarget.value)}
+                      >
+                        {props.callRooms.map((room) => (
+                          <SelectItem key={room.id} value={room.id} text={`${room.name} (${room.code})`} />
+                        ))}
+                      </Select>
+                    ) : null}
+                  </ActionableNotification>
+                ) : null}
+                {props.entry.status === 'WAITING' && !props.canCall ? (
+                  <InlineNotification
+                    className="clinician-start-notification"
+                    kind="info"
+                    lowContrast
+                    hideCloseButton
+                    title="Waiting to be called"
+                    subtitle="A clinician with queue call access must call the patient before consultation can begin."
+                  />
+                ) : null}
+                {props.entry.status === 'CALLED' && props.canStartService ? (
+                  <ActionableNotification
+                    className="clinician-start-notification"
+                    kind="warning"
+                    lowContrast
+                    inline
+                    role="status"
+                    hideCloseButton
+                    title="Confirm patient presence"
+                    subtitle="The patient has been called. Confirm they have arrived before starting consultation service."
+                    actionButtonLabel={startingConsultationService ? 'Starting…' : 'Confirm presence & start consultation'}
+                    onActionButtonClick={startConsultationService}
+                  />
+                ) : null}
+                {props.entry.status === 'CALLED' && !props.canStartService ? (
+                  <InlineNotification
+                    className="clinician-start-notification"
+                    kind="info"
+                    lowContrast
+                    hideCloseButton
+                    title="Patient called"
+                    subtitle="A clinician with queue service access must confirm the patient is present before starting the encounter."
+                  />
+                ) : null}
+                {props.entry.status === 'IN_SERVICE' && props.canStartEncounter && props.encounter.status === 'ARRIVED' ? (
                   <Button size="lg" renderIcon={Play} onClick={startEncounter}>Start encounter</Button>
-                ) : <p className="clinician-panel__note">Documentation is available after the encounter has been started.</p>}
+                ) : props.entry.status === 'IN_SERVICE' ? (
+                  <p className="clinician-panel__note">Documentation is available after the encounter has been started.</p>
+                ) : null}
               </section>
             </div>
           )}

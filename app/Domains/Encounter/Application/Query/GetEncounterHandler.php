@@ -10,6 +10,7 @@ use App\Domains\Encounter\Domain\Model\Encounter;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -23,8 +24,8 @@ use RuntimeException;
  *      encounter is missing or in another tenant.
  *   2. R-1 facility refinement — the authenticated actor (from `Auth`, never a
  *      query field, so it cannot be spoofed: the `SearchPatients` precedent)
- *      must hold `encounter.encounters.read` at THIS encounter's facility
- *      (`ScopeChecker::effectivePermissions`). Otherwise `NotFound` — §114 /
+ *      must hold `encounter.encounters.read` in the active context for THIS
+ *      encounter's facility. Otherwise `NotFound` — §114 /
  *      Invariant 24/25: "facility selection does not grant encounter access";
  *      an out-of-scope encounter is indistinguishable from an absent one, never
  *      an authorization disclosure.
@@ -38,6 +39,7 @@ final class GetEncounterHandler
     public function __construct(
         private readonly EncounterReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetEncounter $query): EncounterSummary
@@ -49,10 +51,11 @@ final class GetEncounterHandler
             throw new RuntimeException('GetEncounter dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'encounter.encounters.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(Encounter::class, $query->encounterId);
         }

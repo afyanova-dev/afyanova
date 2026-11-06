@@ -11,8 +11,8 @@ use InvalidArgumentException;
 
 /**
  * Read one Dispensing record (16-pharmacy-domain.md §24, §127, §255;
- * ADR-184 D-I). `view` gates on the coarse `pharmacy.access` (the
- * `GetPharmacyOrder` precedent — RLS isolates the tenant).
+ * ADR-184 D-I). `view` gates on the coarse `pharmacy.access`; the handler
+ * applies current-context facility authorization.
  */
 #[ProtectedQuery(ability: 'view', subjectType: PharmacyOrder::class)]
 final readonly class GetDispensing

@@ -10,8 +10,8 @@ use App\Platform\Queueing\Domain\Model\QueueEntry;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 abstract class BaseQueueActionController
 {
@@ -54,18 +54,32 @@ abstract class BaseQueueActionController
     protected function requireRoomAssignment(User $user, QueueEntry $entry, ?string $roomId = null): void
     {
         $roomId ??= $entry->called_room_id;
-        abort_unless(
-            is_string($roomId)
-                && DB::table('qms_queue_room_staff')
-                    ->where('tenant_id', $entry->tenant_id)
-                    ->where('facility_id', $entry->facility_id)
-                    ->where('queue_id', $entry->queue_id)
-                    ->where('room_id', $roomId)
-                    ->where('user_id', $user->id)
-                    ->exists(),
-            403,
-            'You are not assigned to this queue and room.',
-        );
+        if (! is_string($roomId)) {
+            return;
+        }
+
+        $staffAssignments = DB::table('qms_queue_room_staff')
+            ->where('tenant_id', $entry->tenant_id)
+            ->where('facility_id', $entry->facility_id)
+            ->where('queue_id', $entry->queue_id)
+            ->where('room_id', $roomId);
+
+        if ($staffAssignments->exists()) {
+            abort_unless(
+                (clone $staffAssignments)->where('user_id', $user->id)->exists(),
+                403,
+                'You are not assigned to this queue location.',
+            );
+        }
+    }
+
+    protected function hasRoomStaffRestrictions(QueueEntry $entry): bool
+    {
+        return DB::table('qms_queue_room_staff')
+            ->where('tenant_id', $entry->tenant_id)
+            ->where('facility_id', $entry->facility_id)
+            ->where('queue_id', $entry->queue_id)
+            ->exists();
     }
 
     protected function done(Request $request, string $message): RedirectResponse

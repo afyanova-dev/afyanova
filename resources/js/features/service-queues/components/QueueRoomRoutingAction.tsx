@@ -1,6 +1,7 @@
 import { Button, FilterableMultiSelect, InlineNotification, Modal, Select, SelectItem } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { router } from '@inertiajs/react';
 import { routes } from '@/app/routes';
 import { permissions, useCan } from '@/lib/authorization';
@@ -9,9 +10,11 @@ import type { QueueBoardRoom, QueueRoomAssignment } from '../types/queue-board';
 export function QueueRoomRoutingAction({
   rooms,
   queueRoomAssignments,
+  buttonSize = 'sm',
 }: {
   rooms: QueueBoardRoom[];
   queueRoomAssignments: QueueRoomAssignment[];
+  buttonSize?: 'sm' | 'lg';
 }): ReactNode {
   const can = useCan();
   const canManageRouting = can(permissions.queue.definitionManage);
@@ -52,12 +55,13 @@ export function QueueRoomRoutingAction({
 
   return (
     <>
-      <Button kind="secondary" size="sm" onClick={openRoutingDialog}>
-        Configure queue rooms
+      <Button kind="secondary" size={buttonSize} onClick={openRoutingDialog}>
+        Manage service locations
       </Button>
-      <Modal
+      {routingOpen ? createPortal(
+        <Modal
         open={routingOpen}
-        modalHeading="Configure queue rooms"
+        modalHeading="Manage service locations"
         primaryButtonText="Save routing"
         secondaryButtonText="Cancel"
         primaryButtonDisabled={!selectedRoutingQueue}
@@ -80,8 +84,8 @@ export function QueueRoomRoutingAction({
         </Select>
         <FilterableMultiSelect
           id="queue-routing-rooms"
-          titleText="Rooms that can serve this queue"
-          placeholder="Search rooms by name or code"
+          titleText="Service locations that can serve this queue"
+          placeholder="Search locations by name or code"
           items={rooms.map((room) => ({ id: room.id, text: `${room.name} (${room.code})` }))}
           itemToString={(item) => item?.text ?? ''}
           selectedItems={rooms
@@ -89,13 +93,15 @@ export function QueueRoomRoutingAction({
             .map((room) => ({ id: room.id, text: `${room.name} (${room.code})` }))}
           onChange={({ selectedItems }) => setRoutingRoomIds(selectedItems.map((item) => item.id))}
         />
-        <p>Search by room name or code, then select the rooms staff may use for this queue.</p>
+        <p>Locations are optional. Use any named service area, counter, or room where staff call patients.</p>
         {routingError ? (
           <div role="alert" className="service-queues__action-error">
             <InlineNotification kind="error" title={routingError} lowContrast />
           </div>
         ) : null}
-      </Modal>
+        </Modal>,
+        document.body,
+      ) : null}
     </>
   );
 }

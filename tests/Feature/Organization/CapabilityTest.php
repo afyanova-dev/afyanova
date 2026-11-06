@@ -159,7 +159,8 @@ it('writes a shared_audit_log row for every capability change (docs 06 §93)', f
     $rows = TenantContextScope::run($tenant->id, null, fn () => DB::table('shared_audit_log')
         ->whereIn('action', ['organization.capability.enable', 'organization.capability.suspend'])
         ->where('target_id', $facilityId)
-        ->orderBy('created_at')
+        ->orderBy('action')
+        ->orderBy('id')
         ->get());
 
     expect($rows)->toHaveCount(2)

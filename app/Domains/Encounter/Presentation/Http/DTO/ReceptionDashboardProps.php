@@ -15,6 +15,7 @@ final readonly class ReceptionDashboardProps
      * @param  list<ReceptionAppointmentItem>  $appointments
      * @param  list<array<string, mixed>>  $availableQueues
      * @param  list<array<string, mixed>>|null  $searchResults
+     * @param  list<array{dayOfWeek: string, date: string, label: string, isToday: bool, isSelected: bool}>|null  $days
      * @param  list<ReceptionReferralItem>  $referrals
      * @param  list<string>  $restricted
      */

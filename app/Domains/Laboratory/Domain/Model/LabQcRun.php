@@ -32,6 +32,7 @@ use Illuminate\Support\Str;
  * @property string $id
  * @property string $tenant_id
  * @property string $facility_id
+ * @property string|null $instrument_id
  * @property string $analyzer_ref
  * @property string|null $test_definition_id
  * @property string|null $test_code
@@ -71,6 +72,7 @@ final class LabQcRun extends AggregateRoot
         'id',
         'tenant_id',
         'facility_id',
+        'instrument_id',
         'analyzer_ref',
         'test_definition_id',
         'test_code',
@@ -114,7 +116,7 @@ final class LabQcRun extends AggregateRoot
 
     /**
      * @param  array{
-     *     qcRunId: string, tenantId: string, facilityId: string, analyzerRef: string,
+     *     qcRunId: string, tenantId: string, facilityId: string, instrumentId: string, analyzerRef: string,
      *     testDefinitionId: string|null, testCode: string|null, controlMaterial: string,
      *     controlLevel: string|null, expectedLow: float|null, expectedHigh: float|null,
      *     observedValue: float, unit: string|null, status: string, performedByUserId: string,
@@ -130,6 +132,7 @@ final class LabQcRun extends AggregateRoot
             'id' => $data['qcRunId'],
             'tenant_id' => $data['tenantId'],
             'facility_id' => $data['facilityId'],
+            'instrument_id' => $data['instrumentId'],
             'analyzer_ref' => $data['analyzerRef'],
             'test_definition_id' => $data['testDefinitionId'],
             'test_code' => $data['testCode'],
@@ -152,6 +155,7 @@ final class LabQcRun extends AggregateRoot
             tenantId: $data['tenantId'],
             facilityId: $data['facilityId'],
             qcRunId: $data['qcRunId'],
+            instrumentId: $data['instrumentId'],
             analyzerRef: $data['analyzerRef'],
             testDefinitionId: $data['testDefinitionId'],
             status: $data['status'],
@@ -166,6 +170,7 @@ final class LabQcRun extends AggregateRoot
                 tenantId: $data['tenantId'],
                 facilityId: $data['facilityId'],
                 qcRunId: $data['qcRunId'],
+                instrumentId: $data['instrumentId'],
                 analyzerRef: $data['analyzerRef'],
                 testDefinitionId: $data['testDefinitionId'],
                 occurredAt: $now->toIso8601String(),

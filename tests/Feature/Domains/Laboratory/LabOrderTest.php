@@ -188,18 +188,24 @@ test('CreateLabOrder rejects a DECEASED patient and a patient/encounter mismatch
     )))->toThrow(LabOrderContextMismatch::class);
 });
 
-test('CreateLabOrder rejects a DISABLED test and a test whose required capability is not enabled', function () {
+test('CreateLabOrder only accepts AVAILABLE tests and enforces required facility capabilities', function () {
     ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = laboratoryFixture();
     $t = (string) $tenant->id;
     $f = (string) $facility->id;
 
     ['encounterId' => $enc, 'patientId' => $patientId] = seedActiveLabEncounter($t, $f, (string) $user->id);
 
-    $disabled = seedLabTestDefinition($t, ['availability_status' => LabTestDefinition::AVAILABILITY_DISABLED]);
-    expect(fn () => dispatchLab($t, $f, new CreateLabOrder(
-        orderId: (string) Str::uuid7(), actorId: (string) $user->id, patientId: $patientId, encounterId: $enc,
-        testDefinitionIds: [(string) $disabled->id],
-    )))->toThrow(LabTestNotOrderable::class);
+    foreach ([
+        LabTestDefinition::AVAILABILITY_TEMPORARILY_UNAVAILABLE,
+        LabTestDefinition::AVAILABILITY_REFERRAL_ONLY,
+        LabTestDefinition::AVAILABILITY_DISABLED,
+    ] as $availabilityStatus) {
+        $unavailable = seedLabTestDefinition($t, ['availability_status' => $availabilityStatus]);
+        expect(fn () => dispatchLab($t, $f, new CreateLabOrder(
+            orderId: (string) Str::uuid7(), actorId: (string) $user->id, patientId: $patientId, encounterId: $enc,
+            testDefinitionIds: [(string) $unavailable->id],
+        )))->toThrow(LabTestNotOrderable::class);
+    }
 
     $needsCapability = seedLabTestDefinition($t, ['required_capability_code' => 'MOLECULAR_DIAGNOSTICS']);
     expect(fn () => dispatchLab($t, $f, new CreateLabOrder(

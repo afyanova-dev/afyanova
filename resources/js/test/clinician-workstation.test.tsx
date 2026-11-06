@@ -90,6 +90,9 @@ const baseProps: ClinicianShowProps = {
     priority: 'ROUTINE',
     status: 'IN_SERVICE',
   },
+  callRooms: [],
+  canCall: false,
+  canStartService: false,
   queueNavigation: {
     position: 2,
     total: 3,
@@ -197,6 +200,89 @@ beforeEach(() => {
 });
 
 describe('clinician workstation quick actions', () => {
+  it('requires calling a waiting patient before consultation can start', () => {
+    const postMock = router.post as unknown as Mock;
+    postMock.mockImplementation((_url, _data, options) => {
+      const callbacks = options as { onFinish?: () => void };
+      callbacks.onFinish?.();
+    });
+
+    render(
+      <ClinicianShow
+        {...baseProps}
+        entry={{ ...baseProps.entry, status: 'WAITING' }}
+        encounter={{ ...baseProps.encounter, status: 'ARRIVED' }}
+        callRooms={[
+          { id: 'room-1', name: 'Consultation Room 1', code: 'CONSULT-1' },
+          { id: 'room-2', name: 'Consultation Room 2', code: 'CONSULT-2' },
+        ]}
+        canCall
+      />,
+    );
+
+    expect(screen.getByText('Waiting to be called')).toBeInTheDocument();
+    expect(screen.getByLabelText('Call to')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start encounter' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Call patient' }));
+
+    expect(router.post).toHaveBeenCalledWith(
+      routes.workspaces.ticketCall('entry-1'),
+      {
+        room: 'room-1',
+        return_to: routes.workspaces.clinicianEntry('entry-1'),
+      },
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
+  it('requires presence confirmation before starting consultation service', () => {
+    const postMock = router.post as unknown as Mock;
+    postMock.mockImplementation((_url, _data, options) => {
+      const callbacks = options as { onFinish?: () => void };
+      callbacks.onFinish?.();
+    });
+
+    render(
+      <ClinicianShow
+        {...baseProps}
+        entry={{ ...baseProps.entry, status: 'CALLED' }}
+        encounter={{ ...baseProps.encounter, status: 'ARRIVED' }}
+        canStartService
+      />,
+    );
+
+    expect(screen.getByRole('status', { name: 'Confirm patient presence' }))
+      .toHaveClass('clinician-start-notification');
+    expect(screen.queryByRole('button', { name: 'Start encounter' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm presence & start consultation' }));
+
+    expect(router.post).toHaveBeenCalledWith(
+      routes.workspaces.ticketStart('entry-1'),
+      { return_to: routes.workspaces.clinicianEntry('entry-1') },
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
+  it('only offers encounter start after consultation service has started', () => {
+    render(
+      <ClinicianShow
+        {...baseProps}
+        entry={{ ...baseProps.entry, status: 'IN_SERVICE' }}
+        encounter={{ ...baseProps.encounter, status: 'ARRIVED' }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start encounter' }));
+
+    expect(router.post).toHaveBeenCalledWith(
+      routes.workspaces.receptionStart('encounter-1'),
+      { return_to: '/' },
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
   it('uses the patient chart banner with direct previous and next queue navigation', () => {
     render(<ClinicianShow {...baseProps} />);
 

@@ -124,29 +124,48 @@ it('requires confirmed two-factor authentication for audit access', function ():
 });
 
 it('limits facility-scoped readers to the active facility and rejects unauthorized facility filters', function (): void {
-    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facility, 'user' => $user] = makeTenantWithUser([
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facility, 'user' => $user, 'role_id' => $roleId] = makeTenantWithUser([
         'admin.workspace.access',
         'audit.events.read',
     ]);
     confirmAdminTwoFactor($user);
 
-    $otherFacility = TenantContextScope::run($tenant->id, null, function () use ($tenant, $organization, $facility): Facility {
+    $otherFacility = TenantContextScope::run($tenant->id, null, function () use ($tenant, $organization, $facility, $user, $roleId): Facility {
         $otherFacility = Facility::factory()->forTenant($tenant->id, $organization->id)->create();
         insertAdminAuditEvent($tenant->id, $otherFacility->id, 'organization.capability.updated');
         insertAdminAuditEvent($tenant->id, $facility->id, 'organization.capability.updated');
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->getKey(),
+            'role_id' => $roleId,
+            'facility_id' => $otherFacility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return $otherFacility;
     });
 
     TenantContextScope::run($tenant->id, $facility->id, function () use ($user, $facility, $otherFacility): void {
-        $this->actingAs($user)
+        $this->withSession([
+            'active_facility_id' => $facility->id,
+            'facility_context_mode' => 'facility',
+        ])->actingAs($user)
             ->get(route('admin.workspace.audit'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('total', 1)
-                ->where('entries.0.facilityId', $facility->id));
+                ->where('entries.0.facilityId', $facility->id)
+                ->has('facilities', 1)
+                ->where('facilities.0.id', $facility->id));
 
-        $this->actingAs($user)
+        $this->withSession([
+            'active_facility_id' => $facility->id,
+            'facility_context_mode' => 'facility',
+        ])->actingAs($user)
             ->get(route('admin.workspace.audit', ['facility_id' => $otherFacility->id]))
             ->assertForbidden();
     });

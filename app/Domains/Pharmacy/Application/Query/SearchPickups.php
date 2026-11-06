@@ -13,8 +13,8 @@ use InvalidArgumentException;
 /**
  * The pickup queue at one facility (16-pharmacy-domain.md §29, §129; ADR-186
  * D-F). Optional status filter (typically READY_FOR_PICKUP). `view` gates on
- * `pharmacy.access`; the handler re-checks the acting user's scope at the
- * facility (the `SearchPharmacyOrders` acting-user pattern).
+ * `pharmacy.access`; the handler re-checks the acting user's permission in the
+ * current context.
  */
 #[ProtectedQuery(ability: 'view', subjectType: PharmacyOrder::class)]
 final readonly class SearchPickups

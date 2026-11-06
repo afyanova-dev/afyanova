@@ -95,6 +95,31 @@ it('redirects guests and forbids users without pharmacy.access', function (): vo
         ->get('/workspaces/pharmacy')->assertStatus(403);
 });
 
+it('forbids pharmacy workspace access without a selected facility', function (): void {
+    $fixture = pharmacyFixture();
+    $tenantId = (string) $fixture['tenant']->id;
+
+    TenantContextScope::run($tenantId, null, function () use ($fixture, $tenantId): void {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $fixture['organization']->id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $fixture['user']->id,
+            'role_id' => $fixture['role_id'],
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
+    $this->actingAs($fixture['user'])
+        ->get('/workspaces/pharmacy')
+        ->assertForbidden();
+});
+
 it('renders the pharmacy workspace for authorized users', function (): void {
     $fx = pharmacyPresentationSetup();
     $this->actingAs($fx['user'])->withSession(['active_facility_id' => $fx['f']])

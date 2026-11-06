@@ -57,6 +57,45 @@ it('signs in a valid, verified, active user and lands them on the dashboard', fu
         ->assertInertia(fn ($page) => $page->component('Dashboard/Index'));
 });
 
+it('starts a General-capable user in General after a successful login', function (): void {
+    $fixture = makeTenantWithUser(['inventory.access']);
+    $user = $fixture['user'];
+    $user->forceFill(['password' => Hash::make('correct-horse')])->save();
+
+    TenantContextScope::run((string) $fixture['tenant']->id, null, function () use ($fixture, $user): void {
+        DB::table('idn_roles')->where('id', $fixture['role_id'])->update(['scope_type' => 'ORG']);
+        DB::table('idn_access_assignments')
+            ->where('tenant_id', $fixture['tenant']->id)
+            ->where('user_id', $user->getKey())
+            ->where('role_id', $fixture['role_id'])
+            ->update([
+                'facility_id' => null,
+                'organization_id' => $fixture['organization']->id,
+            ]);
+    });
+
+    $loginResponse = $this->withSession([
+        'active_facility_id' => $fixture['facility']->id,
+        'facility_context_mode' => 'facility',
+    ])->post('/login', ['email' => $user->email, 'password' => 'correct-horse'])
+        ->assertRedirect('/dashboard');
+    $loginResponse->assertSessionMissing('active_facility_id')
+        ->assertSessionMissing('facility_context_mode');
+
+    $cookieName = (string) config('session.cookie');
+    $cookie = $loginResponse->getCookie($cookieName);
+    if ($cookie === null) {
+        throw new RuntimeException('Successful login did not issue a session cookie.');
+    }
+
+    $this->withCookie($cookieName, $cookie->getValue())
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('auth.contextMode', 'general')
+            ->where('auth.activeFacility', null));
+});
+
 it('invalidates the authenticated Laravel session when its tracked device session is revoked', function (): void {
     $user = makeLoginUser();
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domains\Patient\Domain\Exception;
 
-use App\Shared\Domain\DomainException;
+use App\Domains\Patient\Contracts\Exception\SearchCriteriaTooBroad as SearchCriteriaTooBroadContract;
 
 /**
  * A `SearchPatients` query supplied no usable criterion, only a name fragment
@@ -13,7 +13,7 @@ use App\Shared\Domain\DomainException;
  * query needs a specificity floor. Maps to HTTP 422 (the first 422 in the
  * codebase — ADR-129).
  */
-final class SearchCriteriaTooBroad extends DomainException
+final class SearchCriteriaTooBroad extends SearchCriteriaTooBroadContract
 {
     public static function noUsableCriterion(): self
     {
@@ -23,15 +23,5 @@ final class SearchCriteriaTooBroad extends DomainException
     public static function nameFragmentTooShort(int $minimum): self
     {
         return new self(sprintf('A name-fragment search needs at least %d characters.', $minimum));
-    }
-
-    public function errorCode(): string
-    {
-        return 'search_criteria_too_broad';
-    }
-
-    public function httpStatus(): int
-    {
-        return 422;
     }
 }

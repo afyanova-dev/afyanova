@@ -14,7 +14,6 @@ import {
 } from './CheckInAction';
 import { FrontDeskQuickActions } from './FrontDeskQuickActions';
 import { FrontDeskRosterTable, type FrontDeskRosterRow } from './FrontDeskRosterTable';
-import { FrontDeskVisitSummary } from './FrontDeskVisitSummary';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type {
   ReceptionAppointmentItem,
@@ -231,19 +230,7 @@ function EncounterTableRow({ item, timezone }: {
     details: (
       <span style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <Tag>
-          <FrontDeskVisitSummary
-            label={`Visit summary for ${item.encounterNumber}`}
-            timezone={timezone}
-            summary={{
-              number: item.encounterNumber,
-              type: item.encounterType,
-              status: item.status,
-              arrivedAt: item.arrivedAt,
-              startedAt: item.startedAt,
-            }}
-          >
-            {item.encounterNumber}
-          </FrontDeskVisitSummary>
+          {item.encounterNumber}
           {' · '}
           {item.encounterType.replaceAll('_', ' ')}
         </Tag>

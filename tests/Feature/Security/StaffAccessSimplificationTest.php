@@ -1144,6 +1144,19 @@ it('grants and revokes ordinary access for existing users with scope enforcement
         ->where('tenant_id', $tenantId)->where('user_id', $existing->getKey())
         ->where('facility_id', $facilityId)->value('id'));
     expect($assignmentId)->toBeString();
+    TenantContextScope::run($tenantId, null, function () use ($tenantId, $existing): void {
+        DB::table('aut_sessions')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $existing->getKey(),
+            'session_id' => 'sess-admin-assignment-revoke',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'test',
+            'last_active_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
 
     // Duplicate grant rejected with inline validation error + toast (no 409 page, no page-top alert).
     $this->actingAs($fixture['user'])
@@ -1171,6 +1184,8 @@ it('grants and revokes ordinary access for existing users with scope enforcement
 
     TenantContextScope::run($tenantId, null, function () use ($assignmentId, $existing, $facilityId): void {
         expect(DB::table('idn_access_assignments')->where('id', $assignmentId)->value('status'))->toBe('REVOKED');
+        expect(DB::table('aut_sessions')->where('tenant_id', $existing->tenant_id)
+            ->where('user_id', $existing->getKey())->whereNull('revoked_at')->exists())->toBeFalse();
         $perms = app(ScopeChecker::class)->effectivePermissions($existing, $facilityId);
         expect($perms)->toBe([]);
     });
@@ -1237,6 +1252,17 @@ it('shows linked staff roles and manages each ordinary assignment independently'
                 'updated_at' => now(),
             ]);
         }
+        DB::table('aut_sessions')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $staffAccount->getKey(),
+            'session_id' => 'sess-hr-assignment-suspend',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'test',
+            'last_active_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     });
     sacSelectFacility($this, $facilityId);
     $assignmentIds = TenantContextScope::run($tenantId, null, fn (): array => DB::table('idn_access_assignments')
@@ -1268,8 +1294,15 @@ it('shows linked staff roles and manages each ordinary assignment independently'
         ]), ['reason' => 'Temporary coverage change.'])
         ->assertRedirect(route('hr.staff.show', ['staff' => $staffId]));
 
-    TenantContextScope::run($tenantId, null, function () use ($assignmentIds, $nurseAssignmentId, $tenantId): void {
+    TenantContextScope::run($tenantId, null, function () use (
+        $assignmentIds,
+        $nurseAssignmentId,
+        $tenantId,
+        $staffAccount,
+    ): void {
         expect(DB::table('idn_access_assignments')->where('id', $nurseAssignmentId)->value('status'))->toBe('SUSPENDED');
+        expect(DB::table('aut_sessions')->where('tenant_id', $tenantId)
+            ->where('user_id', $staffAccount->getKey())->whereNull('revoked_at')->exists())->toBeFalse();
         $otherAssignment = DB::table('idn_access_assignments')
             ->where('tenant_id', $tenantId)
             ->whereIn('id', $assignmentIds)
@@ -1291,6 +1324,20 @@ it('shows linked staff roles and manages each ordinary assignment independently'
         ]), ['reason' => 'Coverage is restored.'])
         ->assertRedirect(route('hr.staff.show', ['staff' => $staffId]));
 
+    TenantContextScope::run($tenantId, null, function () use ($tenantId, $staffAccount): void {
+        DB::table('aut_sessions')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $staffAccount->getKey(),
+            'session_id' => 'sess-hr-assignment-revoke',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'test',
+            'last_active_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
     $this->actingAs($hrManager)
         ->post(route('hr.staff.access-assignments.manage', [
             'staff' => $staffId,
@@ -1298,6 +1345,12 @@ it('shows linked staff roles and manages each ordinary assignment independently'
             'action' => 'revoke',
         ]), ['reason' => 'Nursing role no longer required.'])
         ->assertRedirect(route('hr.staff.show', ['staff' => $staffId]));
+
+    TenantContextScope::run($tenantId, null, function () use ($tenantId, $nurseAssignmentId, $staffAccount): void {
+        expect(DB::table('idn_access_assignments')->where('id', $nurseAssignmentId)->value('status'))->toBe('REVOKED');
+        expect(DB::table('aut_sessions')->where('tenant_id', $tenantId)
+            ->where('user_id', $staffAccount->getKey())->whereNull('revoked_at')->exists())->toBeFalse();
+    });
 
     $this->actingAs($hrManager)
         ->get(route('hr.staff.show', $staffId))
@@ -1887,6 +1940,7 @@ it('blocks active role grants to linked suspended or terminated staff', function
             facilityId: $facilityId,
         );
         $staffId = createStaffHelper($tenantId, $personId, facilityId: $facilityId);
+        assignStaffHelper($tenantId, $staffId, $facilityId);
         TenantContextScope::run($tenantId, null, function () use ($tenantId, $staffId, $status): void {
             DB::table('hr_staff')->where('tenant_id', $tenantId)->where('id', $staffId)
                 ->update(['status' => $status]);

@@ -32,6 +32,7 @@ test('GetFacilityFlowBoardQuery aggregates waiting, in-service, and priority cou
         facilityId: $facilityId,
         code: 'FLOW-OPD',
         name: 'OPD Flow Queue',
+        actorId: $userId,
         departmentId: (string) Str::uuid7(),
         ticketPrefix: 'A',
     )));
@@ -40,6 +41,7 @@ test('GetFacilityFlowBoardQuery aggregates waiting, in-service, and priority cou
         facilityId: $facilityId,
         code: 'FLOW-LAB',
         name: 'Lab Intake Queue',
+        actorId: $userId,
         departmentId: (string) Str::uuid7(),
         ticketPrefix: 'L',
     )));

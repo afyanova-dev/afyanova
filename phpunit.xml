@@ -21,7 +21,7 @@
         </include>
     </source>
     <php>
-        <!-- DB creds + drivers come from .env.testing (afyanovav4_test on real PostgreSQL — §17.1). -->
+        <!-- DB creds + drivers come from .env.testing (afyanova_test on real PostgreSQL — §17.1). -->
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

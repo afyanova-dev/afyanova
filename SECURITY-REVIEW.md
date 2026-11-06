@@ -3,8 +3,8 @@
 ## Scope and limitation
 
 This review revalidates the previously documented staff-termination concern.
-The workspace still has no Git metadata, so a diff-based review and change
-provenance cannot be established.
+The repository has Git metadata, but the worktree contains extensive unrelated
+changes. This is a focused revalidation, not a clean-base diff review.
 
 ## Revalidated finding
 
@@ -22,8 +22,9 @@ The multi-facility regression test
 `it revokes all facility access tenant-wide when linked staff is terminated`
 in `tests/Feature/Security/StaffTerminationRevocationTest.php` verifies both
 facility assignments, session revocation, audit attribution, and isolation
-from unrelated and other-tenant accounts. It passed in the full Pest run
-(3,445 passed, 21 other tests failed).
+from unrelated and other-tenant accounts. It passed in the latest focused
+rerun (**1 test / 16 assertions**) and in the full backend run
+(**3,533 tests / 21,326 assertions**).
 
 **Evidence:**
 
@@ -34,13 +35,22 @@ from unrelated and other-tenant accounts. It passed in the full Pest run
 - `tests/Feature/Security/StaffTerminationRevocationTest.php`, multi-facility
   termination regression
 
-## Partial finding / policy decision
+## Privileged assignment policy — retain pending independent review
 
-Suspension changes the tenant-wide Staff lifecycle state. The current
-implementation blocks the linked account tenant-wide, suspends ordinary
-assignments across facilities, and leaves privileged assignments for
-independent review. Confirm the intended privileged-access policy and continue
-testing suspend/reinstate behavior across facilities.
+On HR suspension, immediately block the linked account tenant-wide, revoke
+tracked sessions, and suspend ordinary assignments across facilities.
+Privileged assignments remain recorded as active until an independently
+authorized identity administrator approves a revocation. HR lifecycle
+permissions alone must not change elevated administrator roles. This preserves
+separation of duties and an auditable identity-approval path while the linked
+account is blocked from login and its sessions are invalidated.
+
+The regression test
+`it suspends linked access tenant-wide and restores only suspended assignments`
+in `tests/Feature/Security/StaffTerminationRevocationTest.php` verifies
+tenant-wide login blocking, session revocation, ordinary access suspension,
+pending privileged-revocation requests, and guarded reinstatement. It passes
+(**1 test / 46 assertions**).
 
 ## Other inspected areas
 
@@ -48,12 +58,15 @@ testing suspend/reinstate behavior across facilities.
 - HR Manager permissions alone do not include identity assignment management.
 - Elevated role approvals block target self-approval and enforce scoped authority. Requester self-approval is blocked except for a Facility Admin invitation created by that Tenant Admin (`request_origin = FACILITY_INVITATION`); Tenant Admin promotions, manual Facility Admin promotions, and revocations still require a distinct administrator.
 - Platform Super Admin setup uses a one-time token and prevents bootstrap if an active platform administrator already exists.
-- The full backend suite still has unrelated failures; inviter authorization
-  changes before invitation acceptance and immediate session invalidation
-  following every access-change path remain follow-up test gaps.
+- The inviter-authority bootstrap regression confirms setup is refused without saving the invitee's password or verifying the account after the inviter loses access.
+- Active tracked sessions are verified as revoked after ordinary assignment revocation, HR assignment suspension and revocation, and independently approved Facility Admin revocation.
+- The latest full backend suite passes (**3,533 tests / 21,326 assertions**).
 
 ## Merge recommendation
 
 The former multi-facility termination blocker is resolved in the inspected
-source. This is not a diff-based review: the workspace still has no Git
-metadata, and the full backend quality gate remains open.
+source and regression test. The privileged-assignment suspension policy is
+explicitly documented and covered by regression tests. Follow-up test gaps
+for those inviter and session-revocation scenarios are now covered by focused
+regressions. This is still a focused revalidation, not a clean-base diff
+review; project-wide Pint findings pass.

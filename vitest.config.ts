@@ -16,6 +16,7 @@ export default defineConfig({
         setupFiles: ['resources/js/test/setup.ts'],
         include: ['resources/js/**/*.{test,spec}.{ts,tsx}'],
         css: false,
+        maxWorkers: 2,
         testTimeout: 20000,
     },
 });

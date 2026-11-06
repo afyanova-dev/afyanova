@@ -20,10 +20,14 @@ use App\Domains\Laboratory\Application\Command\CollectSpecimen;
 use App\Domains\Laboratory\Application\Command\CollectSpecimenHandler;
 use App\Domains\Laboratory\Application\Command\CreateLabOrder;
 use App\Domains\Laboratory\Application\Command\CreateLabOrderHandler;
+use App\Domains\Laboratory\Application\Command\FinalizeLabExecutionMaterialUse;
+use App\Domains\Laboratory\Application\Command\FinalizeLabExecutionMaterialUseHandler;
 use App\Domains\Laboratory\Application\Command\ReceiveSpecimen;
 use App\Domains\Laboratory\Application\Command\ReceiveSpecimenHandler;
 use App\Domains\Laboratory\Application\Command\RecordCriticalResult;
 use App\Domains\Laboratory\Application\Command\RecordCriticalResultHandler;
+use App\Domains\Laboratory\Application\Command\RecordLabExecutionMaterialUse;
+use App\Domains\Laboratory\Application\Command\RecordLabExecutionMaterialUseHandler;
 use App\Domains\Laboratory\Application\Command\RecordQcRun;
 use App\Domains\Laboratory\Application\Command\RecordQcRunHandler;
 use App\Domains\Laboratory\Application\Command\RecordResult;
@@ -40,13 +44,23 @@ use App\Domains\Laboratory\Application\Command\ReviewQcRun;
 use App\Domains\Laboratory\Application\Command\ReviewQcRunHandler;
 use App\Domains\Laboratory\Application\Command\ReviewResult;
 use App\Domains\Laboratory\Application\Command\ReviewResultHandler;
+use App\Domains\Laboratory\Application\Command\StartLabExecution;
+use App\Domains\Laboratory\Application\Command\StartLabExecutionHandler;
 use App\Domains\Laboratory\Application\Command\SubmitLabOrder;
 use App\Domains\Laboratory\Application\Command\SubmitLabOrderHandler;
+use App\Domains\Laboratory\Application\Command\TransitionLabExecution;
+use App\Domains\Laboratory\Application\Command\TransitionLabExecutionHandler;
 use App\Domains\Laboratory\Application\Command\VerifyResult;
 use App\Domains\Laboratory\Application\Command\VerifyResultHandler;
 use App\Domains\Laboratory\Application\LaboratoryApiService;
 use App\Domains\Laboratory\Application\Query\GetCriticalResult;
 use App\Domains\Laboratory\Application\Query\GetCriticalResultHandler;
+use App\Domains\Laboratory\Application\Query\GetFacilityLabInstruments;
+use App\Domains\Laboratory\Application\Query\GetFacilityLabInstrumentsHandler;
+use App\Domains\Laboratory\Application\Query\GetLabExecution;
+use App\Domains\Laboratory\Application\Query\GetLabExecutionHandler;
+use App\Domains\Laboratory\Application\Query\GetLabExecutionWorkspace;
+use App\Domains\Laboratory\Application\Query\GetLabExecutionWorkspaceHandler;
 use App\Domains\Laboratory\Application\Query\GetLabOrder;
 use App\Domains\Laboratory\Application\Query\GetLabOrderHandler;
 use App\Domains\Laboratory\Application\Query\GetLabPanel;
@@ -61,6 +75,8 @@ use App\Domains\Laboratory\Application\Query\GetLabTestDefinition;
 use App\Domains\Laboratory\Application\Query\GetLabTestDefinitionHandler;
 use App\Domains\Laboratory\Application\Query\GetLabTestDefinitions;
 use App\Domains\Laboratory\Application\Query\GetLabTestDefinitionsHandler;
+use App\Domains\Laboratory\Application\Query\GetLabTestMethods;
+use App\Domains\Laboratory\Application\Query\GetLabTestMethodsHandler;
 use App\Domains\Laboratory\Application\Query\GetOrderResults;
 use App\Domains\Laboratory\Application\Query\GetOrderResultsHandler;
 use App\Domains\Laboratory\Application\Query\GetOrderSpecimens;
@@ -78,6 +94,7 @@ use App\Domains\Laboratory\Application\Query\GetResultAmendmentsHandler;
 use App\Domains\Laboratory\Application\Query\SearchLabOrders;
 use App\Domains\Laboratory\Application\Query\SearchLabOrdersHandler;
 use App\Domains\Laboratory\Authorization\LabCriticalResultPolicy;
+use App\Domains\Laboratory\Authorization\LabExecutionPolicy;
 use App\Domains\Laboratory\Authorization\LabOrderPolicy;
 use App\Domains\Laboratory\Authorization\LabQcRunPolicy;
 use App\Domains\Laboratory\Authorization\LabResultPolicy;
@@ -87,6 +104,9 @@ use App\Domains\Laboratory\Console\DefineLabTestCommand;
 use App\Domains\Laboratory\Contracts\LaboratoryApi;
 use App\Domains\Laboratory\Domain\LabCriticalResultReader;
 use App\Domains\Laboratory\Domain\LabCriticalResultRepository;
+use App\Domains\Laboratory\Domain\LabExecutionReader;
+use App\Domains\Laboratory\Domain\LabExecutionRepository;
+use App\Domains\Laboratory\Domain\LabFacilityInstrumentReader;
 use App\Domains\Laboratory\Domain\LabOrderReader;
 use App\Domains\Laboratory\Domain\LabOrderRepository;
 use App\Domains\Laboratory\Domain\LabPanelReader;
@@ -99,19 +119,25 @@ use App\Domains\Laboratory\Domain\LabSpecimenReader;
 use App\Domains\Laboratory\Domain\LabSpecimenRepository;
 use App\Domains\Laboratory\Domain\LabTestDefinitionReader;
 use App\Domains\Laboratory\Domain\LabTestDefinitionRepository;
+use App\Domains\Laboratory\Domain\LabTestMethodReader;
 use App\Domains\Laboratory\Domain\Model\LabCriticalResult;
+use App\Domains\Laboratory\Domain\Model\LabExecution;
 use App\Domains\Laboratory\Domain\Model\LabOrder;
 use App\Domains\Laboratory\Domain\Model\LabQcRun;
 use App\Domains\Laboratory\Domain\Model\LabResult;
 use App\Domains\Laboratory\Domain\Model\LabSpecimen;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabCriticalResultReader;
+use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabExecutionReader;
+use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabFacilityInstrumentReader;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabOrderReader;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabPanelReader;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabQcRunReader;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabResultReader;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabSpecimenReader;
 use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabTestDefinitionReader;
+use App\Domains\Laboratory\Infrastructure\Reader\EloquentLabTestMethodReader;
 use App\Domains\Laboratory\Infrastructure\Repository\EloquentLabCriticalResultRepository;
+use App\Domains\Laboratory\Infrastructure\Repository\EloquentLabExecutionRepository;
 use App\Domains\Laboratory\Infrastructure\Repository\EloquentLabOrderRepository;
 use App\Domains\Laboratory\Infrastructure\Repository\EloquentLabPanelRepository;
 use App\Domains\Laboratory\Infrastructure\Repository\EloquentLabQcRunRepository;
@@ -136,6 +162,7 @@ final class LaboratoryServiceProvider extends ServiceProvider
         $this->app->bind(LaboratoryApi::class, LaboratoryApiService::class);
 
         $this->app->bind(LabOrderRepository::class, EloquentLabOrderRepository::class);
+        $this->app->bind(LabExecutionRepository::class, EloquentLabExecutionRepository::class);
         $this->app->bind(LabTestDefinitionRepository::class, EloquentLabTestDefinitionRepository::class);
         $this->app->bind(LabSpecimenRepository::class, EloquentLabSpecimenRepository::class);
         $this->app->bind(LabResultRepository::class, EloquentLabResultRepository::class);
@@ -144,7 +171,10 @@ final class LaboratoryServiceProvider extends ServiceProvider
         $this->app->bind(LabQcRunRepository::class, EloquentLabQcRunRepository::class);
 
         $this->app->bind(LabOrderReader::class, EloquentLabOrderReader::class);
+        $this->app->bind(LabExecutionReader::class, EloquentLabExecutionReader::class);
+        $this->app->bind(LabFacilityInstrumentReader::class, EloquentLabFacilityInstrumentReader::class);
         $this->app->bind(LabTestDefinitionReader::class, EloquentLabTestDefinitionReader::class);
+        $this->app->bind(LabTestMethodReader::class, EloquentLabTestMethodReader::class);
         $this->app->bind(LabSpecimenReader::class, EloquentLabSpecimenReader::class);
         $this->app->bind(LabResultReader::class, EloquentLabResultReader::class);
         $this->app->bind(LabCriticalResultReader::class, EloquentLabCriticalResultReader::class);
@@ -168,6 +198,10 @@ final class LaboratoryServiceProvider extends ServiceProvider
 
         CommandBus::map([
             CreateLabOrder::class => CreateLabOrderHandler::class,
+            StartLabExecution::class => StartLabExecutionHandler::class,
+            RecordLabExecutionMaterialUse::class => RecordLabExecutionMaterialUseHandler::class,
+            FinalizeLabExecutionMaterialUse::class => FinalizeLabExecutionMaterialUseHandler::class,
+            TransitionLabExecution::class => TransitionLabExecutionHandler::class,
             SubmitLabOrder::class => SubmitLabOrderHandler::class,
             AcceptLabOrder::class => AcceptLabOrderHandler::class,
             RejectLabOrder::class => RejectLabOrderHandler::class,
@@ -191,10 +225,14 @@ final class LaboratoryServiceProvider extends ServiceProvider
 
         QueryBus::map([
             GetLabOrder::class => GetLabOrderHandler::class,
+            GetLabExecution::class => GetLabExecutionHandler::class,
+            GetLabExecutionWorkspace::class => GetLabExecutionWorkspaceHandler::class,
             SearchLabOrders::class => SearchLabOrdersHandler::class,
             GetPatientLabOrders::class => GetPatientLabOrdersHandler::class,
             GetLabTestDefinition::class => GetLabTestDefinitionHandler::class,
             GetLabTestDefinitions::class => GetLabTestDefinitionsHandler::class,
+            GetLabTestMethods::class => GetLabTestMethodsHandler::class,
+            GetFacilityLabInstruments::class => GetFacilityLabInstrumentsHandler::class,
             GetLabPanel::class => GetLabPanelHandler::class,
             GetLabPanels::class => GetLabPanelsHandler::class,
             GetLabSpecimen::class => GetLabSpecimenHandler::class,
@@ -209,6 +247,7 @@ final class LaboratoryServiceProvider extends ServiceProvider
         ]);
 
         Gate::policy(LabOrder::class, LabOrderPolicy::class);
+        Gate::policy(LabExecution::class, LabExecutionPolicy::class);
         Gate::policy(LabSpecimen::class, LabSpecimenPolicy::class);
         Gate::policy(LabResult::class, LabResultPolicy::class);
         Gate::policy(LabCriticalResult::class, LabCriticalResultPolicy::class);

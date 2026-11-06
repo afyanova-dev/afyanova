@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 export interface SearchableComboBoxItem {
   id: string;
   label: string;
+  searchText?: string;
 }
 
 interface SearchableComboBoxProps {
@@ -48,7 +49,8 @@ export function SearchableComboBox({
         const query = (inputValue ?? '').trim().toLocaleLowerCase();
 
         return (showAllOnOpen && query === selectedItem?.label.trim().toLocaleLowerCase())
-          || item.label.toLocaleLowerCase().includes(query);
+          || item.label.toLocaleLowerCase().includes(query)
+          || item.searchText?.toLocaleLowerCase().includes(query) === true;
       }}
       placeholder="Type to search"
       invalid={invalid}

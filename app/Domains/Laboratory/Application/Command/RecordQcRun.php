@@ -15,15 +15,15 @@ use InvalidArgumentException;
  * ADR-163 D-F). `$qcRunId` is client-minted. The handler classifies PASS /
  * FAIL from `$observedValue` vs the expected range and, on FAIL, holds the
  * facility's VERIFIED-not-released results for `$testDefinitionId` from
- * release (§85, §159). `$analyzerRef` / `$controlMaterial` / `$controlLevel`
- * are open strings.
+ * release (§85, §159). The handler resolves the facility instrument and
+ * snapshots its configured identifier as the analyzer reference.
  */
 final readonly class RecordQcRun implements Auditable, AuthorizesAgainst
 {
     public function __construct(
         public string $qcRunId,
         public string $actorId,
-        public string $analyzerRef,
+        public string $instrumentId,
         public string $controlMaterial,
         public float $observedValue,
         public ?string $testDefinitionId = null,
@@ -34,7 +34,7 @@ final readonly class RecordQcRun implements Auditable, AuthorizesAgainst
         public ?string $occurredAt = null,
         public ?string $idempotencyKey = null,
     ) {
-        foreach (['qcRunId' => $qcRunId, 'actorId' => $actorId] as $name => $value) {
+        foreach (['qcRunId' => $qcRunId, 'actorId' => $actorId, 'instrumentId' => $instrumentId] as $name => $value) {
             if (! Str::isUuid($value)) {
                 throw new InvalidArgumentException("RecordQcRun::\${$name} must be a UUID (IC §3).");
             }
@@ -44,8 +44,8 @@ final readonly class RecordQcRun implements Auditable, AuthorizesAgainst
             throw new InvalidArgumentException('RecordQcRun::$testDefinitionId must be a UUID or null (IC §3).');
         }
 
-        if (trim($analyzerRef) === '' || trim($controlMaterial) === '') {
-            throw new InvalidArgumentException('RecordQcRun::$analyzerRef and $controlMaterial must not be blank.');
+        if (trim($controlMaterial) === '') {
+            throw new InvalidArgumentException('RecordQcRun::$controlMaterial must not be blank.');
         }
 
         if ($expectedLow !== null && $expectedHigh !== null && $expectedLow > $expectedHigh) {
@@ -70,7 +70,7 @@ final readonly class RecordQcRun implements Auditable, AuthorizesAgainst
             actorId: $this->actorId,
             targetType: 'lab_qc_run',
             targetId: $this->qcRunId,
-            metadata: ['analyzer_ref' => trim($this->analyzerRef)],
+            metadata: ['instrument_id' => $this->instrumentId],
         );
     }
 }

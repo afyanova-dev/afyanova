@@ -11,10 +11,12 @@ use App\Domains\Identity\Contracts\FacilityAdminRoleDefinition;
 use App\Domains\Identity\Contracts\ReceptionistRoleDefinition;
 use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Patient\Domain\Enum\IdentifierType;
+use App\Domains\Patient\Domain\Enum\RelationshipRole;
 use App\Domains\Patient\Domain\Enum\Sex;
 use App\Domains\Patient\Domain\Model\Patient;
 use App\Domains\Patient\Domain\Model\PatientIdentifier;
 use App\Domains\Patient\Domain\Model\PatientRegistration;
+use App\Domains\Patient\Domain\Model\PatientRelationship;
 use App\Models\User;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -751,6 +753,16 @@ it('renders patient profile with full 360 dossier structure', function (): void 
         patientNumber: 'PAT-00000099',
     );
 
+    TenantContextScope::run($tenantId, $facilityId, fn () => PatientRelationship::factory()
+        ->forTenant($tenantId)
+        ->forPatient((string) $pat->id)
+        ->withRole(RelationshipRole::EmergencyContact)
+        ->create([
+            'related_name' => 'Neema Mkwawa',
+            'relationship_label' => 'Aunt',
+            'related_phone' => '+255712345678',
+        ]));
+
     $response = $this->actingAs($user)
         ->withSession(['active_facility_id' => $facilityId])
         ->get("/workspaces/patient/{$pat->id}");
@@ -770,7 +782,10 @@ it('renders patient profile with full 360 dossier structure', function (): void 
                 ->where('facilityRegistrationCount', 1)
                 ->has('identifiers', 2)
                 ->has('addresses')
-                ->has('relationships')
+                ->has('relationships', 1)
+                ->where('relationships.0.name', 'Neema Mkwawa')
+                ->where('relationships.0.label', 'Aunt')
+                ->where('relationships.0.phone', '+255712345678')
                 ->has('auditHistory')
                 ->etc()
             )

@@ -149,7 +149,7 @@ final class QueueEntry extends AggregateRoot
         return $entry;
     }
 
-    public function call(string $roomId, ?string $staffId = null): void
+    public function call(?string $roomId, ?string $staffId = null): void
     {
         if (! $this->status->isCallable()) {
             throw new InvalidQueueStateTransitionException(

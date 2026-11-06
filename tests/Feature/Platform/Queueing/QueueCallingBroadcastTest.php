@@ -32,6 +32,7 @@ test('CallNextTicket broadcasts calling payload over WebSocket with zero PHI', f
         facilityId: $facilityId,
         code: 'OPD-'.Str::upper(Str::random(4)),
         name: 'OPD Consultation Queue',
+        actorId: $userId,
         departmentId: (string) Str::uuid7(),
         ticketPrefix: 'A',
     )));
@@ -78,6 +79,7 @@ test('RecallTicket broadcasts recall chime over WebSocket', function (): void {
         facilityId: $facilityId,
         code: 'TRG-'.Str::upper(Str::random(4)),
         name: 'Triage Queue',
+        actorId: $userId,
         departmentId: (string) Str::uuid7(),
         ticketPrefix: 'T',
     )));

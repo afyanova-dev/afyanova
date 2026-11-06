@@ -6,11 +6,10 @@ namespace App\Domains\HR\Presentation\Http\Controller;
 
 use App\Domains\HR\Contracts\HRApi;
 use App\Models\User;
-use App\Platform\Documents\Application\Query\GetDownloadStreamQuery;
-use App\Platform\Documents\Domain\Exception\DocumentNotAvailableException;
-use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;
+use App\Platform\Documents\Contracts\DocumentsApi;
+use App\Platform\Documents\Contracts\Exception\DocumentNotAvailableException;
+use App\Platform\Documents\Contracts\Exception\DocumentNotFoundException;
 use App\Shared\Authorization\ScopeChecker;
-use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -23,7 +22,7 @@ final class StaffPhotoController
         Request $request,
         TenantContext $context,
         ScopeChecker $scopeChecker,
-        QueryBus $queryBus,
+        DocumentsApi $documents,
         HRApi $hrApi,
     ): Response {
         $user = $request->user();
@@ -50,11 +49,11 @@ final class StaffPhotoController
         abort_unless(is_string($photoDocumentId), 404, 'Staff photo not found.');
 
         try {
-            $stream = $queryBus->dispatch(new GetDownloadStreamQuery(
+            $stream = $documents->getDownloadStream(
                 tenantId: (string) $context->tenantId(),
                 documentId: $photoDocumentId,
                 actorId: (string) $user->getKey(),
-            ));
+            );
         } catch (DocumentNotAvailableException $exception) {
             abort(403, $exception->getMessage());
         } catch (DocumentNotFoundException) {

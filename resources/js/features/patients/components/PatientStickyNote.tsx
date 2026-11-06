@@ -1,6 +1,6 @@
 import { Button, IconButton, InlineLoading, InlineNotification, Modal, SkeletonText, TextArea } from '@carbon/react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Document, Edit, TrashCan } from '@/icons';
+import { Close, Document, Edit, TrashCan } from '@/icons';
 import { sendJson } from '@/lib/http';
 import { formatClinicalDateTime } from '@/lib/formatting';
 import { permissions, useCan } from '@/lib/authorization';
@@ -25,7 +25,15 @@ function endpoint(patientId: string, noteId?: string): string {
   return noteId ? `${base}/${encodeURIComponent(noteId)}` : base;
 }
 
-export function PatientStickyNote({ patientId }: { patientId: string }): ReactNode {
+export function PatientStickyNote({
+  patientId,
+  renderTrigger,
+  size = 'lg',
+}: {
+  patientId: string;
+  renderTrigger?: (onTrigger: () => void) => ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+}): ReactNode {
   const containerRef = useRef<HTMLElement>(null);
   const can = useCan();
   const canEdit = can(permissions.patient.update);
@@ -83,6 +91,16 @@ export function PatientStickyNote({ patientId }: { patientId: string }): ReactNo
     setEditorOpen(true);
   }
 
+  function triggerStickyNote(): void {
+    if (loading || loadError || note) {
+      setPanelOpen((open) => !open);
+    } else if (canEdit) {
+      startEditing();
+    } else {
+      setPanelOpen(true);
+    }
+  }
+
   async function saveNote(): Promise<void> {
     const body = draft.trim();
     if (!body || body.length > MAX_NOTE_LENGTH) return;
@@ -125,31 +143,42 @@ export function PatientStickyNote({ patientId }: { patientId: string }): ReactNo
   return (
     <section className="patient-sticky-note" aria-label="Patient sticky note" ref={containerRef}>
       <div className="patient-sticky-note__trigger-row">
-        <IconButton
-          label="Sticky note"
-          kind="ghost"
-          size="sm"
-          aria-expanded={panelOpen}
-          aria-busy={loading}
-          onClick={() => {
-            if (loading || loadError || note) {
-              setPanelOpen((open) => !open);
-            } else if (canEdit) {
-              startEditing();
-            } else {
-              setPanelOpen(true);
-            }
-          }}
-        >
-          <span className="patient-sticky-note__icon">
+        {renderTrigger ? (
+          <div className="patient-sticky-note__combo-trigger" aria-busy={loading}>
+            {renderTrigger(triggerStickyNote)}
+          </div>
+        ) : (
+          <IconButton
+            label="Sticky note"
+            kind="ghost"
+            size={size}
+            badgeCount={note ? 1 : undefined}
+            align="bottom"
+            aria-expanded={panelOpen}
+            aria-busy={loading}
+            onClick={triggerStickyNote}
+          >
             <Document />
-            {note ? <span className="patient-sticky-note__badge">1</span> : null}
-          </span>
-        </IconButton>
+          </IconButton>
+        )}
       </div>
 
       {panelOpen ? (
         <div className="patient-sticky-note__panel" role="region" aria-label="Sticky note details">
+          <header className="patient-sticky-note__header">
+            <div className="patient-sticky-note__header-title">
+              <Document size={16} aria-hidden="true" />
+              <h3>Sticky note</h3>
+            </div>
+            <IconButton
+              label="Close sticky note"
+              kind="ghost"
+              size="sm"
+              onClick={() => setPanelOpen(false)}
+            >
+              <Close />
+            </IconButton>
+          </header>
           {loading ? (
             <div className="patient-sticky-note__body" role="status" aria-label="Loading sticky note">
               <SkeletonText paragraph lineCount={3} />

@@ -126,15 +126,8 @@ final class ReceptionCheckInController
                 );
             }
 
-            if ($selectedQueue->roomNames === []) {
-                return $this->queueRoutingError(
-                    $request,
-                    'This queue has no active rooms assigned. Ask a queue administrator to configure its service rooms.',
-                );
-            }
-
             if ($queueingApi->serviceCapabilityRequiresOrderProvenance($selectedQueue->serviceCapability)
-                && ($protocolDefinition === null || $protocolDefinitionId === null || $queueId !== $queueingApi->procedureQueueId($facilityId, $protocolDefinitionId))) {
+                && ($protocolDefinition === null || $queueId !== $queueingApi->procedureQueueId($facilityId, $protocolDefinitionId))) {
                 return $this->queueRoutingError(
                     $request,
                     'This service queue requires an authorized order and cannot be selected during check-in yet. Check in without queue placement and arrange the service after its order is recorded.',
@@ -197,7 +190,7 @@ final class ReceptionCheckInController
         }
 
         $ticketNumber = null;
-        if ($protocolDefinition !== null && $protocolDefinitionId !== null) {
+        if ($protocolDefinition !== null) {
             try {
                 $clinicalApi->requestProtocolProcedure(
                     procedureId: (string) Str::uuid7(),

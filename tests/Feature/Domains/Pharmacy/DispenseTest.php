@@ -15,6 +15,7 @@ use App\Domains\Pharmacy\Application\Command\Dispense;
 use App\Domains\Pharmacy\Application\Command\ValidatePharmacyOrder;
 use App\Domains\Pharmacy\Application\Query\GetDispensing;
 use App\Domains\Pharmacy\Application\Query\GetPharmacyOrderDispensings;
+use App\Domains\Pharmacy\Application\Query\GetPickup;
 use App\Domains\Pharmacy\Contracts\Event\MedicationDispensed;
 use App\Domains\Pharmacy\Domain\Exception\DispensingExceedsAuthorizedQuantity;
 use App\Domains\Pharmacy\Domain\Exception\DispensingFacilityMismatch;
@@ -36,11 +37,11 @@ uses(RefreshDatabase::class);
 
 /**
  * @param  array<string, mixed>  $rxOverrides
- * @return array{t: string, f: string, a: string, order: string, patient: string, pd: string, item: string, loc: string}
+ * @return array{t: string, f: string, a: string, order: string, patient: string, pd: string, item: string, loc: string, organization: string, roleId: string}
  */
 function dispenseSetup(array $rxOverrides = []): array
 {
-    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = pharmacyFixture();
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facility, 'user' => $user, 'role_id' => $roleId] = pharmacyFixture();
     $t = (string) $tenant->id;
     $f = (string) $facility->id;
     $a = (string) $user->id;
@@ -54,7 +55,18 @@ function dispenseSetup(array $rxOverrides = []): array
 
     ['itemId' => $item, 'locationId' => $loc] = pharmacyStockedItem($t, $f, '100');
 
-    return ['t' => $t, 'f' => $f, 'a' => $a, 'order' => $orderId, 'patient' => $patient, 'pd' => $pd, 'item' => $item, 'loc' => $loc];
+    return [
+        't' => $t,
+        'f' => $f,
+        'a' => $a,
+        'order' => $orderId,
+        'patient' => $patient,
+        'pd' => $pd,
+        'item' => $item,
+        'loc' => $loc,
+        'organization' => (string) $organization->id,
+        'roleId' => (string) $roleId,
+    ];
 }
 
 function doDispense(string $t, string $f, string $a, string $order, string $item, string $loc, string $qty): string
@@ -116,6 +128,28 @@ test('Dispense against a VALIDATED order: a COMPLETED Dispensing + a stock OUT m
     test()->assertDatabaseHas('shared_audit_log', ['tenant_id' => $t, 'action' => 'pharmacy.medication_dispensed']);
     test()->assertDatabaseHas('shared_audit_log', ['tenant_id' => $t, 'action' => 'inventory.stock_reserved']);
     test()->assertDatabaseHas('shared_audit_log', ['tenant_id' => $t, 'action' => 'inventory.stock_consumed']);
+});
+
+test('dispensing and pickup details are hidden outside their active facility, and dispensing cannot cross context', function () {
+    ['t' => $t, 'f' => $facilityAId, 'a' => $a, 'order' => $orderId, 'item' => $item, 'loc' => $locationId, 'organization' => $organizationId, 'roleId' => $roleId] = dispenseSetup();
+    $dispensingId = doDispense($t, $facilityAId, $a, $orderId, $item, $locationId, '1');
+    $pickupId = (string) Tenancy::run(
+        $t,
+        fn (): string => (string) DB::table('rx_pickups')->where('dispensing_id', $dispensingId)->value('id'),
+    );
+    $facilityBId = pharmacyFacilityForUser($t, $organizationId, $a, $roleId);
+
+    expect(fn () => queryRx($t, $facilityBId, new GetDispensing($dispensingId)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => queryRx($t, $facilityBId, new GetPickup($pickupId)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => queryRx($t, $facilityBId, new GetPharmacyOrderDispensings($orderId)))
+        ->toThrow(NotFound::class)
+        ->and(fn () => doDispense($t, $facilityBId, $a, $orderId, $item, $locationId, '1'))
+        ->toThrow(AuthorizationException::class);
+
+    expect(Tenancy::run($t, fn (): int => DB::table('rx_dispensings')->where('pharmacy_order_id', $orderId)->count()))
+        ->toBe(1);
 });
 
 test('§112 / §113: cumulative dispensing is capped at the C.10 authorised quantity; the last event completes the order', function () {

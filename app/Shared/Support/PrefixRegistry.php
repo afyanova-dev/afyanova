@@ -14,6 +14,7 @@ final class PrefixRegistry
 {
     /** @var array<string, string>  prefix => owning module */
     public const MAP = [
+        'platform_' => 'Platform administration',
         'org_' => 'Organization',
         'idn_' => 'Identity & RBAC',
         'aut_' => 'Authentication',

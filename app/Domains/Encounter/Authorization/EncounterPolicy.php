@@ -62,22 +62,18 @@ final class EncounterPolicy extends BasePolicy
      * (RLS-scoped) repository (IC §5.1). `RecordArrival` is a routine lifecycle
      * progression, mapped to `encounter.encounters.update` (ADR-130).
      *
-     * Facility scope is evaluated against the ENCOUNTER's own facility, not the
-     * actor's currently-selected one: `enc_encounters` RLS is tenant-scoped, so
-     * an actor could load an encounter at a facility they are not assigned to —
-     * "Facility selection does not grant encounter access" (§114, Invariant 24;
-     * "Organization membership does not automatically grant every facility's
-     * encounter access" — Invariant 25). `effectivePermissions($user,
-     * $encounter->facility_id)` is exactly "does this actor hold the key at
-     * THIS encounter's facility" (ADR-130 D).
+     * The actor must hold the permission at the encounter's facility and that
+     * facility must match the active context. General context permits an
+     * explicitly targeted facility only when the actor is authorized there.
      */
     public function recordArrival(User $user, Encounter $encounter, ?RecordArrival $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.update',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -91,10 +87,11 @@ final class EncounterPolicy extends BasePolicy
     public function start(User $user, Encounter $encounter, ?StartEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.update',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -111,10 +108,11 @@ final class EncounterPolicy extends BasePolicy
     public function admit(User $user, Encounter $encounter, ?AdmitEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.admit',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -130,10 +128,11 @@ final class EncounterPolicy extends BasePolicy
     public function changeDisposition(User $user, Encounter $encounter, ?ChangeEncounterDisposition $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.manage_disposition',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -150,10 +149,11 @@ final class EncounterPolicy extends BasePolicy
     public function assignLocation(User $user, Encounter $encounter, ?AssignEncounterLocation $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.assign_location',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -167,10 +167,11 @@ final class EncounterPolicy extends BasePolicy
     public function recordRelationship(User $user, Encounter $encounter, ?RecordEncounterRelationship $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.link_relationship',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -186,10 +187,11 @@ final class EncounterPolicy extends BasePolicy
     public function complete(User $user, Encounter $encounter, ?CompleteEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.complete',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -205,10 +207,11 @@ final class EncounterPolicy extends BasePolicy
     public function reopen(User $user, Encounter $encounter, ?ReopenEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.reopen',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -224,10 +227,11 @@ final class EncounterPolicy extends BasePolicy
     public function cancel(User $user, Encounter $encounter, ?CancelEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.cancel',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -243,10 +247,11 @@ final class EncounterPolicy extends BasePolicy
     public function abandon(User $user, Encounter $encounter, ?AbandonEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.abandon',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 
@@ -262,10 +267,11 @@ final class EncounterPolicy extends BasePolicy
     public function transfer(User $user, Encounter $encounter, ?TransferEncounter $command = null): bool
     {
         return $this->sameTenant($user, (string) $encounter->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $encounter->facility_id,
                 'encounter.encounters.transfer',
-                $this->scope->effectivePermissions($user, (string) $encounter->facility_id),
-                true,
             );
     }
 }

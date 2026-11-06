@@ -31,6 +31,7 @@ final class EloquentContractRepository extends EloquentRepository implements Con
             ?? throw NotFound::aggregate(Contract::class, $id);
     }
 
+    /** @return numeric-string */
     public function committedQuantityForContractLine(string $contractLineId): string
     {
         // Base units: a contract line's ceiling is expressed in the contract's
@@ -48,6 +49,8 @@ final class EloquentContractRepository extends EloquentRepository implements Con
      * `contract_line_id` and excluding CANCELLED lines AND lines of a CANCELLED
      * PO (ADR-177 D-D — "a cancelled PO commits nothing"). Both tables are
      * tenant-RLS'd, so the join is tenant-safe.
+     *
+     * @return numeric-string
      */
     private function sumForContractLine(string $contractLineId, string $column): string
     {

@@ -35,6 +35,14 @@ export const permissions = {
     /** Confirm staff assignments within an authorized facility. */
     assignmentsManage: 'identity.assignments.manage',
   },
+  laboratory: {
+    /** Read tenant-wide laboratory tests, panels, and methods. */
+    catalogRead: 'laboratory.catalog.read',
+    /** Maintain tenant-wide test and panel definitions. */
+    catalogManage: 'laboratory.catalog.manage',
+    /** Read the laboratory worklist and execution records. */
+    access: 'laboratory.access',
+  },
   queue: {
     /** Queueing/P12.1 — open the service-queues workspace. */
     ticketView: 'queue.ticket.view',
@@ -65,6 +73,7 @@ export const permissions = {
     /** Open the clinician consultation workspace. */
     consultationsRead: 'clinical.consultations.read',
     noteCreate: 'clinical.notes.create',
+    diagnosesRead: 'clinical.diagnoses.read',
     diagnosisRecord: 'clinical.diagnoses.record',
     planRecord: 'clinical.plans.record',
     /** Read the procedure catalog when configuring procedure queue routing. */

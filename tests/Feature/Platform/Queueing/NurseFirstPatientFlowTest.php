@@ -151,8 +151,79 @@ test('one encounter flows from reception through nurse triage and clinician comp
         ->and($consultationTicket->patient_id)->toBe($patientId)
         ->and($consultationTicket->priority)->toBe('PRIORITY');
 
-    $this->get(route('clinician.entries.show', $consultationTicket->id))->assertOk();
-    $this->post(route('reception.encounters.start', $encounter->id))->assertRedirect()->assertSessionHasNoErrors();
+    $clinicianUrl = route('clinician.entries.show', $consultationTicket->id);
+    $clinicianPath = '/workspaces/clinician/entries/'.$consultationTicket->id;
+
+    $this->actingAs($receptionOnlyUser)
+        ->withSession(['active_facility_id' => $facilityId])
+        ->from($clinicianUrl)
+        ->post(route('reception.encounters.start', $encounter->id))
+        ->assertForbidden();
+
+    $this->actingAs($user)->withSession(['active_facility_id' => $facilityId]);
+    $this->get($clinicianUrl)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('canCall', true)
+            ->where('canStartService', false)
+            ->where('callRooms.0.id', $consultationRoom->id));
+
+    $this->postJson(route('reception.encounters.start', $encounter->id))
+        ->assertConflict()
+        ->assertJsonPath('error.code', 'CONSULTATION_NOT_IN_SERVICE');
+
+    $this->from($clinicianUrl)
+        ->post(route('reception.encounters.start', $encounter->id))
+        ->assertRedirect($clinicianUrl)
+        ->assertSessionHasErrors('start');
+    $notStarted = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('enc_encounters')
+        ->where('id', $encounter->id)->firstOrFail());
+    expect($notStarted->status)->toBe('ARRIVED');
+
+    $this->post(route('service-queues.entries.call', $consultationTicket->id), [
+        'room' => $consultationRoom->id,
+        'return_to' => $clinicianPath,
+    ])->assertRedirect($clinicianUrl)->assertSessionHasNoErrors();
+
+    $this->get($clinicianUrl)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('entry.status', 'CALLED')
+            ->where('canCall', false)
+            ->where('canStartService', true));
+
+    $this->from($clinicianUrl)
+        ->post(route('reception.encounters.start', $encounter->id))
+        ->assertRedirect($clinicianUrl)
+        ->assertSessionHasErrors('start');
+    $stillNotStarted = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('enc_encounters')
+        ->where('id', $encounter->id)->firstOrFail());
+    expect($stillNotStarted->status)->toBe('ARRIVED');
+
+    $this->post(route('service-queues.entries.start', $consultationTicket->id), [
+        'return_to' => $clinicianPath,
+    ])->assertRedirect($clinicianUrl)->assertSessionHasNoErrors();
+    $queueStarted = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('qms_queue_entries')
+        ->where('id', $consultationTicket->id)->firstOrFail());
+    $stillArrived = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('enc_encounters')
+        ->where('id', $encounter->id)->firstOrFail());
+    expect($queueStarted->status)->toBe('IN_SERVICE')
+        ->and($stillArrived->status)->toBe('ARRIVED');
+
+    $this->get($clinicianUrl)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('entry.status', 'IN_SERVICE')
+            ->where('canCall', false)
+            ->where('canStartService', false));
+
+    $this->post(route('reception.encounters.start', $encounter->id))
+        ->assertRedirect($clinicianUrl)
+        ->assertSessionHasNoErrors();
+    $activeEncounter = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('enc_encounters')
+        ->where('id', $encounter->id)->firstOrFail());
+    expect($activeEncounter->status)->toBe('ACTIVE');
+
     $this->post(route('clinical.encounters.notes.record', $encounter->id), [
         'patient_id' => $patientId,
         'note_type' => 'CONSULTATION',

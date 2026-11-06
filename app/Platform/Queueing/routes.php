@@ -7,9 +7,11 @@ use App\Platform\Queueing\Presentation\Http\Controller\ClinicianEncounterControl
 use App\Platform\Queueing\Presentation\Http\Controller\ClinicianWorkspaceController;
 use App\Platform\Queueing\Presentation\Http\Controller\CloseQueueController;
 use App\Platform\Queueing\Presentation\Http\Controller\CompleteTicketServiceController;
+use App\Platform\Queueing\Presentation\Http\Controller\DiagnosisCatalogController;
 use App\Platform\Queueing\Presentation\Http\Controller\HoldTicketController;
 use App\Platform\Queueing\Presentation\Http\Controller\LeaveTicketController;
 use App\Platform\Queueing\Presentation\Http\Controller\ManageProcedureQueueMappingsController;
+use App\Platform\Queueing\Presentation\Http\Controller\ManageQueueDefinitionsController;
 use App\Platform\Queueing\Presentation\Http\Controller\ManageQueueRoomsController;
 use App\Platform\Queueing\Presentation\Http\Controller\ManageQueueRoomStaffController;
 use App\Platform\Queueing\Presentation\Http\Controller\NoResponseTicketController;
@@ -23,6 +25,7 @@ use App\Platform\Queueing\Presentation\Http\Controller\QueueDetailController;
 use App\Platform\Queueing\Presentation\Http\Controller\RecallTicketController;
 use App\Platform\Queueing\Presentation\Http\Controller\ReleaseHoldTicketController;
 use App\Platform\Queueing\Presentation\Http\Controller\ResumeQueueController;
+use App\Platform\Queueing\Presentation\Http\Controller\ServiceQueueManagementController;
 use App\Platform\Queueing\Presentation\Http\Controller\ServiceQueuesController;
 use App\Platform\Queueing\Presentation\Http\Controller\SkipTicketController;
 use App\Platform\Queueing\Presentation\Http\Controller\StartTicketServiceController;
@@ -32,15 +35,19 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth', 'verified'])->group(function (): void {
     Route::get('/workspaces/service-queues', ServiceQueuesController::class)->name('service-queues.index');
+    Route::get('/workspaces/service-queues/manage', ServiceQueueManagementController::class)->name('service-queues.manage');
     Route::get('/workspaces/service-queues/{queue}', QueueDetailController::class)->name('service-queues.show');
     Route::get('/workspaces/nurse-station', NurseStationController::class)->name('nurse-station.index');
     Route::get('/workspaces/nurse-station/entries/{entry}', NurseStationEntryController::class)->name('nurse-station.entries.show');
     Route::post('/workspaces/nurse-station/entries/{entry}/start', NurseStationStartServiceController::class)->name('nurse-station.entries.start');
     Route::post('/workspaces/nurse-station/entries/{entry}/handoff', NurseStationHandoffController::class)->name('nurse-station.entries.handoff');
     Route::get('/workspaces/clinician', ClinicianWorkspaceController::class)->name('clinician.index');
+    Route::get('/workspaces/clinician/diagnoses', DiagnosisCatalogController::class)->name('clinician.diagnoses.index');
     Route::get('/workspaces/clinician/entries/{entry}', ClinicianEncounterController::class)->name('clinician.entries.show');
 
     Route::post('/workspaces/service-queues/entries', PlaceQueueEntryController::class)->name('service-queues.entries.store');
+    Route::post('/workspaces/service-queues/queues', [ManageQueueDefinitionsController::class, 'store'])->name('service-queues.queues.store');
+    Route::put('/workspaces/service-queues/queues/{queue}', [ManageQueueDefinitionsController::class, 'update'])->name('service-queues.queues.update');
     Route::post('/workspaces/service-queues/entries/{entry}/call', CallTicketController::class)->name('service-queues.entries.call');
     Route::post('/workspaces/service-queues/entries/{entry}/recall', RecallTicketController::class)->name('service-queues.entries.recall');
     Route::post('/workspaces/service-queues/entries/{entry}/start', StartTicketServiceController::class)->name('service-queues.entries.start');

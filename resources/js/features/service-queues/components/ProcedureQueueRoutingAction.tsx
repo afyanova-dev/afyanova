@@ -1,6 +1,7 @@
 import { Button, InlineNotification, Modal, Select, SelectItem } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { router } from '@inertiajs/react';
 import { routes } from '@/app/routes';
 import { permissions, useCan } from '@/lib/authorization';
@@ -8,8 +9,10 @@ import type { ProcedureQueueRouting } from '../types/queue-board';
 
 export function ProcedureQueueRoutingAction({
   routing,
+  buttonSize = 'sm',
 }: {
   routing: ProcedureQueueRouting | null;
+  buttonSize?: 'sm' | 'lg';
 }): ReactNode {
   const can = useCan();
   const canConfigure = can(permissions.queue.definitionManage)
@@ -55,10 +58,11 @@ export function ProcedureQueueRoutingAction({
 
   return (
     <>
-      <Button kind="secondary" size="sm" onClick={openDialog}>
+      <Button kind="secondary" size={buttonSize} onClick={openDialog}>
         Configure procedure queues
       </Button>
-      <Modal
+      {open ? createPortal(
+        <Modal
         open={open}
         modalHeading="Configure procedure queues"
         primaryButtonText="Save routing"
@@ -111,7 +115,9 @@ export function ProcedureQueueRoutingAction({
             <InlineNotification kind="error" lowContrast title={error} />
           </div>
         ) : null}
-      </Modal>
+        </Modal>,
+        document.body,
+      ) : null}
     </>
   );
 }

@@ -118,6 +118,7 @@ interface InventoryApi
         ?string $sourceRef = null,
         ?string $batchNumber = null,
         ?string $reservationId = null,
+        ?string $idempotencyKey = null,
     ): void;
 
     /**

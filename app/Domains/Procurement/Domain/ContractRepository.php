@@ -22,6 +22,8 @@ interface ContractRepository extends Repository
      * D-D). Returns a scale-4 numeric string; '0.0000' when nothing consumes the
      * line. Callers that ENFORCE the ceiling must hold the `pcr_contracts` row
      * lock and have already written the candidate PO line(s) in the same txn.
+     *
+     * @return numeric-string
      */
     public function committedQuantityForContractLine(string $contractLineId): string;
 

@@ -79,6 +79,6 @@ final class ReferralPolicy extends BasePolicy
     private function hasScope(User $user, Referral $referral, string $facilityId, string $permissionKey): bool
     {
         return $this->sameTenant($user, (string) $referral->tenant_id)
-            && in_array($permissionKey, $this->scope->effectivePermissions($user, $facilityId), true);
+            && $this->scope->hasFacilityPermissionInContext($user, $this->context, $facilityId, $permissionKey);
     }
 }

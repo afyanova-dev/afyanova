@@ -543,11 +543,11 @@ export function InventoryWorkspace(props: InventoryWorkspaceProps): ReactNode {
           )}
         </div>
 
-        {/* ── Section: Item catalogue ─────────────────────────────────────── */}
+        {/* ── Section: Inventory items ────────────────────────────────────── */}
         <div
           id="inventory-section-catalogue"
           role="region"
-          aria-label="Item catalogue"
+          aria-label="Inventory items"
           style={{ display: activeSection === 'catalogue' ? 'block' : 'none' }}
         >
           {activeSection === 'catalogue' ? (

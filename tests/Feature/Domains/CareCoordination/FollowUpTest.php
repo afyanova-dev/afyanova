@@ -68,6 +68,32 @@ test('ScheduleFollowUp creates a PENDING follow-up, copies the encounter facilit
     expect($audit)->not->toBeNull();
 });
 
+test('recording a follow-up outcome rejects a different active facility', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = careCoordinationFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = createFacilityFixture($tenantId, (string) $organization->id);
+    assignUserToFacility($tenantId, (string) $user->id, $roleId, (string) $facilityB->id);
+
+    ['encounterId' => $encounterId, 'patientId' => $patientId] =
+        seedEligibleReferralEncounter($tenantId, $facilityAId, (string) $user->id);
+    $followUpId = (string) Str::uuid7();
+    dispatchFollowUp($tenantId, $facilityAId, new ScheduleFollowUp(
+        followUpId: $followUpId,
+        sourceEncounterId: $encounterId,
+        patientId: $patientId,
+        actorId: (string) $user->id,
+        dueFrom: now()->subWeeks(3)->toDateString(),
+        dueTo: now()->subWeek()->toDateString(),
+    ));
+
+    expect(fn () => dispatchFollowUp($tenantId, (string) $facilityB->id, new RecordFollowUpOutcome(
+        followUpId: $followUpId,
+        actorId: (string) $user->id,
+        outcome: FollowUp::STATUS_MISSED,
+    )))->toThrow(AuthorizationException::class);
+});
+
 test('ScheduleFollowUp rejects a DECEASED patient and a patient/encounter mismatch', function () {
     ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = careCoordinationFixture();
     $t = (string) $tenant->id;

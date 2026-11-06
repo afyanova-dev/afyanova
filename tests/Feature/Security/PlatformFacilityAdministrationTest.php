@@ -387,6 +387,19 @@ it('invites a Facility Admin, lets the inviting Tenant Admin approve, and requir
         ->where('role_id', $facilityAdminRole->getKey())
         ->value('id'));
     expect($assignmentId)->not->toBe('');
+    TenantContextScope::run($fixture['tenant']->id, null, function () use ($fixture, $targetId): void {
+        DB::table('aut_sessions')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $fixture['tenant']->id,
+            'user_id' => $targetId,
+            'session_id' => 'sess-approved-admin-revocation',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'test',
+            'last_active_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
 
     $selfApprovalAudit = TenantContextScope::run($fixture['tenant']->id, null, fn () => DB::table('shared_audit_log')
         ->where('action', 'identity.admin_role_promotion.approved')
@@ -424,6 +437,11 @@ it('invites a Facility Admin, lets the inviting Tenant Admin approve, and requir
         ->assertRedirect(route('admin.identity.role-promotions'));
     expect(TenantContextScope::run($fixture['tenant']->id, null, fn () => DB::table('idn_access_assignments')
         ->where('id', $assignmentId)->value('status')))->toBe('REVOKED');
+    expect(TenantContextScope::run($fixture['tenant']->id, null, fn () => DB::table('aut_sessions')
+        ->where('tenant_id', $fixture['tenant']->id)
+        ->where('user_id', $targetId)
+        ->whereNull('revoked_at')
+        ->exists()))->toBeFalse();
 });
 
 it('repairs a legacy Facility Admin protected flag before inviting', function (): void {

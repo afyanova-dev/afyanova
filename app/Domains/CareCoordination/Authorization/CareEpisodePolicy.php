@@ -32,10 +32,11 @@ final class CareEpisodePolicy extends BasePolicy
     public function manage(User $user, CareEpisode $episode, CloseCareEpisode|MarkEpisodeTransferredOut|null $command = null): bool
     {
         return $this->sameTenant($user, (string) $episode->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $episode->facility_id,
                 'care_coordination.episode.manage',
-                $this->scope->effectivePermissions($user, (string) $episode->facility_id),
-                true,
             );
     }
 

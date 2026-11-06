@@ -199,9 +199,9 @@ final class PharmacyController
      * MPI lookup for the transcribe-patient search — same classification as
      * the other intake consoles (patient number / phone / name fragment).
      *
-     * @return list<RxPatientResult>|null
+     * @return list<RxPatientResult>
      */
-    private function search(PatientApi $patientApi, string $query): ?array
+    private function search(PatientApi $patientApi, string $query): array
     {
         $cleanDigits = (string) preg_replace('/\D+/', '', $query);
         $isPatPrefix = str_starts_with(strtoupper($query), 'PAT-')

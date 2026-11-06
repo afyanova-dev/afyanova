@@ -20,9 +20,15 @@ final class EloquentPrescriptionReader implements PrescriptionReader
         return $this->toSummary($prescription);
     }
 
-    public function forPatient(string $patientId, ?string $status): array
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<PrescriptionSummary>
+     */
+    public function forPatient(string $patientId, ?string $status, array $facilityIds): array
     {
-        $query = Prescription::query()->where('patient_id', $patientId);
+        $query = Prescription::query()
+            ->where('patient_id', $patientId)
+            ->whereIn('facility_id', $facilityIds);
 
         if ($status !== null) {
             $query->where('status', strtoupper(trim($status)));
@@ -82,7 +88,7 @@ final class EloquentPrescriptionReader implements PrescriptionReader
             cancelReason: $p->cancel_reason,
             occurredAt: $p->occurred_at->toIso8601String(),
             recordedAt: $p->recorded_at->toIso8601String(),
-            source: $p->source !== null ? (string) $p->source : null,
+            source: (string) $p->source,
             prescriberName: $p->prescriber_name !== null ? (string) $p->prescriber_name : null,
             transcriptionNote: $p->transcription_note !== null ? (string) $p->transcription_note : null,
             inventoryItemId: $p->inventory_item_id !== null ? (string) $p->inventory_item_id : null,

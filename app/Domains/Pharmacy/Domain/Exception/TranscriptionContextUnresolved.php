@@ -12,7 +12,7 @@ use App\Shared\Domain\DomainException;
  */
 final class TranscriptionContextUnresolved extends DomainException
 {
-    public function __construct(string $patientId, string $facilityId)
+    public function __construct()
     {
         parent::__construct(
             'The selected patient is not registered at the active facility. Search for the correct patient or create a pharmacy-only record.',

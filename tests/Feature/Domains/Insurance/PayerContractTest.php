@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Insurance\Application\Query\FindEffectivePayerTariff;
 use App\Domains\Insurance\Application\Query\GetContractTariffs;
 use App\Domains\Insurance\Application\Query\GetPayerContract;
+use App\Domains\Insurance\Application\Query\GetPayerContracts;
 use App\Domains\Insurance\Domain\Exception\IllegalPayerContractTransition;
 use App\Domains\Insurance\Domain\Exception\InvalidPayerContractDates;
 use App\Domains\Insurance\Domain\Exception\PayerContractNotActive;
@@ -13,13 +14,17 @@ use App\Domains\Insurance\Domain\Exception\PayerTariffEffectiveDateNotAfterCurre
 use App\Domains\Insurance\Domain\ValueObject\CoveredServiceCategory;
 use App\Domains\Insurance\Domain\ValueObject\PayerContractStatus;
 use App\Domains\Insurance\Domain\ValueObject\PayerTariffStatus;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Models\User;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContextScope;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -329,6 +334,72 @@ test('facility-specific contract takes precedence over tenant-wide contract', fu
         facilityId: null,
     ));
     expect($tariffTenant?->amount)->toBe('50000.00');
+});
+
+test('a facility user cannot query another facility tariff by supplying its ID', function (): void {
+    ['t' => $tenantId, 'f' => $facilityAId, 'a' => $actorId, 'payer' => $payerId] = payerContractSetup();
+    $tenantContractId = insuranceCreateContract(
+        $tenantId,
+        $facilityAId,
+        $actorId,
+        $payerId,
+        name: 'Tenant Contract',
+        contractFacilityId: null,
+    );
+    $contractId = insuranceCreateContract(
+        $tenantId,
+        $facilityAId,
+        $actorId,
+        $payerId,
+        name: 'Facility A Contract',
+        contractFacilityId: $facilityAId,
+    );
+    insuranceActivateContract($tenantId, $facilityAId, $actorId, $contractId);
+    insuranceSetTariff($tenantId, $facilityAId, $actorId, $contractId, CoveredServiceCategory::CONSULTATION, '40000.0000', '2026-01-01');
+
+    $facilityA = DB::table('org_facilities')->where('id', $facilityAId)->first();
+    $roleId = DB::table('idn_access_assignments')
+        ->where('user_id', $actorId)
+        ->where('facility_id', $facilityAId)
+        ->value('role_id');
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $facilityA, $actorId, $roleId): string {
+        $facilityB = Facility::factory()->forTenant($tenantId, (string) $facilityA->organization_id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $actorId,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new FindEffectivePayerTariff(
+        payerId: $payerId,
+        serviceCategory: CoveredServiceCategory::CONSULTATION,
+        onDate: '2026-06-01',
+        facilityId: $facilityAId,
+    )))->toThrow(NotFound::class);
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetPayerContract($contractId)))
+        ->toThrow(PayerContractNotFound::class);
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetContractTariffs(
+        contractId: $contractId,
+        serviceCategory: CoveredServiceCategory::CONSULTATION,
+    )))->toThrow(PayerContractNotFound::class);
+
+    $contractsInFacilityB = queryInsurance($tenantId, $facilityBId, new GetPayerContracts(payerId: $payerId));
+
+    expect($contractsInFacilityB)->toHaveCount(1)
+        ->and($contractsInFacilityB[0]->id)->toBe($tenantContractId)
+        ->and($contractsInFacilityB[0]->facilityId)->toBeNull();
 });
 
 test('RBAC enforces insurance.contracts.manage and insurance.tariffs.manage permissions', function () {

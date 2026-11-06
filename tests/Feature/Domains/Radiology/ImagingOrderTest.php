@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Patient\Domain\Model\Patient;
 use App\Domains\Radiology\Application\Command\AcceptImagingOrder;
 use App\Domains\Radiology\Application\Command\CancelImagingOrder;
@@ -24,6 +25,7 @@ use App\Domains\Radiology\Domain\Model\ImagingOrder;
 use App\Domains\Radiology\Domain\Model\ImagingOrderItem;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -237,4 +239,49 @@ test('GetImagingOrder, SearchImagingOrders and GetPatientImagingOrders return th
 
     $forPatient = TenantContextScope::run($t, $f, fn () => app(QueryBus::class)->dispatch(new GetPatientImagingOrders(patientId: $patientId)));
     expect($forPatient)->toHaveCount(1)->and($forPatient[0]->orderId)->toBe($orderId);
+});
+
+test('facility B cannot read imaging orders owned by facility A', function (): void {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = radiologyFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    ['orderId' => $orderId, 'patientId' => $patientId] = seedAcceptedImagingOrder($tenantId, $facilityAId, (string) $user->id);
+
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user, $roleId): string {
+        $facilityB = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new GetImagingOrder(orderId: $orderId)),
+    ))->toThrow(NotFound::class);
+
+    expect(fn () => TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new SearchImagingOrders(facilityId: $facilityAId)),
+    ))->toThrow(NotFound::class);
+
+    $patientOrdersInFacilityB = TenantContextScope::run(
+        $tenantId,
+        $facilityBId,
+        fn () => app(QueryBus::class)->dispatch(new GetPatientImagingOrders(patientId: $patientId)),
+    );
+
+    expect($patientOrdersInFacilityB)->toBe([]);
 });

@@ -4,34 +4,33 @@ declare(strict_types=1);
 
 namespace App\Platform\Queueing\Presentation\Http\Controller;
 
-use App\Domains\Clinical\Application\Query\GetEncounterTriageAssessments;
-use App\Domains\Clinical\Application\Query\GetPatientVitalSigns;
+use App\Domains\Clinical\Contracts\ClinicalApi;
 use App\Domains\Clinical\Contracts\Dto\TriageAssessmentSummary;
 use App\Domains\Clinical\Contracts\Dto\VitalSignsObservationSummary;
 use App\Domains\Encounter\Contracts\EncounterApi;
-use App\Domains\Patient\Application\Query\GetPatientProfile;
-use App\Domains\Patient\Contracts\Dto\PatientProfileData;
+use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Domains\Patient\Contracts\PatientApi;
 use App\Models\User;
 use App\Platform\Queueing\Domain\Enum\QueueStatus;
 use App\Platform\Queueing\Domain\Enum\ServiceCapability;
 use App\Platform\Queueing\Domain\Model\Queue;
 use App\Platform\Queueing\Domain\Model\QueueEntry;
-use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class NurseStationEntryController
 {
+    use PresentsQueueEntries;
+
     public function __invoke(
         Request $request,
         TenantContext $context,
         EncounterApi $encounterApi,
         PatientApi $patientApi,
-        QueryBus $queryBus,
+        ClinicalApi $clinicalApi,
+        OrganizationApi $organizationApi,
         string $entry,
     ): Response {
         $user = $request->user();
@@ -103,11 +102,10 @@ final class NurseStationEntryController
             404,
         );
         $patient = $patientApi->getPatientSummary($ticket->patient_id);
-        /** @var PatientProfileData $patientProfile */
-        $patientProfile = $queryBus->dispatch(new GetPatientProfile($ticket->patient_id, $facilityId));
+        $hasPatientPhoto = $patientApi->patientHasPhoto($ticket->patient_id, $facilityId);
 
         /** @var list<VitalSignsObservationSummary> $observations */
-        $observations = $queryBus->dispatch(new GetPatientVitalSigns($ticket->patient_id));
+        $observations = $clinicalApi->getPatientVitalSigns($ticket->patient_id);
         $vitals = array_values(array_filter(
             $observations,
             static fn (VitalSignsObservationSummary $observation): bool => $observation->encounterId === $ticket->encounter_id
@@ -116,14 +114,22 @@ final class NurseStationEntryController
         $vitals = array_slice($vitals, 0, 5);
 
         /** @var list<TriageAssessmentSummary> $assessments */
-        $assessments = $queryBus->dispatch(new GetEncounterTriageAssessments($ticket->encounter_id, currentOnly: true));
+        $assessments = $clinicalApi->getEncounterTriageAssessments($ticket->encounter_id, currentOnly: true);
         $currentTriage = $assessments[0] ?? null;
+
+        $callRooms = [];
+        $canCall = false;
+        if ($ticket->status === QueueStatus::WAITING && $user->can('queue.ticket.call')) {
+            $callRooms = $this->callRoomsFor($ticket, $user, $organizationApi);
+            $canCallInQueue = ! $this->hasRoomStaffRestrictions($ticket);
+            $canCall = $canCallInQueue || $callRooms !== [];
+        }
 
         return Inertia::render('NurseStation/Show', [
             'entry' => [
                 'id' => $ticket->id,
                 'ticketNumber' => $ticket->ticket_number,
-                'queue' => $ticket->queue?->name ?? 'Triage',
+                'queue' => $ticket->queue->name,
                 'status' => $ticket->status->value,
                 'priority' => $ticket->priority->value,
             ],
@@ -147,7 +153,7 @@ final class NurseStationEntryController
                 'sex' => $patient->sex,
                 'status' => $patient->status,
                 'isProvisional' => $patient->isProvisional,
-                'photoUrl' => $patientProfile->photoDocumentId !== null
+                'photoUrl' => $hasPatientPhoto
                     ? route('patient.photo', ['patientId' => $patient->patientId])
                     : null,
             ],
@@ -178,14 +184,12 @@ final class NurseStationEntryController
             ] : null,
             'canStartService' => $user->can('queue.ticket.service')
                 && $ticket->status === QueueStatus::CALLED
-                && is_string($ticket->called_room_id)
-                && DB::table('qms_queue_room_staff')
-                    ->where('tenant_id', $ticket->tenant_id)
-                    ->where('facility_id', $ticket->facility_id)
-                    ->where('queue_id', $ticket->queue_id)
-                    ->where('room_id', $ticket->called_room_id)
-                    ->where('user_id', $user->id)
-                    ->exists(),
+                && ($ticket->called_room_id === null || $this->userCanAccessLocation(
+                    $ticket,
+                    (string) $user->getAuthIdentifier(),
+                )),
+            'canCall' => $canCall,
+            'callRooms' => $callRooms,
             'canRecordVitals' => $user->can('clinical.vitals.record'),
             'canRecordTriage' => $user->can('clinical.triage.record'),
             'consultationQueues' => Queue::query()

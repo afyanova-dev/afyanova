@@ -13,8 +13,7 @@ use InvalidArgumentException;
 /**
  * The prescription queue at one facility (16-pharmacy-domain.md §186; ADR-181
  * D-F). Optional status filter. `view` gates on `pharmacy.access`; the handler
- * re-checks the acting user's `pharmacy.access` scope at the facility (the
- * `GetStockAdjustments` acting-user pattern).
+ * re-checks the acting user's `pharmacy.access` in the current context.
  */
 #[ProtectedQuery(ability: 'view', subjectType: Prescription::class)]
 final readonly class SearchPrescriptions

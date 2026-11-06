@@ -118,10 +118,11 @@ final class CreateReferralHandler
             throw new RuntimeException('CreateReferral dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'care_coordination.referral.send',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(Referral::class, $referralId);
         }

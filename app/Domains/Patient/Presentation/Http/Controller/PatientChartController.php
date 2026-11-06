@@ -5,25 +5,16 @@ declare(strict_types=1);
 namespace App\Domains\Patient\Presentation\Http\Controller;
 
 use App\Domains\Billing\Contracts\BillingApi;
-use App\Domains\CareCoordination\Application\Query\GetPatientCareEpisodes;
-use App\Domains\CareCoordination\Application\Query\GetPatientReferrals;
-use App\Domains\Clinical\Application\Query\GetPatientAllergies;
-use App\Domains\Clinical\Application\Query\GetPatientClinicalPlans;
-use App\Domains\Clinical\Application\Query\GetPatientProblems;
-use App\Domains\Clinical\Application\Query\GetPatientProcedures;
-use App\Domains\Clinical\Application\Query\GetPatientVitalSigns;
-use App\Domains\Encounter\Application\Query\GetPatientEncounters;
+use App\Domains\CareCoordination\Contracts\CareCoordinationApi;
+use App\Domains\Clinical\Contracts\ClinicalApi;
 use App\Domains\Encounter\Contracts\EncounterApi;
-use App\Domains\Laboratory\Application\Query\GetOrderResults;
-use App\Domains\Laboratory\Application\Query\GetPatientLabOrders;
+use App\Domains\Laboratory\Contracts\LaboratoryApi;
 use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Domains\Patient\Application\Query\GetPatientProfile;
 use App\Domains\Patient\Contracts\Dto\PatientProfileData;
-use App\Domains\Pharmacy\Application\Query\GetPatientPrescriptions;
-use App\Domains\Radiology\Application\Query\GetPatientImagingOrders;
-use App\Domains\Scheduling\Application\Query\GetAppointmentTypes;
-use App\Domains\Scheduling\Application\Query\GetPatientAppointments;
-use App\Domains\Scheduling\Application\Query\GetSchedulableResources;
+use App\Domains\Pharmacy\Contracts\PharmacyApi;
+use App\Domains\Radiology\Contracts\RadiologyApi;
+use App\Domains\Scheduling\Contracts\SchedulingApi;
 use App\Models\User;
 use App\Platform\Queueing\Contracts\QueueingApi;
 use App\Shared\Bus\QueryBus;
@@ -68,6 +59,12 @@ final class PatientChartController
         QueueingApi $queueingApi,
         BillingApi $billingApi,
         OrganizationApi $organizationApi,
+        CareCoordinationApi $careCoordinationApi,
+        ClinicalApi $clinicalApi,
+        LaboratoryApi $laboratoryApi,
+        PharmacyApi $pharmacyApi,
+        RadiologyApi $radiologyApi,
+        SchedulingApi $schedulingApi,
     ): Response {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -120,6 +117,7 @@ final class PatientChartController
                     'name' => $q->name,
                     'code' => $q->code,
                     'serviceCapability' => $q->serviceCapability,
+                    'roomNames' => $q->roomNames,
                 ], $queues);
             } catch (\Throwable) {
                 $availableQueues = [];
@@ -128,56 +126,66 @@ final class PatientChartController
 
         $queueEntry = null;
         if ($activeEncounter !== null) {
+            $entry = null;
             try {
                 $entry = $queueingApi->getActiveForEncounter((string) $activeEncounter['encounterId']);
-                if ($entry !== null) {
-                    $queueEntry = [
-                        'entryId' => $entry->id,
-                        'queueId' => $entry->queueId,
-                        'ticketNumber' => $entry->ticketNumber,
-                        'priority' => $entry->priority,
-                        'status' => $entry->status,
-                    ];
-                }
             } catch (\Throwable) {
-                $queueEntry = null;
+                $entry = null;
+            }
+
+            if ($entry !== null) {
+                $queueEntry = [
+                    'entryId' => $entry->id,
+                    'queueId' => $entry->queueId,
+                    'serviceCapability' => null,
+                    'ticketNumber' => $entry->ticketNumber,
+                    'priority' => $entry->priority,
+                    'status' => $entry->status,
+                ];
+
+                try {
+                    $queue = $queueingApi->getQueue($entry->queueId);
+                    $queueEntry['serviceCapability'] = $queue?->serviceCapability;
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
             }
         }
 
         $allergies = $this->section($user, $queryBus, 'allergies', 'clinical.allergies.read',
-            static fn (): array => array_values(array_map(self::mapAllergy(...),
-                $queryBus->dispatch(new GetPatientAllergies($patientId)))));
+            static fn (): array => array_map(self::mapAllergy(...),
+                $clinicalApi->getPatientAllergies($patientId)));
 
         $conditions = $this->section($user, $queryBus, 'conditions', 'clinical.problems.read',
-            static fn (): array => array_values(array_map(self::mapProblem(...),
-                $queryBus->dispatch(new GetPatientProblems($patientId)))));
+            static fn (): array => array_map(self::mapProblem(...),
+                $clinicalApi->getPatientProblems($patientId)));
 
         $procedures = $this->section($user, $queryBus, 'procedures', 'clinical.procedures.read',
-            static fn (): array => array_values(array_map(self::mapProcedure(...),
-                $queryBus->dispatch(new GetPatientProcedures($patientId)))));
+            static fn (): array => array_map(self::mapProcedure(...),
+                $clinicalApi->getPatientProcedures($patientId)));
 
         $plans = $this->section($user, $queryBus, 'plans', 'clinical.plans.read',
-            static fn (): array => array_values(array_map(self::mapPlan(...),
-                $queryBus->dispatch(new GetPatientClinicalPlans($patientId)))));
+            static fn (): array => array_map(self::mapPlan(...),
+                $clinicalApi->getPatientClinicalPlans($patientId)));
 
         $vitals = $this->section($user, $queryBus, 'vitals', 'clinical.vitals.read',
-            static fn (): array => array_values(array_map(self::mapVitals(...),
-                $queryBus->dispatch(new GetPatientVitalSigns($patientId)))));
+            static fn (): array => array_map(self::mapVitals(...),
+                $clinicalApi->getPatientVitalSigns($patientId)));
 
         $medications = $this->section($user, $queryBus, 'medications', 'pharmacy.access',
-            static fn (): array => array_values(array_map(self::mapPrescription(...),
-                $queryBus->dispatch(new GetPatientPrescriptions($patientId)))));
+            static fn (): array => array_map(self::mapPrescription(...),
+                $pharmacyApi->getPatientPrescriptions($patientId)));
 
         $labOrders = $this->section($user, $queryBus, 'results', 'laboratory.access',
-            static fn (): array => array_values(array_map(self::mapLabOrder(...),
-                $queryBus->dispatch(new GetPatientLabOrders($patientId)))));
+            static fn (): array => array_map(self::mapLabOrder(...),
+                $laboratoryApi->getPatientLabOrders($patientId)));
 
         $labResults = [];
         if ($labOrders !== null && $user->can('laboratory.access')) {
             $recent = array_slice($labOrders, 0, 5);
             foreach ($recent as $order) {
                 try {
-                    $rows = $queryBus->dispatch(new GetOrderResults($order['orderId']));
+                    $rows = $laboratoryApi->getOrderResults($order['orderId']);
                     $labResults[$order['orderId']] = array_map(self::mapLabResult(...), $rows);
                 } catch (\Throwable) {
                     $labResults[$order['orderId']] = [];
@@ -186,46 +194,41 @@ final class PatientChartController
         }
 
         $imagingOrders = $this->section($user, $queryBus, 'orders', 'radiology.access',
-            static fn (): array => array_values(array_map(self::mapImagingOrder(...),
-                $queryBus->dispatch(new GetPatientImagingOrders($patientId)))));
+            static fn (): array => array_map(self::mapImagingOrder(...),
+                $radiologyApi->getPatientImagingOrders($patientId)));
 
         // Type/resource display names resolve via the same two batched list
         // queries the daily board uses — fixed cost regardless of row count,
         // never per-appointment lookups.
         $appointments = $this->section($user, $queryBus, 'appointments', 'sch.access',
-            static function () use ($queryBus, $patientId, $facilityId): array {
-                /** @var array<string, string> $typeNames */
-                $typeNames = [];
-                foreach ($queryBus->dispatch(new GetAppointmentTypes($facilityId)) as $type) {
-                    $typeNames[$type->id] = $type->name;
-                }
-                /** @var array<string, string> $resourceNames */
-                $resourceNames = [];
-                foreach ($queryBus->dispatch(new GetSchedulableResources($facilityId)) as $resource) {
-                    $resourceNames[$resource->id] = $resource->name;
-                }
+            static function () use ($schedulingApi, $patientId, $facilityId): array {
+                $displayNames = $schedulingApi->getSchedulingDisplayNames($facilityId);
 
-                return array_values(array_map(
-                    static fn ($a): array => self::mapAppointment($a, $typeNames, $resourceNames),
-                    $queryBus->dispatch(new GetPatientAppointments($patientId, $facilityId)),
-                ));
+                return array_map(
+                    static fn ($a): array => self::mapAppointment(
+                        $a,
+                        $displayNames['types'],
+                        $displayNames['resources'],
+                    ),
+                    $schedulingApi->getPatientAppointments($patientId, $facilityId),
+                );
             });
 
         $programs = $this->section($user, $queryBus, 'programs', 'care_coordination.access',
-            static fn (): array => array_values(array_map(self::mapCareEpisode(...),
-                $queryBus->dispatch(new GetPatientCareEpisodes($patientId)))));
+            static fn (): array => array_map(self::mapCareEpisode(...),
+                $careCoordinationApi->getPatientCareEpisodes($patientId)));
 
         // Department/unit display names resolve via one facility-structure
         // read — fixed cost regardless of row count, never per-visit
         // lookups. Names are best-effort: a missing structure still yields
         // rows with null names rather than an unavailable section.
         $visits = $this->section($user, $queryBus, 'visits', 'encounter.encounters.read',
-            static function () use ($queryBus, $organizationApi, $patientId, $facilityId): array {
+            static function () use ($encounterApi, $organizationApi, $patientId, $facilityId): array {
                 $departmentNames = [];
                 $unitNames = [];
                 try {
                     $structure = $organizationApi->getFacilityStructure($facilityId);
-                    foreach ($structure?->departments ?? [] as $department) {
+                    foreach ($structure->departments ?? [] as $department) {
                         $departmentNames[(string) $department['id']] = (string) $department['name'];
                         foreach ($department['units'] ?? [] as $unit) {
                             $unitNames[(string) $unit['id']] = (string) $unit['name'];
@@ -236,15 +239,15 @@ final class PatientChartController
                     $unitNames = [];
                 }
 
-                return array_values(array_map(
+                return array_map(
                     static fn ($e): array => self::mapVisit($e, $departmentNames, $unitNames),
-                    $queryBus->dispatch(new GetPatientEncounters($patientId, $facilityId)),
-                ));
+                    $encounterApi->getPatientEncounters($patientId, $facilityId),
+                );
             });
 
         $referrals = $this->section($user, $queryBus, 'referrals', 'care_coordination.access',
-            static fn (): array => array_values(array_map(self::mapReferral(...),
-                $queryBus->dispatch(new GetPatientReferrals($patientId)))));
+            static fn (): array => array_map(self::mapReferral(...),
+                $careCoordinationApi->getPatientReferrals($patientId)));
 
         $billing = $this->section($user, $queryBus, 'billing-history', 'billing.access',
             static fn (): array => self::billingHistory($billingApi, $patientId, $facilityId));
@@ -360,11 +363,14 @@ final class PatientChartController
         return [
             'id' => $a->allergyId,
             'substance' => $a->substanceName,
+            'category' => $a->category,
             'severity' => $a->severity,
             'status' => $a->clinicalStatus,
             'verification' => $a->verificationStatus,
             'reaction' => $a->reactionDescription,
             'onset' => $a->onsetDate,
+            'resolvedAt' => $a->resolvedAt,
+            'recordedAt' => $a->recordedAt,
         ];
     }
 
@@ -375,8 +381,11 @@ final class PatientChartController
             'id' => $p->problemId,
             'description' => $p->description,
             'code' => $p->code,
+            'codeSystem' => $p->codeSystem,
             'status' => $p->status,
             'onset' => $p->onsetDate,
+            'resolvedAt' => $p->resolvedAt,
+            'recordedAt' => $p->recordedAt,
         ];
     }
 
@@ -418,7 +427,9 @@ final class PatientChartController
             'oxygenSaturation' => $v->oxygenSaturation,
             'weight' => $v->weight,
             'height' => $v->height,
+            'painScore' => $v->painScore,
             'occurredAt' => $v->occurredAt,
+            'recordedAt' => $v->recordedAt,
         ];
     }
 
@@ -432,7 +443,13 @@ final class PatientChartController
             'medication' => $p->medicationName ?? $p->medicationCode,
             'dose' => $p->dose,
             'frequency' => $p->frequency,
+            'route' => $p->route,
+            'duration' => $p->duration,
+            'instructions' => $p->dosingInstruction,
+            'urgency' => $p->urgency,
+            'prescriberName' => $p->prescriberName,
             'status' => $p->status,
+            'occurredAt' => $p->occurredAt,
             'recordedAt' => $p->recordedAt,
         ];
     }
@@ -460,10 +477,16 @@ final class PatientChartController
         $value = $r->valueNumeric ?? $r->valueCode ?? $r->valueText;
 
         return [
+            'id' => $r->resultId,
             'parameter' => $r->parameterName ?? $r->parameterCode,
             'value' => $value,
             'unit' => $r->unit,
             'flag' => $r->abnormalFlag ?? null,
+            'referenceLow' => $r->referenceLow,
+            'referenceHigh' => $r->referenceHigh,
+            'referenceText' => $r->referenceText,
+            'status' => $r->status,
+            'releasedAt' => $r->releasedAt,
         ];
     }
 
@@ -485,6 +508,11 @@ final class PatientChartController
     }
 
     /** @return array<string, mixed> */
+    /**
+     * @param  array<string, string>  $typeNames
+     * @param  array<string, string>  $resourceNames
+     * @return array<string, mixed>
+     */
     private static function mapAppointment(mixed $a, array $typeNames = [], array $resourceNames = []): array
     {
         return [
@@ -502,6 +530,11 @@ final class PatientChartController
     }
 
     /** @return array<string, mixed> */
+    /**
+     * @param  array<string, string>  $departmentNames
+     * @param  array<string, string>  $unitNames
+     * @return array<string, mixed>
+     */
     private static function mapVisit(mixed $e, array $departmentNames = [], array $unitNames = []): array
     {
         return [

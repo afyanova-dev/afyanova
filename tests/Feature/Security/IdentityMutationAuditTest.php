@@ -7,6 +7,8 @@ use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
+require_once __DIR__.'/../../Support/hr.php';
+
 it('audits role creation, permission grants, and status changes with each mutation', function (): void {
     ['tenant' => $tenant] = makeTenantWithUser();
 
@@ -111,4 +113,56 @@ it('audits staff identity changes without copying staff numbers into audit metad
         ->and(json_decode($events[1]->metadata, true, 512, JSON_THROW_ON_ERROR))->toBe(['is_staff' => false])
         ->and($events->pluck('target_id')->unique()->all())->toBe([$user->id])
         ->and($events->pluck('facility_id')->unique()->all())->toBe([null]);
+});
+
+it('repairs linked staff identities only when apply is requested and audits each repair', function (): void {
+    ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = hrFixture();
+    $personId = createPersonHelper($tenant->id, 'Amina', null, 'Mushi', facilityId: $facility->id);
+    $staffId = createStaffHelper($tenant->id, $personId, facilityId: $facility->id);
+
+    TenantContextScope::run($tenant->id, null, function () use ($tenant, $staffId, $user): void {
+        DB::table('hr_staff_user_links')->insert([
+            'tenant_id' => $tenant->id,
+            'staff_id' => $staffId,
+            'user_id' => $user->id,
+            'linked_at' => now(),
+            'linked_by' => $user->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('idn_staff_identities')->where('user_id', $user->id)->delete();
+    });
+
+    expect(Artisan::call('afyanova:identity:sync-linked-staff', [
+        '--tenant' => $tenant->id,
+    ]))->toBe(0);
+
+    $identityExistsAfterDryRun = TenantContextScope::run(
+        $tenant->id,
+        null,
+        fn (): bool => DB::table('idn_staff_identities')->where('user_id', $user->id)->exists(),
+    );
+    expect($identityExistsAfterDryRun)->toBeFalse();
+
+    expect(Artisan::call('afyanova:identity:sync-linked-staff', [
+        '--tenant' => $tenant->id,
+        '--apply' => true,
+    ]))->toBe(0);
+
+    $staffIdentity = TenantContextScope::run($tenant->id, null, fn () => DB::table('idn_staff_identities')
+        ->where('user_id', $user->id)
+        ->first());
+    $audit = TenantContextScope::run($tenant->id, null, fn () => DB::table('shared_audit_log')
+        ->where('action', 'identity.staff_identity.updated')
+        ->where('target_id', $user->id)
+        ->first());
+
+    expect($staffIdentity)->not->toBeNull()
+        ->and((bool) $staffIdentity->is_staff)->toBeTrue()
+        ->and($staffIdentity->staff_ref)->toBe($staffId);
+    expect($audit)->not->toBeNull()
+        ->and(json_decode($audit->metadata, true, 512, JSON_THROW_ON_ERROR))->toBe([
+            'is_staff' => true,
+            'staff_reference_synced' => true,
+        ]);
 });

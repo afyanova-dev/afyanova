@@ -42,11 +42,11 @@ final readonly class CallTicketHandler
             'encounter_id' => $entry->encounter_id,
             'patient_id' => $entry->patient_id,
             'from_area' => $queue !== null ? $queue->name : 'WAITING_AREA',
-            'to_area' => $command->roomId,
+            'to_area' => $command->roomId ?? $queue->name ?? 'QUEUE',
             'status' => 'ARRIVED',
             'queue_entry_id' => $entry->id,
             'actor_id' => $command->staffId,
-            'reason' => 'Called to room',
+            'reason' => $command->roomId === null ? 'Called from queue' : 'Called to service location',
             'occurred_at' => CarbonImmutable::now(),
         ]);
         $this->movementRepository->save($movement);

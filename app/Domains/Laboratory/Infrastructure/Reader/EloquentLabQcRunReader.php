@@ -40,6 +40,7 @@ final class EloquentLabQcRunReader implements LabQcRunReader
             qcRunId: (string) $run->id,
             facilityId: (string) $run->facility_id,
             analyzerRef: (string) $run->analyzer_ref,
+            instrumentId: $run->instrument_id,
             testDefinitionId: $run->test_definition_id,
             testCode: $run->test_code,
             controlMaterial: (string) $run->control_material,

@@ -172,7 +172,7 @@ final class CreateLabOrderHandler
     {
         $definition = $this->definitions->summary($definitionId);
 
-        if (! $definition->active || $definition->availabilityStatus === LabTestDefinition::AVAILABILITY_DISABLED) {
+        if (! $definition->active || $definition->availabilityStatus !== LabTestDefinition::AVAILABILITY_AVAILABLE) {
             throw LabTestNotOrderable::unavailable($definitionId);
         }
 

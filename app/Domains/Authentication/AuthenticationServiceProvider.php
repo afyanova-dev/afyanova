@@ -168,7 +168,12 @@ final class AuthenticationServiceProvider extends ServiceProvider
         Event::listen(Login::class, function (Login $e): void {
             /** @var User $user */
             $user = $e->user;
-            app(AuthEventRecorder::class)->onLogin($user, request());
+            $request = request();
+            if ($request->hasSession()) {
+                $request->session()->forget(['active_facility_id', 'facility_context_mode']);
+            }
+
+            app(AuthEventRecorder::class)->onLogin($user, $request);
         });
 
         Event::listen(Failed::class, function (Failed $e): void {

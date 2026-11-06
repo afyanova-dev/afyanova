@@ -10,6 +10,7 @@ use App\Domains\Pharmacy\Domain\PrescriptionReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class SearchPrescriptionsHandler
     public function __construct(
         private readonly PrescriptionReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -30,7 +32,7 @@ final class SearchPrescriptionsHandler
             throw new RuntimeException('SearchPrescriptions dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! $this->scope->hasFacilityPermission($user, $query->facilityId, 'pharmacy.access')) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $query->facilityId, 'pharmacy.access')) {
             throw NotFound::aggregate(Prescription::class, $query->facilityId);
         }
 

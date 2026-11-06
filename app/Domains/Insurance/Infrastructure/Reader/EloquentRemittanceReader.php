@@ -31,9 +31,12 @@ final class EloquentRemittanceReader implements RemittanceReader
         return $remittance !== null ? $this->toSummary($remittance) : null;
     }
 
-    public function search(?string $payerId = null, ?string $status = null): array
+    public function search(array $facilityIds, ?string $payerId = null, ?string $status = null): array
     {
-        $query = Remittance::query()->with('lines')->orderByDesc('created_at');
+        $query = Remittance::query()
+            ->with('lines')
+            ->whereIn('facility_id', $facilityIds)
+            ->orderByDesc('created_at');
 
         if ($payerId !== null) {
             $query->where('payer_id', $payerId);

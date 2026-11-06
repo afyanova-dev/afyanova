@@ -23,8 +23,8 @@ declare(strict_types=1);
  *   - laboratory.critical.manage    — critical-result identification + acknowledgement (§54–§56) (Lab.3c, ADR-161)
  *   - laboratory.quality.manage     — QC run recording + review (§83–§85)                       (Lab.5, ADR-163)
  *
- * Catalog authoring (`laboratory:define-test` / `laboratory:define-panel`) is
- * console-only (ADR-157 D-C / ADR-162 D-C) — NO permission key.
+ *   - laboratory.catalog.read    — read-only catalog oversight for Tenant Admin
+ *   - laboratory.catalog.manage  — catalog editors assigned by Tenant Admin
  *
  * @return list<string>
  */
@@ -40,4 +40,6 @@ return [
     'laboratory.results.amend',
     'laboratory.critical.manage',
     'laboratory.quality.manage',
+    'laboratory.catalog.read',
+    'laboratory.catalog.manage',
 ];

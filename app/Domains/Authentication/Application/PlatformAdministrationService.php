@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Authentication\Application;
 
 use App\Domains\Authentication\Application\Dto\FacilityInvitationForResend;
+use App\Domains\Authentication\Contracts\Dto\FacilityInvitationSummary;
 use App\Domains\Authentication\Contracts\FacilityUserInvitationApi;
 use App\Domains\Authentication\Contracts\FacilityUserRoleCatalog;
 use App\Domains\Authentication\Infrastructure\Reader\FacilityInvitationReader;
@@ -13,16 +14,8 @@ use App\Domains\Authentication\Mail\AdminBootstrapInvitation;
 use App\Domains\Authentication\Support\FacilityInvitationEventType;
 use App\Domains\Authentication\Support\FacilityInvitationStatus;
 use App\Domains\Authentication\Support\OneTimeInvitationMailGuard;
-use App\Domains\Identity\Application\BillingAdminRoleProvisioner;
-use App\Domains\Identity\Application\CashierRoleProvisioner;
-use App\Domains\Identity\Application\ClinicianRoleProvisioner;
-use App\Domains\Identity\Application\FacilityStaffManagerRoleProvisioner;
-use App\Domains\Identity\Application\LaboratoryTechnicianRoleProvisioner;
-use App\Domains\Identity\Application\NurseRoleProvisioner;
-use App\Domains\Identity\Application\PharmacistRoleProvisioner;
-use App\Domains\Identity\Application\ReceptionistRoleProvisioner;
-use App\Domains\Identity\Application\TenantAdminRoleProvisioner;
 use App\Domains\Identity\Contracts\FacilityAdminRoleDefinition;
+use App\Domains\Identity\Contracts\IdentityApi;
 use App\Domains\Identity\Contracts\TenantAdminRoleDefinition;
 use App\Domains\Organization\Contracts\Dto\InitialTenantStructure;
 use App\Domains\Organization\Contracts\OrganizationApi;
@@ -44,6 +37,7 @@ final class PlatformAdministrationService implements FacilityUserInvitationApi
     public function __construct(
         private readonly FacilityInvitationReader $facilityInvitations,
         private readonly FacilityInvitationEventWriter $invitationEvents,
+        private readonly IdentityApi $identityApi,
     ) {}
 
     public function facilityInvitationForResend(string $tenantId, string $invitationId): ?FacilityInvitationForResend
@@ -55,8 +49,37 @@ final class PlatformAdministrationService implements FacilityUserInvitationApi
         string $tenantId,
         string $facilityId,
         string $userId,
-    ): ?FacilityInvitationForResend {
-        return $this->facilityInvitations->pendingForFacilityAccount($tenantId, $facilityId, $userId);
+    ): ?FacilityInvitationSummary {
+        $invitation = $this->facilityInvitations->pendingForFacilityAccount($tenantId, $facilityId, $userId);
+        if ($invitation === null) {
+            return null;
+        }
+
+        return new FacilityInvitationSummary(
+            invitationId: $invitation->invitationId,
+            userId: $invitation->userId,
+            facilityId: $invitation->facilityId,
+            roleKey: $invitation->roleKey,
+            roleKeys: $invitation->roleKeys,
+            purpose: $invitation->purpose,
+            expiresAt: $invitation->expiresAt,
+            consumedAt: $invitation->consumedAt,
+            name: $invitation->name,
+            email: $invitation->email,
+            emailVerifiedAt: $invitation->emailVerifiedAt,
+            status: $invitation->status,
+            invitationStatus: $invitation->invitationStatus,
+            sentAt: $invitation->sentAt,
+            deliveryStatus: $invitation->deliveryStatus,
+            supersededAt: $invitation->supersededAt,
+            revokedAt: $invitation->revokedAt,
+            revocationReason: $invitation->revocationReason,
+            resendCount: $invitation->resendCount,
+            lastSentByName: $invitation->lastSentByName,
+            isExpired: $invitation->isExpired(),
+            canResend: $invitation->canResend(),
+            canRevoke: $invitation->canRevoke(),
+        );
     }
 
     /** @return list<array<string, mixed>> */
@@ -741,26 +764,14 @@ final class PlatformAdministrationService implements FacilityUserInvitationApi
                 if ($selectedRoleKey === FacilityUserRoleCatalog::ADMINISTRATOR) {
                     $this->ensureFacilityAdminRole($tenantId, $facilityId, $actorId, $reason);
                 } elseif ($selectedRoleKey === FacilityUserRoleCatalog::HR_MANAGER) {
-                    app(FacilityStaffManagerRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === 'laboratory_technician') {
-                    app(LaboratoryTechnicianRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === FacilityUserRoleCatalog::CLINICIAN) {
-                    app(ClinicianRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === 'nurse') {
-                    app(NurseRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === 'receptionist') {
-                    app(ReceptionistRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === 'pharmacist') {
-                    app(PharmacistRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === 'cashier') {
-                    app(CashierRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
-                } elseif ($selectedRoleKey === 'billing_admin') {
-                    app(BillingAdminRoleProvisioner::class)->provision($tenantId, $actorId, $facilityId);
+                    $this->identityApi->provisionFacilityStaffManagerRole($tenantId, $actorId, $facilityId);
                 } else {
-                    throw new RuntimeException(sprintf(
-                        'No facility role provisioner is configured for [%s].',
+                    $this->identityApi->provisionFacilityRole(
+                        $tenantId,
+                        $actorId,
+                        $facilityId,
                         $selectedRoleKey,
-                    ));
+                    );
                 }
             }
 
@@ -1551,7 +1562,7 @@ final class PlatformAdministrationService implements FacilityUserInvitationApi
                     actorId: $actorId,
                     reason: 'Provisioned as part of platform tenant setup.',
                 );
-                app(TenantAdminRoleProvisioner::class)->provision(
+                $this->identityApi->provisionTenantAdmin(
                     tenantId: $tenantId,
                     actorId: $actorId,
                     reason: 'Provisioned as part of platform tenant setup.',
@@ -1639,7 +1650,7 @@ final class PlatformAdministrationService implements FacilityUserInvitationApi
                 throw new RuntimeException('That email already belongs to an account.');
             }
 
-            $roleId = app(TenantAdminRoleProvisioner::class)->provision(
+            $roleId = $this->identityApi->provisionTenantAdmin(
                 tenantId: $tenantId,
                 actorId: $actorId,
                 reason: 'Provisioned during initial Tenant Admin invitation.',

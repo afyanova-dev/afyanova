@@ -1,5 +1,6 @@
 export interface NurseStationEntry {
   id: string;
+  patientId: string;
   ticketNumber: string;
   patientName: string;
   patientNumber: string;
@@ -65,6 +66,12 @@ export interface NurseStationQueueNavigation {
   next: NurseStationQueueNeighbor | null;
 }
 
+export interface NurseStationCallRoom {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export interface NurseStationShowProps {
   entry: Pick<NurseStationEntry, 'id' | 'ticketNumber' | 'queue' | 'priority' | 'status'>;
   queueNavigation: NurseStationQueueNavigation;
@@ -75,6 +82,8 @@ export interface NurseStationShowProps {
   canRecordVitals: boolean;
   canRecordTriage: boolean;
   canStartService: boolean;
+  canCall: boolean;
+  callRooms: NurseStationCallRoom[];
   consultationQueues: NurseStationConsultationQueue[];
   canHandoff: boolean;
 }

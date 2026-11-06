@@ -13,6 +13,7 @@ final readonly class LabQcRunSummary
         public string $qcRunId,
         public string $facilityId,
         public string $analyzerRef,
+        public ?string $instrumentId,
         public ?string $testDefinitionId,
         public ?string $testCode,
         public string $controlMaterial,

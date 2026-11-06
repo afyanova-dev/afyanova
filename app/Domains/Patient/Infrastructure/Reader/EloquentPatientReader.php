@@ -240,7 +240,7 @@ final class EloquentPatientReader implements PatientReader
             ->orderByDesc('merged_at')
             ->value('surviving_patient_id');
 
-        $addresses = PatientAddress::query()
+        $addresses = array_values(PatientAddress::query()
             ->where('patient_id', $patientId)
             ->where('status', AddressStatus::Active)
             ->orderByDesc('created_at')
@@ -254,10 +254,9 @@ final class EloquentPatientReader implements PatientReader
                 'streetOrVillage' => $addr->street_or_village,
                 'postalCode' => $addr->postal_code,
             ])
-            ->values()
-            ->all();
+            ->all());
 
-        $relationships = PatientRelationship::query()
+        $relationships = array_values(PatientRelationship::query()
             ->where('patient_id', $patientId)
             ->where('status', RelationshipStatus::Active)
             ->orderByDesc('created_at')
@@ -265,12 +264,11 @@ final class EloquentPatientReader implements PatientReader
             ->map(static fn (PatientRelationship $rel): array => [
                 'id' => (string) $rel->id,
                 'role' => $rel->role->value,
-                'name' => (string) $rel->name,
-                'phone' => $rel->phone,
-                'label' => $rel->label,
+                'name' => $rel->related_name,
+                'phone' => $rel->related_phone,
+                'label' => $rel->relationship_label,
             ])
-            ->values()
-            ->all();
+            ->all());
 
         $auditRows = DB::table('shared_audit_log')
             ->where('target_id', $patientId)
@@ -279,18 +277,19 @@ final class EloquentPatientReader implements PatientReader
             ->limit(10)
             ->get();
 
-        $auditHistory = $auditRows->map(static function ($row): array {
+        $auditHistory = array_values($auditRows->map(static function ($row): array {
             $meta = is_string($row->metadata) ? (json_decode($row->metadata, true) ?? []) : (array) $row->metadata;
             $changedFields = isset($meta['changed_fields']) && is_array($meta['changed_fields']) ? $meta['changed_fields'] : [];
+            $changedFields = array_values(array_filter($changedFields, static fn (mixed $field): bool => is_string($field)));
 
             return [
                 'action' => (string) $row->action,
                 'actorName' => $row->actor_id ? 'Staff' : null,
-                'reason' => $row->reason,
-                'changedFields' => array_values($changedFields),
+                'reason' => $row->reason === null ? null : (string) $row->reason,
+                'changedFields' => $changedFields,
                 'changedAt' => (string) $row->created_at,
             ];
-        })->values()->all();
+        })->all());
 
         return new PatientProfileData(
             patientId: (string) $patient->id,

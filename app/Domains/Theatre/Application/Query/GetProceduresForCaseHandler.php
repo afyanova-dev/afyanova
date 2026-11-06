@@ -10,6 +10,7 @@ use App\Domains\Theatre\Domain\SurgicalProcedureReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetProceduresForCaseHandler
     public function __construct(
         private readonly SurgicalProcedureReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -36,7 +38,7 @@ final class GetProceduresForCaseHandler
             return []; // the #[ProtectedQuery] `view` gate already confirmed theatre.access
         }
 
-        if (! in_array('theatre.access', $this->scope->effectivePermissions($user, $procedures[0]->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $procedures[0]->facilityId, 'theatre.access')) {
             throw NotFound::aggregate(SurgicalProcedure::class, $query->caseId);
         }
 

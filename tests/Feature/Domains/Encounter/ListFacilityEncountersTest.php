@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Domains\Encounter;
 
+use App\Domains\Encounter\Application\Query\CountFacilityEncounters;
+use App\Domains\Encounter\Application\Query\GetPatientEncounters;
 use App\Domains\Encounter\Application\Query\ListFacilityEncounters;
 use App\Domains\Encounter\Contracts\Dto\EncounterSummary;
 use App\Domains\Encounter\Domain\Enum\EncounterDisposition;
 use App\Domains\Encounter\Domain\Enum\EncounterStatus;
 use App\Domains\Encounter\Domain\Enum\EncounterType;
 use App\Domains\Encounter\Domain\Model\Encounter;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\Tenancy;
 use App\Shared\Tenancy\TenantContextScope;
@@ -227,6 +230,41 @@ test('a caller holding encounter.encounters.read at facility A cannot list encou
         facilityId: (string) $facilityA->id,
         targetFacilityId: $facilityBId,
     ))->toThrow(AuthorizationException::class);
+});
+
+test('facility-specific encounter queries reject another facility while a different one is active', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user] =
+        listEncounterFixture(['encounter.encounters.read']);
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user): Facility {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+        $roleId = DB::table('idn_access_assignments')->where('user_id', $user->id)->value('role_id');
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => (string) $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $facility;
+    });
+    $patientId = (string) Str::uuid7();
+    seedEncounterForList($tenantId, $facilityAId, EncounterStatus::Arrived, attributes: ['patient_id' => $patientId]);
+
+    expect(fn () => dispatchListFacilityEncounters($tenantId, (string) $facilityB->id, $facilityAId))
+        ->toThrow(AuthorizationException::class);
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(QueryBus::class)->dispatch(
+        new GetPatientEncounters($patientId, $facilityAId),
+    )))->toThrow(AuthorizationException::class);
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(QueryBus::class)->dispatch(
+        new CountFacilityEncounters($facilityAId, CarbonImmutable::now()),
+    )))->toThrow(AuthorizationException::class);
 });
 
 test('sibling encounter permissions do not authorize listing', function (string $siblingKey) {

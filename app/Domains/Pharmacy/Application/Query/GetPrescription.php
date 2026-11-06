@@ -11,7 +11,8 @@ use InvalidArgumentException;
 
 /**
  * Read one Prescription record (16-pharmacy-domain.md §19; ADR-181 D-F).
- * `view` gates on the coarse `pharmacy.access`.
+ * `view` gates on the coarse `pharmacy.access`; the handler applies
+ * current-context facility authorization.
  */
 #[ProtectedQuery(ability: 'view', subjectType: Prescription::class)]
 final readonly class GetPrescription

@@ -22,16 +22,18 @@ use App\Shared\Authorization\BasePolicy;
 /**
  * Pharmacy Order policy (ADR-182 D-E).
  *
- * `view` is a coarse `pharmacy.access` check (`SearchPharmacyOrders` re-checks
- * the acting user's scope at the facility). `create` is coarse
- * `pharmacy.orders.manage` (the handler's ADR-133 refinement at the
- * prescription's facility is the real gate). `manage` is per-subject —
- * `pharmacy.orders.manage` at the order's facility (validate / reject / hold /
+ * `view` is a coarse `pharmacy.access` check; query handlers enforce the
+ * current-context facility scope. `create` is coarse `pharmacy.orders.manage`
+ * (the handler's ADR-133 refinement at the prescription's facility in the
+ * current context is the real gate). `manage` is per-subject —
+ * `pharmacy.orders.manage` at the order's facility in the current context (validate / reject / hold /
  * release / cancel) — the `StockAdjustmentPolicy` shape. `dispense` (ADR-184)
- * is per-subject `pharmacy.dispensing.record` at the order's facility.
+ * is per-subject `pharmacy.dispensing.record` at the order's facility in the
+ * current context.
  * `reverse` (ADR-185) is per-subject `pharmacy.dispensing.reverse` — a distinct
  * higher-trust key (§110 "high-risk overrides must be audited"). `pickup`
- * (ADR-186) is per-subject `pharmacy.pickup.record` at the order's facility.
+ * (ADR-186) is per-subject `pharmacy.pickup.record` at the order's facility in
+ * the current context.
  */
 final class PharmacyOrderPolicy extends BasePolicy
 {
@@ -51,30 +53,33 @@ final class PharmacyOrderPolicy extends BasePolicy
         ValidatePharmacyOrder|RejectPharmacyOrder|HoldPharmacyOrder|ReleasePharmacyOrderHold|CancelPharmacyOrder|null $command = null,
     ): bool {
         return $this->sameTenant($user, (string) $order->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $order->facility_id,
                 'pharmacy.orders.manage',
-                $this->scope->effectivePermissions($user, (string) $order->facility_id),
-                true,
             );
     }
 
     public function dispense(User $user, PharmacyOrder $order, ?Dispense $command = null): bool
     {
         return $this->sameTenant($user, (string) $order->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $order->facility_id,
                 'pharmacy.dispensing.record',
-                $this->scope->effectivePermissions($user, (string) $order->facility_id),
-                true,
             );
     }
 
     public function reverse(User $user, PharmacyOrder $order, ?ReverseDispensing $command = null): bool
     {
         return $this->sameTenant($user, (string) $order->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $order->facility_id,
                 'pharmacy.dispensing.reverse',
-                $this->scope->effectivePermissions($user, (string) $order->facility_id),
-                true,
             );
     }
 
@@ -84,10 +89,11 @@ final class PharmacyOrderPolicy extends BasePolicy
         RecordPickup|MarkPickupNotCollected|CancelPickup|null $command = null,
     ): bool {
         return $this->sameTenant($user, (string) $order->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $order->facility_id,
                 'pharmacy.pickup.record',
-                $this->scope->effectivePermissions($user, (string) $order->facility_id),
-                true,
             );
     }
 

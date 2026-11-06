@@ -78,7 +78,7 @@ final class PharmacyPresenter
         $nameOf = static function (string $patientId) use ($patients): array {
             $p = $patients[$patientId] ?? null;
 
-            return [$p?->displayName ?? 'Unknown patient', $p?->patientNumber ?? '—'];
+            return [$p->displayName ?? 'Unknown patient', $p->patientNumber ?? '—'];
         };
         $demographicsOf = static function (string $patientId) use ($patients): array {
             $patient = $patients[$patientId] ?? null;
@@ -86,7 +86,7 @@ final class PharmacyPresenter
                 ? CarbonImmutable::parse($patient->dateOfBirth)->age
                 : null;
 
-            return [$age, $patient?->sex ?? 'UNKNOWN'];
+            return [$age, $patient->sex ?? 'UNKNOWN'];
         };
 
         /** @var array<string, list<RxDispensingItem>> $dispensingsByOrder */
@@ -129,10 +129,10 @@ final class PharmacyPresenter
                 $orderDispensings[] = new RxDispensingItem(
                     dispensingId: $dispensing->dispensingId,
                     dispensingNumber: $dispensing->dispensingNumber,
-                    itemCode: $item?->code ?? '—',
-                    itemName: $item?->name ?? 'Unknown item',
+                    itemCode: $item->code ?? '—',
+                    itemName: $item->name ?? 'Unknown item',
                     quantity: $dispensing->quantity,
-                    quantityUnit: $dispensing->quantityUnit ?? $item?->uom ?? '',
+                    quantityUnit: $dispensing->quantityUnit ?? $item->uom ?? '',
                     status: $dispensing->status,
                     pickupStatus: $pickupByDispensing[$dispensing->dispensingId] ?? null,
                     reversalId: $dispensing->reversalId,
@@ -173,10 +173,8 @@ final class PharmacyPresenter
         $lastDispenserByPrescription = [];
         foreach ($dispensingActorsByPrescription as $prescriptionId => $actors) {
             usort($actors, static fn (array $left, array $right): int => strcmp($right['occurredAt'], $left['occurredAt']));
-            $lastActorId = $actors[0]['userId'] ?? null;
-            $lastDispenserByPrescription[$prescriptionId] = $lastActorId !== null
-                ? ($dispenserNames[$lastActorId] ?? 'Unknown dispenser')
-                : null;
+            $lastActorId = $actors[0]['userId'];
+            $lastDispenserByPrescription[$prescriptionId] = $dispenserNames[$lastActorId] ?? 'Unknown dispenser';
         }
 
         $prescriptionItems = array_map(static function (PrescriptionSummary $p) use ($nameOf, $demographicsOf, $lastDispenserByPrescription): RxPrescriptionItem {
@@ -365,27 +363,27 @@ final class PharmacyPresenter
             canDispense: $permissions['dispense'] ?? false,
             canReverse: $permissions['reverse'] ?? false,
             canRecordPickup: $permissions['pickup'] ?? false,
-            prescriptions: array_values($prescriptionItems),
+            prescriptions: $prescriptionItems,
             prescriptionStatus: $prescriptionStatus,
-            orders: array_values($orderItems),
+            orders: $orderItems,
             orderStatus: $orderStatus,
             selectedOrderId: $selectedOrder?->pharmacyOrderId,
             selectedOrderNumber: $selectedOrder?->orderNumber,
             selectedOrderStatus: $selectedOrder?->status,
-            selectedPrescriptionId: $selectedPrescription?->prescriptionId ?? $standalonePrescription?->prescriptionId,
-            selectedPrescriptionNumber: $selectedPrescription?->prescriptionNumber ?? $standalonePrescription?->prescriptionNumber,
-            selectedMedicationName: $selectedPrescription?->medicationName ?? $standalonePrescription?->medicationName,
-            selectedMedicationCode: $selectedPrescription?->medicationCode ?? $standalonePrescription?->medicationCode,
-            selectedDose: $selectedPrescription?->dose ?? $standalonePrescription?->dose,
-            selectedFrequency: $selectedPrescription?->frequency ?? $standalonePrescription?->frequency,
-            selectedDuration: $selectedPrescription?->duration ?? $standalonePrescription?->duration,
-            selectedPrescribedQuantity: $selectedPrescription?->prescribedQuantity ?? $standalonePrescription?->prescribedQuantity,
-            selectedDosingInstruction: $selectedPrescription?->dosingInstruction ?? $standalonePrescription?->dosingInstruction,
-            selectedPrescriberName: $selectedPrescription?->prescriberName ?? $standalonePrescription?->prescriberName,
-            selectedTranscriptionNote: $selectedPrescription?->transcriptionNote ?? $standalonePrescription?->transcriptionNote,
-            selectedRxStatus: $selectedPrescription?->status ?? $standalonePrescription?->status,
-            selectedRxOccurredAt: $selectedPrescription?->occurredAt ?? $standalonePrescription?->occurredAt,
-            selectedSource: $selectedPrescription?->source ?? $standalonePrescription?->source,
+            selectedPrescriptionId: $selectedPrescription->prescriptionId ?? $standalonePrescription?->prescriptionId,
+            selectedPrescriptionNumber: $selectedPrescription->prescriptionNumber ?? $standalonePrescription?->prescriptionNumber,
+            selectedMedicationName: $selectedPrescription->medicationName ?? $standalonePrescription?->medicationName,
+            selectedMedicationCode: $selectedPrescription->medicationCode ?? $standalonePrescription?->medicationCode,
+            selectedDose: $selectedPrescription->dose ?? $standalonePrescription?->dose,
+            selectedFrequency: $selectedPrescription->frequency ?? $standalonePrescription?->frequency,
+            selectedDuration: $selectedPrescription->duration ?? $standalonePrescription?->duration,
+            selectedPrescribedQuantity: $selectedPrescription->prescribedQuantity ?? $standalonePrescription?->prescribedQuantity,
+            selectedDosingInstruction: $selectedPrescription->dosingInstruction ?? $standalonePrescription?->dosingInstruction,
+            selectedPrescriberName: $selectedPrescription->prescriberName ?? $standalonePrescription?->prescriberName,
+            selectedTranscriptionNote: $selectedPrescription->transcriptionNote ?? $standalonePrescription?->transcriptionNote,
+            selectedRxStatus: $selectedPrescription->status ?? $standalonePrescription?->status,
+            selectedRxOccurredAt: $selectedPrescription->occurredAt ?? $standalonePrescription?->occurredAt,
+            selectedSource: $selectedPrescription->source ?? $standalonePrescription?->source,
             selectedPatientId: $selectedPatientId,
             selectedPatientDisplayName: $selectedPatientName,
             selectedPatientNumber: $selectedPatientNumber,
@@ -393,14 +391,14 @@ final class PharmacyPresenter
             selectedPatientSex: $selectedPatientSex,
             selectedPatientAllergies: $selectedPatientAllergies,
             dispensings: $dispensings,
-            items: array_values($itemOptions),
-            locations: array_values($locationOptions),
+            items: $itemOptions,
+            locations: $locationOptions,
             selectedItemId: $selectedItem?->itemId,
             selectedItemCode: $selectedItem?->code,
             selectedItemName: $selectedItem?->name,
             selectedItemUom: $selectedItem?->uom,
             availabilityStatus: $availabilityStatus,
-            stockByLocation: array_values($stockByLocation),
+            stockByLocation: $stockByLocation,
         );
     }
 

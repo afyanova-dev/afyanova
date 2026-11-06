@@ -36,6 +36,7 @@ use App\Domains\HR\Domain\StaffUserLinkReader;
 use App\Domains\HR\Domain\ValueObject\AssignmentScope;
 use App\Domains\HR\Domain\ValueObject\RegistrationStatus;
 use App\Domains\HR\Domain\ValueObject\VerificationSource;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Models\User;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
@@ -370,6 +371,7 @@ it('executes staff-user link lifecycle and ensures non-deletion invariant (Invar
 
     $personId = createPersonHelper($tenantId, 'Fiona', 'G', 'Gallagher');
     $staffId = createStaffHelper($tenantId, $personId);
+    assignStaffHelper($tenantId, $staffId, $facilityId);
 
     // 1. Link staff to user
     $linkId = (string) Str::uuid();
@@ -387,6 +389,16 @@ it('executes staff-user link lifecycle and ensures non-deletion invariant (Invar
             ->and($row->staff_id)->toBe($staffId)
             ->and($row->user_id)->toBe((string) $user->id);
 
+        $staffIdentity = DB::table('idn_staff_identities')
+            ->where('user_id', (string) $user->id)
+            ->first();
+        expect($staffIdentity)->not->toBeNull()
+            ->and((bool) $staffIdentity->is_staff)->toBeTrue()
+            ->and($staffIdentity->staff_ref)->toBe($staffId)
+            ->and($staffIdentity->staff_number)->toBe(
+                DB::table('hr_staff')->where('id', $staffId)->value('staff_number'),
+            );
+
         $outbox = DB::table('shared_outbox_events')
             ->where('event_class', StaffLinkedToUser::class)
             ->first();
@@ -398,6 +410,7 @@ it('executes staff-user link lifecycle and ensures non-deletion invariant (Invar
     // 2. Duplicate link rejected
     $person2 = createPersonHelper($tenantId, 'George', null, 'Clark');
     $staff2 = createStaffHelper($tenantId, $person2);
+    assignStaffHelper($tenantId, $staff2, $facilityId);
 
     expect(function () use ($tenantId, $staff2, $user, $facilityId): void {
         linkStaffUserHelper($tenantId, $staff2, (string) $user->id, $facilityId);
@@ -426,6 +439,9 @@ it('executes staff-user link lifecycle and ensures non-deletion invariant (Invar
         expect($staffRow)->not->toBeNull()
             ->and($userRow)->not->toBeNull();
 
+        expect(DB::table('idn_staff_identities')->where('user_id', (string) $user->id)->exists())
+            ->toBeFalse();
+
         $outbox = DB::table('shared_outbox_events')
             ->where('event_class', StaffUnlinkedFromUser::class)
             ->first();
@@ -433,6 +449,86 @@ it('executes staff-user link lifecycle and ensures non-deletion invariant (Invar
         $payload = json_decode((string) $outbox->payload, true);
         expect($payload['linkId'])->toBe($linkId);
     });
+});
+
+it('denies linking a staff member assigned to another facility', function (): void {
+    $fx = hrFixture();
+    $tenantId = (string) $fx['tenant']->id;
+    $facilityAId = (string) $fx['facility']->id;
+    $facilityB = Facility::factory()
+        ->forTenant($tenantId, (string) $fx['organization']->id)
+        ->create();
+    $facilityBId = (string) $facilityB->id;
+
+    DB::table('idn_access_assignments')->insert([
+        'id' => (string) Str::uuid7(),
+        'tenant_id' => $tenantId,
+        'user_id' => $fx['user']->id,
+        'role_id' => $fx['role_id'],
+        'facility_id' => $facilityBId,
+        'status' => 'ACTIVE',
+        'is_primary' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $personId = createPersonHelper($tenantId, 'Mariam', null, 'Kweka', facilityId: $facilityAId);
+    $staffId = createStaffHelper($tenantId, $personId, facilityId: $facilityAId);
+    assignStaffHelper($tenantId, $staffId, $facilityAId);
+
+    expect(function () use ($tenantId, $facilityBId, $fx, $staffId): void {
+        TenantContextScope::run($tenantId, $facilityBId, function () use ($fx, $staffId): void {
+            $this->bus->dispatch(new LinkStaffToUser(
+                staffId: $staffId,
+                userId: (string) $fx['user']->id,
+            ));
+        });
+    })->toThrow(AuthorizationException::class);
+
+    $linkExists = Tenancy::run(
+        $tenantId,
+        fn (): bool => DB::table('hr_staff_user_links')->where('staff_id', $staffId)->exists(),
+    );
+    expect($linkExists)->toBeFalse();
+});
+
+it('denies unlinking a staff member assigned to another facility', function (): void {
+    $fx = hrFixture();
+    $tenantId = (string) $fx['tenant']->id;
+    $facilityAId = (string) $fx['facility']->id;
+    $facilityB = Facility::factory()
+        ->forTenant($tenantId, (string) $fx['organization']->id)
+        ->create();
+    $facilityBId = (string) $facilityB->id;
+
+    DB::table('idn_access_assignments')->insert([
+        'id' => (string) Str::uuid7(),
+        'tenant_id' => $tenantId,
+        'user_id' => $fx['user']->id,
+        'role_id' => $fx['role_id'],
+        'facility_id' => $facilityBId,
+        'status' => 'ACTIVE',
+        'is_primary' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $personId = createPersonHelper($tenantId, 'Neema', null, 'Mushi', facilityId: $facilityAId);
+    $staffId = createStaffHelper($tenantId, $personId, facilityId: $facilityAId);
+    assignStaffHelper($tenantId, $staffId, $facilityAId);
+    linkStaffUserHelper($tenantId, $staffId, (string) $fx['user']->id, $facilityAId);
+
+    expect(function () use ($tenantId, $facilityBId, $staffId): void {
+        TenantContextScope::run($tenantId, $facilityBId, function () use ($staffId): void {
+            $this->bus->dispatch(new UnlinkStaffFromUser(staffId: $staffId));
+        });
+    })->toThrow(AuthorizationException::class);
+
+    $linkExists = Tenancy::run(
+        $tenantId,
+        fn (): bool => DB::table('hr_staff_user_links')->where('staff_id', $staffId)->exists(),
+    );
+    expect($linkExists)->toBeTrue();
 });
 
 it('enforces fail-closed precondition: terminate staff rejected if active assignment exists', function (): void {

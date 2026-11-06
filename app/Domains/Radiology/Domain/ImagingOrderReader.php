@@ -32,7 +32,11 @@ interface ImagingOrderReader
      *
      * @return list<ImagingOrderSummary>
      */
-    public function forPatient(string $patientId): array;
+    /**
+     * @param  list<string>  $facilityIds
+     * @return list<ImagingOrderSummary>
+     */
+    public function forPatient(string $patientId, array $facilityIds): array;
 
     /** Count of non-CANCELLED items on an order (the SubmitImagingOrder guard). */
     public function activeItemCount(string $orderId): int;

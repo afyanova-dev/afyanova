@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Queueing\Presentation\Http\Controller;
 
-use App\Domains\Clinical\Contracts\ClinicalApi;
+use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Domains\Patient\Contracts\PatientApi;
 use App\Models\User;
 use App\Platform\Queueing\Application\Query\GetFacilityFlowBoardQuery;
@@ -13,7 +13,6 @@ use App\Platform\Queueing\Domain\Model\Queue;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,14 +25,14 @@ final class ServiceQueuesController
         TenantContext $context,
         QueryBus $queryBus,
         PatientApi $patientApi,
-        ClinicalApi $clinicalApi,
+        OrganizationApi $organizationApi,
     ): Response {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
         $facilityId = $context->facilityId();
         abort_if($facilityId === null || $facilityId === '', 403, 'No active facility context.');
-        abort_unless($user->can('queue.ticket.view'), 403, 'You do not have access to service queues.');
+        abort_unless($user->can('queue.ticket.view'), 403, 'You do not have access to patient flow.');
 
         $board = null;
         try {
@@ -121,70 +120,6 @@ final class ServiceQueuesController
             ];
         }
 
-        $procedureRouting = null;
-        if ($user->can('queue.definition.manage') && $user->can('clinical.procedures.read')) {
-            $definitions = $clinicalApi->getProcedureDefinitions();
-            $mappings = DB::table('qms_procedure_queue_mappings')
-                ->join('qms_queues', 'qms_queues.id', '=', 'qms_procedure_queue_mappings.queue_id')
-                ->where('qms_procedure_queue_mappings.facility_id', $facilityId)
-                ->where('qms_procedure_queue_mappings.tenant_id', $context->tenantId())
-                ->where('qms_queues.service_capability', 'PROCEDURE')
-                ->pluck('qms_procedure_queue_mappings.queue_id', 'qms_procedure_queue_mappings.procedure_definition_id');
-            $procedureQueues = Queue::query()
-                ->where('facility_id', $facilityId)
-                ->where('service_capability', 'PROCEDURE')
-                ->where('is_active', true)
-                ->whereExists(function ($query) use ($facilityId): void {
-                    $query->selectRaw('1')
-                        ->from('qms_queue_rooms')
-                        ->join('org_rooms', 'org_rooms.id', '=', 'qms_queue_rooms.room_id')
-                        ->whereColumn('qms_queue_rooms.queue_id', 'qms_queues.id')
-                        ->where('qms_queue_rooms.facility_id', $facilityId)
-                        ->where('org_rooms.status', 'ACTIVE');
-                })
-                ->orderBy('name')
-                ->get(['id', 'name', 'code']);
-
-            $procedureRouting = [
-                'definitions' => array_map(static fn ($definition): array => [
-                    'definitionId' => $definition->definitionId,
-                    'code' => $definition->code,
-                    'name' => $definition->name,
-                    'queueId' => isset($mappings[$definition->definitionId])
-                        ? (string) $mappings[$definition->definitionId]
-                        : '',
-                ], $definitions),
-                'queues' => $procedureQueues->map(static fn (Queue $queue): array => [
-                    'queueId' => (string) $queue->id,
-                    'queue' => $queue->name,
-                    'code' => $queue->code,
-                ])->values()->all(),
-            ];
-        }
-
-        $procedureProtocolGovernance = null;
-        if ($user->can('clinical.procedures.protocol_manage') && $user->can('clinical.procedures.read')) {
-            $definitions = $clinicalApi->getProcedureDefinitions();
-            $approvals = $clinicalApi->getDirectProcedureProtocolApprovals($facilityId);
-            $procedureProtocolGovernance = [
-                'definitions' => array_map(static fn ($definition): array => [
-                    'definitionId' => $definition->definitionId,
-                    'code' => $definition->code,
-                    'name' => $definition->name,
-                    'version' => $definition->version,
-                ], $definitions),
-                'approvals' => array_map(static fn ($approval): array => [
-                    'approvalId' => $approval->approvalId,
-                    'definitionId' => $approval->definitionId,
-                    'definitionVersion' => $approval->definitionVersion,
-                    'protocolReference' => $approval->protocolReference,
-                    'protocolVersion' => $approval->protocolVersion,
-                    'approvedByUserId' => $approval->approvedByUserId,
-                    'approvedAt' => $approval->approvedAt,
-                ], $approvals),
-            ];
-        }
-
         return Inertia::render('ServiceQueues/Index', [
             'asOf' => $board?->asOf,
             'totals' => $totals,
@@ -197,16 +132,8 @@ final class ServiceQueuesController
             'transferQueues' => $this->presentQueueOptions($facilityId),
             'queueRoomAssignments' => $this->presentQueueRoomAssignments($facilityId),
             'myQueueRoomAssignments' => $this->presentMyQueueRoomAssignments($facilityId, (string) $user->id),
-            'facilityStaff' => $user->can('queue.definition.manage')
-                ? $this->presentFacilityStaff($context->tenantId(), $facilityId)
-                : [],
-            'queueRoomStaffAssignments' => $user->can('queue.definition.manage')
-                ? $this->presentQueueRoomStaffAssignments($facilityId)
-                : [],
-            'procedureRouting' => $procedureRouting,
-            'procedureProtocolGovernance' => $procedureProtocolGovernance,
             // Room options are narrowed by the ticket's explicit queue assignment.
-            'rooms' => $this->presentRooms($facilityId),
+            'rooms' => $this->presentRooms($facilityId, $organizationApi),
         ]);
     }
 }

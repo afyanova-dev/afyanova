@@ -30,7 +30,7 @@ final class LinkStaffToUserHandler
 
     public function __invoke(LinkStaffToUser $command): void
     {
-        $this->staff->getById($command->staffId);
+        $staff = $this->staff->getById($command->staffId);
 
         if (! $this->identity->userExists($command->userId)) {
             throw IdentityUserNotFoundException::forId($command->userId);
@@ -57,5 +57,12 @@ final class LinkStaffToUserHandler
         );
 
         $this->links->save($link);
+
+        $this->identity->linkStaffIdentity(
+            tenantId: $this->context->tenantId(),
+            userId: $command->userId,
+            staffRef: $command->staffId,
+            staffNumber: $staff->staff_number,
+        );
     }
 }

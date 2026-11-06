@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Platform\Queueing;
 
+use App\Models\User;
 use App\Platform\Queueing\Application\Command\CallTicketCommand;
 use App\Platform\Queueing\Domain\Model\Queue;
 use App\Platform\Queueing\Domain\Model\QueueEntry;
-use App\Models\User;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -164,6 +164,38 @@ test('the board presents skipped and no-response tickets for recall', function (
     expect($status)->toBe('CALLED');
 });
 
+test('recall without a location is blocked if staff restrictions were added after a no-location call', function (): void {
+    $fixture = queueingFixture();
+    $tenantId = (string) $fixture['tenant']->id;
+    $facilityId = (string) $fixture['facility']->id;
+    $queue = queueTestQueue($tenantId, $facilityId);
+    $entry = queueTestEntry($tenantId, $facilityId, (string) $queue->id);
+
+    $this->actingAs($fixture['user'])
+        ->post(route('service-queues.entries.call', ['entry' => $entry->id]))
+        ->assertRedirect(route('service-queues.index'));
+
+    $room = queueTestRoom($tenantId, $facilityId);
+    queueAssignRoom($tenantId, $facilityId, (string) $queue->id, (string) $room->id);
+    queueAssignRoomStaff($tenantId, $facilityId, (string) $queue->id, (string) $room->id, (string) $fixture['user']->id);
+
+    $this->actingAs($fixture['user'])
+        ->post(route('service-queues.entries.no-response', ['entry' => $entry->id]))
+        ->assertRedirect(route('service-queues.index'));
+
+    $this->actingAs($fixture['user'])
+        ->post(route('service-queues.entries.recall', ['entry' => $entry->id]), [])
+        ->assertSessionHasErrors([
+            'room' => 'Select a service location to apply its staff access restrictions.',
+        ]);
+
+    expect(TenantContextScope::run(
+        $tenantId,
+        $facilityId,
+        fn (): string => QueueEntry::query()->whereKey($entry->id)->value('status')->value,
+    ))->toBe('NO_RESPONSE');
+});
+
 test('call, start and complete move a ticket through service', function (): void {
     $fixture = queueingFixture();
     $tenantId = (string) $fixture['tenant']->id;
@@ -195,16 +227,50 @@ test('call, start and complete move a ticket through service', function (): void
     expect($status)->toBe('COMPLETED');
 });
 
-test('calling without a room fails validation', function (): void {
+test('calling without a service location is allowed when no staff restrictions are configured', function (): void {
     $fixture = queueingFixture();
     $tenantId = (string) $fixture['tenant']->id;
     $facilityId = (string) $fixture['facility']->id;
     $queue = queueTestQueue($tenantId, $facilityId);
     $entry = queueTestEntry($tenantId, $facilityId, (string) $queue->id);
+    $room = queueTestRoom($tenantId, $facilityId);
+    queueAssignRoom($tenantId, $facilityId, (string) $queue->id, (string) $room->id);
 
     $this->actingAs($fixture['user'])
         ->post(route('service-queues.entries.call', ['entry' => $entry->id]), [])
-        ->assertSessionHasErrors('room');
+        ->assertRedirect(route('service-queues.index'));
+
+    $calledEntry = TenantContextScope::run(
+        $tenantId,
+        $facilityId,
+        fn (): QueueEntry => QueueEntry::query()->whereKey($entry->id)->firstOrFail(),
+    );
+
+    expect($calledEntry->status->value)->toBe('CALLED')
+        ->and($calledEntry->called_room_id)->toBeNull();
+});
+
+test('calling without a service location is rejected when explicit staff restrictions exist', function (): void {
+    $fixture = queueingFixture();
+    $tenantId = (string) $fixture['tenant']->id;
+    $facilityId = (string) $fixture['facility']->id;
+    $queue = queueTestQueue($tenantId, $facilityId);
+    $entry = queueTestEntry($tenantId, $facilityId, (string) $queue->id);
+    $room = queueTestRoom($tenantId, $facilityId);
+    queueAssignRoom($tenantId, $facilityId, (string) $queue->id, (string) $room->id);
+    queueAssignRoomStaff($tenantId, $facilityId, (string) $queue->id, (string) $room->id, (string) $fixture['user']->id);
+
+    $this->actingAs($fixture['user'])
+        ->post(route('service-queues.entries.call', ['entry' => $entry->id]), [])
+        ->assertSessionHasErrors([
+            'room' => 'Select a service location to apply its staff access restrictions.',
+        ]);
+
+    expect(TenantContextScope::run(
+        $tenantId,
+        $facilityId,
+        fn (): string => QueueEntry::query()->whereKey($entry->id)->value('status')->value,
+    ))->toBe('WAITING');
 });
 
 test('a ticket can only be called to a room assigned to its queue', function (): void {
@@ -229,7 +295,7 @@ test('a ticket can only be called to a room assigned to its queue', function ():
         ->assertRedirect(route('service-queues.index'));
 });
 
-test('calling and starting service require assignment to the ticket room', function (): void {
+test('explicit room staff restrictions limit who can call and serve a ticket', function (): void {
     $fixture = queueingFixture();
     $tenantId = (string) $fixture['tenant']->id;
     $facilityId = (string) $fixture['facility']->id;
@@ -238,22 +304,13 @@ test('calling and starting service require assignment to the ticket room', funct
     $room = queueTestRoom($tenantId, $facilityId);
     queueAssignRoom($tenantId, $facilityId, (string) $queue->id, (string) $room->id);
 
-    $this->actingAs($fixture['user'])
-        ->post(route('service-queues.entries.call', ['entry' => $entry->id]), ['room' => $room->id])
-        ->assertForbidden();
-
-    queueAssignRoomStaff($tenantId, $facilityId, (string) $queue->id, (string) $room->id, (string) $fixture['user']->id);
-    $this->actingAs($fixture['user'])
-        ->post(route('service-queues.entries.call', ['entry' => $entry->id]), ['room' => $room->id])
-        ->assertRedirect(route('service-queues.index'));
-
-    $otherUser = User::factory()->for($fixture['tenant'])->create();
-    TenantContextScope::run($tenantId, $facilityId, function () use ($tenantId, $facilityId, $otherUser, $fixture): void {
+    $assignedUser = User::factory()->for($fixture['tenant'])->create();
+    TenantContextScope::run($tenantId, $facilityId, function () use ($tenantId, $facilityId, $assignedUser, $fixture): void {
         DB::table('idn_access_assignments')->insert([
             'id' => (string) Str::uuid7(),
             'tenant_id' => $tenantId,
             'facility_id' => $facilityId,
-            'user_id' => $otherUser->id,
+            'user_id' => $assignedUser->id,
             'role_id' => $fixture['role_id'],
             'status' => 'ACTIVE',
             'is_primary' => true,
@@ -261,11 +318,21 @@ test('calling and starting service require assignment to the ticket room', funct
             'updated_at' => now(),
         ]);
     });
-    $this->actingAs($otherUser)
+    queueAssignRoomStaff($tenantId, $facilityId, (string) $queue->id, (string) $room->id, (string) $assignedUser->id);
+
+    $this->actingAs($fixture['user'])
+        ->post(route('service-queues.entries.call', ['entry' => $entry->id]), ['room' => $room->id])
+        ->assertForbidden();
+
+    $this->actingAs($assignedUser)
+        ->post(route('service-queues.entries.call', ['entry' => $entry->id]), ['room' => $room->id])
+        ->assertRedirect(route('service-queues.index'));
+
+    $this->actingAs($fixture['user'])
         ->post(route('service-queues.entries.start', ['entry' => $entry->id]))
         ->assertForbidden();
 
-    $this->actingAs($fixture['user'])
+    $this->actingAs($assignedUser)
         ->post(route('service-queues.entries.start', ['entry' => $entry->id]))
         ->assertRedirect(route('service-queues.index'));
 });
@@ -281,13 +348,15 @@ test('queue administrators can configure and view queue room routing', function 
         ->put(route('service-queues.queues.rooms', ['queue' => $queue->id]), [
             'room_ids' => [$room->id],
         ])
-        ->assertRedirect(route('service-queues.index'));
+        ->assertRedirect(route('service-queues.manage'));
+    queueAssignRoomStaff($tenantId, $facilityId, (string) $queue->id, (string) $room->id, (string) $fixture['user']->id);
 
     $this->actingAs($fixture['user'])
-        ->get(route('service-queues.index'))
+        ->get(route('service-queues.manage'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('queueRoomAssignments.0.queueId', $queue->id)
-            ->where('queueRoomAssignments.0.roomIds.0', $room->id));
+            ->where('queueRoomAssignments.0.roomIds.0', $room->id)
+            ->where('queueRoomAssignments.0.restrictedRoomIds.0', $room->id));
 });
 
 test('queue room routing cannot be configured without queue definition permission', function (): void {

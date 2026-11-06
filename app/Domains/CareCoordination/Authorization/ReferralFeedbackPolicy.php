@@ -44,10 +44,11 @@ final class ReferralFeedbackPolicy extends BasePolicy
     private function hasScope(User $user, ReferralFeedback $feedback): bool
     {
         return $this->sameTenant($user, (string) $feedback->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $feedback->facility_id,
                 'care_coordination.feedback.record',
-                $this->scope->effectivePermissions($user, (string) $feedback->facility_id),
-                true,
             );
     }
 }

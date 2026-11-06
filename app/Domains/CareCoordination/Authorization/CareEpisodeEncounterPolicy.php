@@ -31,10 +31,11 @@ final class CareEpisodeEncounterPolicy extends BasePolicy
     public function manage(User $user, CareEpisodeEncounter $link, ?DetachEncounterFromEpisode $command = null): bool
     {
         return $this->sameTenant($user, (string) $link->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $link->facility_id,
                 'care_coordination.episode.manage',
-                $this->scope->effectivePermissions($user, (string) $link->facility_id),
-                true,
             );
     }
 }

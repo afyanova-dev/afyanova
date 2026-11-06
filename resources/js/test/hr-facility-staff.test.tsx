@@ -1133,6 +1133,24 @@ describe('facility staff workflows', () => {
     );
   });
 
+  it('renders the qualifications section without the unknown-section fallback', () => {
+    state.url = '/workspaces/hr/staff/staff-1?section=qualifications';
+    render(<StaffProfile
+      staff={{ ...staff, status: 'ACTIVE' }}
+      terminationBlockers={noTerminationBlockers}
+      canManagePerson={false}
+      canManageEmployment={false}
+      canManageStaff={false}
+      canLinkStaff={false}
+      canReadQualifications
+    />);
+
+    const qualifications = screen.getByRole('region', { name: 'Qualifications' });
+    expect(qualifications).toHaveTextContent('Education & training');
+    expect(qualifications).toHaveTextContent('No qualifications recorded');
+    expect(screen.queryByText('Unknown section.')).not.toBeInTheDocument();
+  });
+
   it('renders the chart-style staff banner with photo placeholder and collapsed details', () => {
     state.url = '/workspaces/hr/staff/staff-1';
     const { rerender } = render(<StaffProfile

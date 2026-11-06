@@ -11,6 +11,7 @@ use App\Domains\Encounter\Application\Command\CancelEncounter;
 use App\Domains\Patient\Domain\Enum\PatientStatus;
 use App\Domains\Patient\Domain\Model\Patient;
 use App\Shared\Bus\CommandBus;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -65,6 +66,29 @@ test('it creates an internal referral with source encounter as DRAFT and writes 
         ->first());
 
     expect($audit)->not->toBeNull();
+});
+
+test('creating a referral rejects a source encounter from a different active facility', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = careCoordinationFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = createFacilityFixture($tenantId, (string) $organization->id);
+    assignUserToFacility($tenantId, (string) $user->id, $roleId, (string) $facilityB->id);
+
+    ['encounterId' => $encounterId, 'patientId' => $patientId] =
+        seedEligibleReferralEncounter($tenantId, $facilityAId, (string) $user->id);
+
+    $command = new CreateReferral(
+        referralId: (string) Str::uuid7(),
+        actorId: (string) $user->id,
+        patientId: $patientId,
+        targetType: Referral::TARGET_TYPE_INTERNAL,
+        targetRef: (string) $facilityB->id,
+        sourceEncounterId: $encounterId,
+    );
+
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(CommandBus::class)->dispatch($command)))
+        ->toThrow(NotFound::class);
 });
 
 test('it creates a standalone external referral without source encounter when consentBasisRef is provided', function () {

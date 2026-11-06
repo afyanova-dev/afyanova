@@ -9,6 +9,7 @@ use App\Domains\Patient\Contracts\PatientApi;
 use App\Models\User;
 use App\Platform\Queueing\Domain\Enum\QueueStatus;
 use App\Platform\Queueing\Domain\Enum\ServiceCapability;
+use App\Platform\Queueing\Domain\Model\Queue;
 use App\Platform\Queueing\Domain\Model\QueueEntry;
 use App\Shared\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -42,18 +43,23 @@ final class NurseStationController
             ->limit(200)
             ->get();
 
-        $patientIds = $entries->pluck('patient_id')->unique()->values()->all();
+        $patientIds = array_values(array_unique(array_map(
+            static fn (QueueEntry $entry): string => (string) $entry->patient_id,
+            $entries->all(),
+        )));
         $patients = $patientIds === [] ? [] : $patientApi->getPatientSummaries($patientIds);
         $summaries = [];
         foreach ($entries as $entry) {
             $patient = $patients[$entry->patient_id] ?? null;
             abort_unless($patient instanceof PatientSummary, 409, 'Patient context is unavailable for this queue ticket.');
+            $queue = $entry->getRelation('queue');
             $summaries[] = [
                 'id' => $entry->id,
+                'patientId' => $patient->patientId,
                 'ticketNumber' => $entry->ticket_number,
                 'patientName' => $patient->displayName,
                 'patientNumber' => $patient->patientNumber,
-                'queue' => $entry->queue?->name ?? 'Triage',
+                'queue' => $queue instanceof Queue ? $queue->name : 'Triage',
                 'priority' => $entry->priority->value,
                 'status' => $entry->status->value,
                 'waitMinutes' => max(0, (int) CarbonImmutable::now()->diffInMinutes($entry->created_at, true)),

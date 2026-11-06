@@ -260,6 +260,7 @@ it('enforces separation of duties: requester cannot approve their own leave requ
 
     // Create staff member and link to $fx['user']
     $staffId = onboardStaffHelper($tenantId, firstName: 'Supervisor', lastName: 'User', facilityId: $facilityId);
+    assignStaffHelper($tenantId, $staffId, $facilityId);
     linkStaffUserHelper($tenantId, $staffId, (string) $fx['user']->id, $facilityId);
 
     $typeId = defineLeaveTypeHelper($tenantId, code: 'ANNUAL-DUTY');
@@ -271,6 +272,7 @@ it('enforces separation of duties: requester cannot approve their own leave requ
     // The same user ($fx['user']) attempts to approve their own leave request -> must fail!
     expect(function () use ($tenantId, $facilityId, $requestId, $fx): void {
         TenantContextScope::run($tenantId, $facilityId, function () use ($requestId, $fx): void {
+            expect($fx['user']->hasPermissionKey('hr.leave.approve'))->toBeTrue();
             $this->bus->dispatch(new ApproveLeave($requestId, $fx['user']->id));
         });
     })->toThrow(RequesterCannotApproveOwnLeaveException::class);

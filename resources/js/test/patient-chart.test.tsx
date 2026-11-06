@@ -4,15 +4,46 @@ import type { PatientChartProps } from '@/features/patients/types/chart';
 import { PatientChart } from '@/features/patients/components/PatientChart';
 import PatientProfile from '@/pages/Patients/Profile';
 
+vi.mock('@carbon/react', async (importOriginal) => {
+  const carbon = await importOriginal<typeof import('@carbon/react')>();
+  const { Card } = await vi.importActual<typeof import('@carbon/react/lib/components/Card/Card')>(
+    '@carbon/react/lib/components/Card/Card',
+  );
+  const {
+    TestCarbonComboButton,
+    TestCarbonMenuButton,
+    TestCarbonMenuItem,
+    TestCarbonPopover,
+    TestCarbonPopoverContent,
+  } = await import('@/test/carbon-floating-stubs');
+
+  return {
+    ...carbon,
+    Card,
+    ComboButton: TestCarbonComboButton,
+    MenuButton: TestCarbonMenuButton,
+    MenuItem: TestCarbonMenuItem,
+    Popover: TestCarbonPopover,
+    PopoverContent: TestCarbonPopoverContent,
+  };
+});
+
 const state = vi.hoisted(() => ({
   url: '/patient/patient-1/chart',
   canRead: true,
   canBook: false,
   canManage: false,
   canUpdate: true,
+  canMarkDeceased: false,
   canCreate: true,
+  canRecordVitals: false,
+  canOpenVitalsWorkflow: false,
+  canReadConsultations: false,
+  canPlaceQueue: false,
   getJson: vi.fn(),
   sendJson: vi.fn(),
+  inertiaPost: vi.fn(),
+  routerVisit: vi.fn(),
 }));
 
 vi.mock('@inertiajs/react', async () => {
@@ -21,6 +52,7 @@ vi.mock('@inertiajs/react', async () => {
     Link: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
       <a href={href} {...props}>{children}</a>
     ),
+    router: { visit: state.routerVisit },
     usePage: () => ({
       url: state.url,
       props: {
@@ -50,7 +82,7 @@ vi.mock('@inertiajs/react', async () => {
         data,
         setData,
         setDefaults: vi.fn(),
-        post: vi.fn(),
+        post: state.inertiaPost,
         patch: () => {},
         processing: false,
         errors: {},
@@ -68,10 +100,29 @@ vi.mock('@/lib/http', () => ({
 
 vi.mock('@/lib/authorization', () => ({
   permissions: {
-    patient: { read: 'patient.patients.read', update: 'patient.patients.update' },
+    patient: {
+      read: 'patient.patients.read',
+      update: 'patient.patients.update',
+      markDeceased: 'patient.patients.mark_deceased',
+    },
     scheduling: { book: 'sch.appointment.book', manage: 'sch.appointment.manage', recordArrival: 'sch.appointment.record_arrival' },
-    encounter: { create: 'encounter.encounters.create', update: 'encounter.encounters.update' },
-    queue: { ticketTransfer: 'queue.ticket.transfer' },
+    encounter: {
+      read: 'encounter.encounters.read',
+      create: 'encounter.encounters.create',
+      update: 'encounter.encounters.update',
+    },
+    queue: {
+      ticketTransfer: 'queue.ticket.transfer',
+      ticketView: 'queue.ticket.view',
+      ticketPlace: 'queue.ticket.place',
+    },
+    clinical: {
+      access: 'clinical.access',
+      vitalsRead: 'clinical.vitals.read',
+      vitalsRecord: 'clinical.vitals.record',
+      triageRead: 'clinical.triage.read',
+      consultationsRead: 'clinical.consultations.read',
+    },
     organization: { structureRead: 'organization.structure.read' },
   },
   useCan: () => (permission: string) => {
@@ -79,7 +130,18 @@ vi.mock('@/lib/authorization', () => ({
     if (permission === 'sch.appointment.book') return state.canBook;
     if (permission === 'sch.appointment.manage') return state.canManage;
     if (permission === 'patient.patients.update') return state.canUpdate;
+    if (permission === 'patient.patients.mark_deceased') return state.canMarkDeceased;
     if (permission === 'encounter.encounters.create') return state.canCreate;
+    if (permission === 'clinical.vitals.record') return state.canRecordVitals;
+    if (permission === 'queue.ticket.place') return state.canPlaceQueue;
+    if (permission === 'clinical.access'
+      || permission === 'clinical.vitals.read'
+      || permission === 'clinical.triage.read'
+      || permission === 'queue.ticket.view'
+      || permission === 'encounter.encounters.read') {
+      return state.canOpenVitalsWorkflow;
+    }
+    if (permission === 'clinical.consultations.read') return state.canReadConsultations;
     if (permission === 'organization.structure.read') return true;
     return false;
   },
@@ -157,7 +219,14 @@ beforeEach(() => {
   state.canBook = false;
   state.canManage = false;
   state.canUpdate = true;
+  state.canMarkDeceased = false;
   state.canCreate = true;
+  state.canRecordVitals = false;
+  state.canOpenVitalsWorkflow = false;
+  state.canReadConsultations = false;
+  state.canPlaceQueue = false;
+  state.inertiaPost.mockReset();
+  state.routerVisit.mockReset();
   state.sendJson.mockReset();
   state.getJson.mockResolvedValue({ facilityId: 'facility-1', facilityName: 'Demo', departments: [] });
   state.sendJson.mockResolvedValue({ stickyNote: null });
@@ -180,25 +249,299 @@ describe('Patient chart', () => {
   it('renders the patient profile without a breadcrumb trail', () => {
     render(<PatientProfile {...props} />);
 
-    expect(screen.getByRole('heading', { name: 'Amina Juma' })).toBeInTheDocument();
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+
+    expect(within(banner).getByRole('heading', { name: 'Amina Juma' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
   });
 
   it('renders the patient header and default Patient Summary selection', () => {
     render(<PatientChart {...props} />);
 
-    expect(screen.getByRole('heading', { name: 'Amina Juma' })).toBeInTheDocument();
-    expect(screen.getByText('Patient number: PAT-00000001')).toBeInTheDocument();
-    expect(screen.getByText('Female')).toBeInTheDocument();
     const banner = screen.getByRole('banner', { name: 'Patient header' });
-    expect(within(banner).getByText('03-Feb-1990')).toBeInTheDocument();
+    expect(within(banner).getByRole('heading', { name: 'Amina Juma' })).toBeInTheDocument();
+    expect(screen.getByText('PAT-00000001')).toBeInTheDocument();
+    expect(within(banner).getByText('Female')).toBeInTheDocument();
+    expect(within(banner).getByText('DOB 03-Feb-1990')).toBeInTheDocument();
     expect(within(banner).getByText(/\d+ yrs/)).toBeInTheDocument();
     expect(screen.queryByText('Phone: +255700000000')).not.toBeInTheDocument();
     expect(screen.queryByText('Email: amina@example.test')).not.toBeInTheDocument();
-    expect(screen.getByText('Female').querySelector('svg')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Patient Summary' })).not.toBeInTheDocument();
-    expect(document.querySelector('.patient-chart__overview-grid')).not.toBeInTheDocument();
+    expect(within(banner).getByText('Female').querySelector('svg')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Patient Summary' })).toBeInTheDocument();
+    expect(document.querySelector('.afy-summary-card-grid')).not.toBeNull();
+    expect(screen.getByText('Conditions')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Patient chart sections' })).not.toBeInTheDocument();
+  });
+
+  it('opens the permission-gated patient editor from Patient Summary', () => {
+    render(<PatientChart {...props} />);
+
+    const editButton = screen.getByRole('button', { name: 'Edit patient information' });
+    expect(editButton.closest('.cds--card__header')).not.toBeNull();
+    expect(editButton.closest('.cds--card__footer')).toBeNull();
+
+    fireEvent.click(editButton);
+
+    expect(screen.getByRole('dialog', { name: 'Edit demographics' })).toBeInTheDocument();
+  });
+
+  it('hides the Patient Summary edit action without patient update permission', () => {
+    state.canUpdate = false;
+    render(<PatientChart {...props} />);
+
+    expect(screen.queryByRole('button', { name: 'Edit patient information' })).not.toBeInTheDocument();
+  });
+
+  it('offers vital recording only through an authorized active triage workflow', () => {
+    state.canRecordVitals = true;
+    state.canOpenVitalsWorkflow = true;
+    render(
+      <PatientChart
+        {...props}
+        activeEncounter={{
+          encounterId: 'encounter-1',
+          encounterNumber: 'ENC-1',
+          encounterType: 'OUTPATIENT',
+          status: 'ACTIVE',
+          departmentId: null,
+          unitId: null,
+          arrivedAt: '2026-09-01T10:00:00Z',
+          startedAt: '2026-09-01T10:20:00Z',
+        }}
+        queueEntry={{
+          entryId: 'entry-1',
+          queueId: 'queue-1',
+          serviceCapability: 'TRIAGE',
+          ticketNumber: 'T-001',
+          priority: 'NORMAL',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Record vital signs' })).toHaveAttribute(
+      'href',
+      '/workspaces/nurse-station/entries/entry-1',
+    );
+  });
+
+  it('does not offer vital recording without required permissions, an active encounter, or a triage queue entry', () => {
+    state.canOpenVitalsWorkflow = true;
+    const activeEncounter: NonNullable<PatientChartProps['activeEncounter']> = {
+      encounterId: 'encounter-1',
+      encounterNumber: 'ENC-1',
+      encounterType: 'OUTPATIENT',
+      status: 'ACTIVE',
+      departmentId: null,
+      unitId: null,
+      arrivedAt: '2026-09-01T10:00:00Z',
+      startedAt: '2026-09-01T10:20:00Z',
+    };
+    const triageQueueEntry: NonNullable<PatientChartProps['queueEntry']> = {
+      entryId: 'entry-1',
+      queueId: 'queue-1',
+      serviceCapability: 'TRIAGE',
+      ticketNumber: 'T-001',
+      priority: 'NORMAL',
+      status: 'IN_SERVICE',
+    };
+
+    const { rerender } = render(
+      <PatientChart
+        {...props}
+        activeEncounter={activeEncounter}
+        queueEntry={triageQueueEntry}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Record vital signs' })).not.toBeInTheDocument();
+
+    state.canRecordVitals = true;
+    rerender(<PatientChart {...props} />);
+
+    expect(screen.queryByRole('link', { name: 'Record vital signs' })).not.toBeInTheDocument();
+
+    rerender(
+      <PatientChart
+        {...props}
+        activeEncounter={activeEncounter}
+        queueEntry={{
+          entryId: 'entry-1',
+          queueId: 'queue-1',
+          serviceCapability: 'CONSULTATION',
+          ticketNumber: 'T-001',
+          priority: 'NORMAL',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Record vital signs' })).not.toBeInTheDocument();
+
+    rerender(
+      <PatientChart
+        {...props}
+        activeEncounter={activeEncounter}
+        queueEntry={{ ...triageQueueEntry, status: 'CALLED' }}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Record vital signs' })).not.toBeInTheDocument();
+
+    state.canOpenVitalsWorkflow = false;
+    rerender(
+      <PatientChart
+        {...props}
+        activeEncounter={activeEncounter}
+        queueEntry={triageQueueEntry}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Record vital signs' })).not.toBeInTheDocument();
+  });
+
+  it('shows active clinical context and safety information in the patient banner', () => {
+    render(
+      <PatientChart
+        {...props}
+        chart={{
+          ...props.chart,
+          conditions: [{
+            id: 'condition-1',
+            description: 'Hypertension',
+            code: 'I10',
+            status: 'ACTIVE',
+            onset: '2024-01-01',
+            recordedAt: '2024-01-01T09:00:00Z',
+          }],
+          medications: [{
+            id: 'medication-1',
+            facilityId: 'facility-1',
+            number: 'RX-1',
+            medication: 'Amlodipine',
+            dose: '5 mg',
+            frequency: 'Once daily',
+            route: 'Oral',
+            status: 'ACTIVE',
+            recordedAt: '2026-08-01T09:00:00Z',
+          }],
+          vitals: [{
+            id: 'vital-1',
+            temperature: 38.9,
+            heartRate: 72,
+            respiratoryRate: 18,
+            systolicBp: 120,
+            diastolicBp: 80,
+            oxygenSaturation: 98,
+            weight: 64,
+            height: 165,
+            painScore: 2,
+            occurredAt: '2026-09-01T09:00:00Z',
+          }],
+        }}
+      />,
+    );
+
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    const safety = within(banner).getByRole('region', { name: 'Patient safety summary' });
+    expect(safety).toHaveClass('patient-chart__banner-badges');
+    expect(within(safety).getByText(/Penicillin/)).toBeInTheDocument();
+    expect(within(safety).getByText(/Moderate/)).toBeInTheDocument();
+    expect(document.querySelector('.patient-chart__safety')).toBeNull();
+
+    const conditions = screen.getByLabelText('Conditions');
+    const medications = screen.getByLabelText('Medications');
+    const vitals = screen.getByLabelText('Vitals');
+
+    expect(within(conditions).getByText('Hypertension')).toBeInTheDocument();
+    expect(within(medications).getByText('Amlodipine')).toBeInTheDocument();
+    expect(within(medications).getByText(/5 mg/)).toBeInTheDocument();
+    expect(within(vitals).getByText('120/80')).toBeInTheDocument();
+    expect(within(vitals).getByText('2/10')).toBeInTheDocument();
+    expect(within(vitals).getByText('38.9°C')).toBeInTheDocument();
+    expect(within(vitals).getByText('High')).toBeInTheDocument();
+  });
+
+  it('filters the longitudinal timeline by event type', () => {
+    state.url = '/patient/patient-1/chart/timeline';
+    render(
+      <PatientChart
+        {...props}
+        chart={{
+          ...props.chart,
+          billing: {
+            account: null,
+            outstanding: null,
+            ledger: [{
+              entryType: 'Payment',
+              direction: 'CREDIT',
+              amount: '50000',
+              currency: 'TZS',
+              postedAt: '2026-09-02T10:00:00Z',
+            }],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Patient timeline' })).toBeInTheDocument();
+    expect(screen.getAllByText('1 event')).toHaveLength(3);
+    expect(screen.queryByText('Longitudinal record')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Registration through ongoing care/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Restricted sections excluded')).not.toBeInTheDocument();
+    expect(screen.getByText('Patient registered')).toBeInTheDocument();
+    expect(screen.getByText('Allergy: Penicillin')).toBeInTheDocument();
+    expect(screen.getByText('Payment')).toBeInTheDocument();
+    expect(screen.getByText('01-Sep-2026')).toBeInTheDocument();
+    const registration = screen.getByText('Patient registered').closest('li');
+    expect(registration).toHaveClass('patient-chart__timeline-event--registration');
+    expect(within(registration!).getByRole('time')).toHaveTextContent('10:00 UTC');
+    expect(registration?.querySelector('.patient-chart__timeline-marker')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Show' }), { target: { value: 'allergy' } });
+
+    expect(screen.getByText('Allergy: Penicillin')).toBeInTheDocument();
+    expect(screen.queryByText('Patient registered')).not.toBeInTheDocument();
+    expect(screen.queryByText('Payment')).not.toBeInTheDocument();
+  });
+
+  it('explains restricted sections on the timeline', () => {
+    state.url = '/patient/patient-1/chart/timeline';
+    render(<PatientChart {...props} chart={{ ...props.chart, restricted: ['medications'] }} />);
+
+    expect(screen.getByText('Restricted sections excluded')).toBeInTheDocument();
+    expect(screen.getByText(/excluded from this timeline/)).toBeInTheDocument();
+  });
+
+  it('caps the overview activity list and defers the full ledger to the timeline', () => {
+    render(
+      <PatientChart
+        {...props}
+        chart={{
+          ...props.chart,
+          appointments: Array.from({ length: 8 }, (_, index) => ({
+            id: `appointment-${index}`,
+            number: `APT-${index}`,
+            resourceId: 'resource-1',
+            appointmentTypeId: 'type-1',
+            appointmentTypeName: 'Follow-up',
+            resourceName: 'Clinic A',
+            start: `2026-09-25T09:00:00Z`,
+            end: `2026-09-25T09:30:00Z`,
+            status: 'BOOKED',
+            reason: null,
+          })),
+        }}
+      />,
+    );
+
+    const activity = screen.getByText('Recent activity').closest<HTMLElement>('.afy-summary-card');
+    expect(activity).not.toBeNull();
+    expect(within(activity!).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(activity!).getByRole('link', { name: /View all/ })).toHaveAttribute(
+      'href',
+      '/patient/patient-1/chart/timeline',
+    );
   });
 
   it('creates and displays a patient-level sticky note', async () => {
@@ -217,7 +560,7 @@ describe('Patient chart', () => {
     render(<PatientChart {...props} />);
 
     const stickyNoteButton = await screen.findByRole('button', { name: 'Sticky note' });
-    await waitFor(() => expect(stickyNoteButton).toHaveAttribute('aria-busy', 'false'));
+    await waitFor(() => expect(stickyNoteButton.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'false'));
     fireEvent.click(stickyNoteButton);
 
     const textarea = await screen.findByPlaceholderText('Enter your sticky note here...');
@@ -232,10 +575,10 @@ describe('Patient chart', () => {
     expect(await screen.findByText('Call family before discharge')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Sticky note details' })).toBeInTheDocument();
     expect(screen.getByText(/Demo Receptionist/)).toBeInTheDocument();
-    expect(stickyNoteButton.querySelector('.patient-sticky-note__badge')).toHaveTextContent('1');
+    expect(document.querySelector('.cds--badge-indicator, .patient-sticky-note__badge')).toHaveTextContent('1');
   });
 
-  it('expands and collapses additional patient details from the banner', () => {
+  it('shows additional patient details in the Patient Summary instead of the banner', () => {
     const patient: PatientChartProps['patient'] = {
       ...props.patient,
       identifiers: [{
@@ -257,43 +600,40 @@ describe('Patient chart', () => {
     render(<PatientChart {...props} patient={patient} />);
 
     const banner = screen.getByRole('banner', { name: 'Patient header' });
-    const showMore = within(banner).getByRole('button', { name: 'Show more' });
-    expect(showMore).toHaveAttribute('aria-expanded', 'false');
-    expect(within(banner).queryByText('Phone')).not.toBeInTheDocument();
+    const details = screen.getByRole('region', { name: 'Patient details' });
 
-    fireEvent.click(showMore);
-
-    expect(within(banner).getByRole('button', { name: 'Show less' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(within(banner).getByText('Phone')).toBeInTheDocument();
-    expect(within(banner).getByText('+255700000000')).toBeInTheDocument();
-    expect(within(banner).getByText('Email')).toBeInTheDocument();
-    expect(within(banner).getByText('NIDA-123 · Verified')).toBeInTheDocument();
-    expect(within(banner).getByText('Mwai Kibaki Road, Mikocheni, Kinondoni, Dar es Salaam')).toBeInTheDocument();
-
-    fireEvent.click(within(banner).getByRole('button', { name: 'Show less' }));
-
-    expect(within(banner).getByRole('button', { name: 'Show more' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    expect(within(banner).queryByText('Phone')).not.toBeInTheDocument();
+    expect(within(banner).queryByRole('button', { name: /Show (more|less)/ })).not.toBeInTheDocument();
+    expect(within(details).getByText('Phone')).toBeInTheDocument();
+    expect(within(details).getByText('+255700000000')).toBeInTheDocument();
+    expect(within(details).getByText('Email')).toBeInTheDocument();
+    expect(within(details).getByText('NIDA-123 · Verified')).toBeInTheDocument();
+    expect(within(details).getByText('Mwai Kibaki Road, Mikocheni, Kinondoni, Dar es Salaam')).toBeInTheDocument();
   });
 
-  it('uses a labelled Actions menu button with icon-enabled items', () => {
+  it('uses a sticky note icon button with badge and icon-enabled patient action items in MenuButton', () => {
+    state.canMarkDeceased = true;
     render(<PatientChart {...props} />);
 
     const banner = screen.getByRole('banner', { name: 'Patient header' });
-    const actionsButton = within(banner).getByRole('button', { name: 'Actions' });
-    expect(actionsButton).toHaveTextContent('Actions');
-    expect(actionsButton.querySelector('svg')).toBeInTheDocument();
+    const stickyNoteButton = within(banner).getByRole('button', { name: 'Sticky note' });
+    expect(stickyNoteButton).toBeInTheDocument();
 
-    fireEvent.click(actionsButton);
+    fireEvent.click(within(banner).getByRole('button', { name: 'Actions' }));
 
     expect(screen.getByRole('menuitem', { name: 'Edit patient details' }).querySelector('svg')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Mark patient deceased' }).querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('keeps the sticky note icon button and Actions MenuButton in the banner toolbar without a details toggle', () => {
+    render(<PatientChart {...props} />);
+
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    const toolbar = banner.querySelector<HTMLElement>('.patient-chart__banner-action-row');
+
+    expect(toolbar).toBeInTheDocument();
+    expect(within(toolbar!).getByRole('button', { name: 'Sticky note' })).toBeInTheDocument();
+    expect(within(toolbar!).getByRole('button', { name: 'Actions' })).toBeInTheDocument();
+    expect(within(toolbar!).queryByRole('button', { name: /Show (more|less)/ })).not.toBeInTheDocument();
   });
 
   it('shows Book appointment in the Appointments section when booking is allowed', () => {
@@ -302,7 +642,7 @@ describe('Patient chart', () => {
     render(<PatientChart {...props} />);
 
     expect(screen.getByRole('region', { name: 'Appointments' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Book appointment' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Book appointment' })).toHaveLength(1);
   });
 
   it('hides Book appointment from the Appointments section without booking permission', () => {
@@ -313,7 +653,7 @@ describe('Patient chart', () => {
     expect(screen.queryByRole('button', { name: 'Book appointment' })).not.toBeInTheDocument();
   });
 
-  it('shows visit status and encounter type in the two-line patient banner', () => {
+  it('shows visit status and encounter type in the patient banner', () => {
     render(
       <PatientChart
         {...props}
@@ -330,10 +670,87 @@ describe('Patient chart', () => {
       />,
     );
 
-    expect(screen.getByText('Active visit')).toBeInTheDocument();
-    expect(screen.getByText('Outpatient')).toBeInTheDocument();
-    expect(screen.getByText('Arrived')).toBeInTheDocument();
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    const nameRow = banner.querySelector('.patient-chart__name-row');
+    expect(nameRow).toHaveTextContent('Active visit');
+    const patientDetails = within(banner).getByLabelText('Patient details');
+    expect(patientDetails).toHaveTextContent('DOB');
+    expect(patientDetails).not.toHaveTextContent('Outpatient');
+    expect(patientDetails).not.toHaveTextContent('ENC-1');
     expect(screen.queryByText('Active encounter ENC-1')).not.toBeInTheDocument();
+  });
+
+  it('keeps patient identity to two lines and adds concise queue context', () => {
+    const activeEncounter: NonNullable<PatientChartProps['activeEncounter']> = {
+      encounterId: 'encounter-1',
+      encounterNumber: 'ENC-1',
+      encounterType: 'OUTPATIENT',
+      status: 'ACTIVE',
+      departmentId: null,
+      unitId: null,
+      arrivedAt: '2026-09-01T10:00:00Z',
+      startedAt: '2026-09-01T10:20:00Z',
+    };
+    const { rerender } = render(
+      <PatientChart
+        {...props}
+        activeEncounter={activeEncounter}
+        queueEntry={{
+          entryId: 'entry-1',
+          queueId: 'queue-1',
+          serviceCapability: 'TRIAGE',
+          ticketNumber: 'T-001',
+          priority: 'EMERGENCY',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    const patientDetails = within(banner).getByLabelText('Patient details');
+    const nameRow = banner.querySelector('.patient-chart__name-row');
+    const identityCopy = screen.getByRole('heading', { name: 'Amina Juma' }).parentElement?.parentElement;
+    expect(identityCopy?.children).toHaveLength(2);
+    expect(nameRow).toHaveTextContent('Amina Juma');
+    expect(nameRow).toHaveTextContent('Active visit');
+    expect(nameRow).not.toHaveTextContent('In Service');
+    expect(nameRow).not.toHaveTextContent('Outpatient');
+    expect(nameRow).not.toHaveTextContent('ENC-1');
+    expect(nameRow).not.toHaveTextContent('Triage T-001');
+    expect(nameRow).toHaveTextContent('Emergency');
+    expect(patientDetails).toHaveTextContent('DOB 03-Feb-1990');
+    expect(patientDetails).toHaveTextContent('PAT-00000001');
+    expect(patientDetails).not.toHaveTextContent('Triage');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Visit summary for ENC-1' }));
+    const visitSummary = document.querySelector('.patient-chart__visit-summary');
+    expect(visitSummary).not.toBeNull();
+    expect(within(visitSummary as HTMLElement).getByText('ENC-1')).toBeInTheDocument();
+    expect(within(visitSummary as HTMLElement).getByText('Outpatient')).toBeInTheDocument();
+    expect(within(visitSummary as HTMLElement).getByText('Triage · T-001')).toBeInTheDocument();
+    expect(within(visitSummary as HTMLElement).getByText('In Service')).toBeInTheDocument();
+    expect(within(visitSummary as HTMLElement).getByText('Emergency')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Visit summary for ENC-1' }));
+    rerender(
+      <PatientChart
+        {...props}
+        activeEncounter={activeEncounter}
+        queueEntry={{
+          entryId: 'entry-2',
+          queueId: 'queue-2',
+          serviceCapability: 'CONSULTATION',
+          ticketNumber: 'C-001',
+          priority: 'ROUTINE',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    expect(banner.querySelector('.patient-chart__name-row')).not.toHaveTextContent('Consultation');
+    expect(banner.querySelector('.patient-chart__name-row')).toHaveTextContent('Active visit');
+    expect(patientDetails).not.toHaveTextContent('Consultation');
+    expect(within(banner).queryByText('Routine')).not.toBeInTheDocument();
   });
 
   it('opens a visit summary popover from the Active visit badge', () => {
@@ -369,8 +786,9 @@ describe('Patient chart', () => {
 
     const banner = screen.getByRole('banner', { name: 'Patient header' });
     expect(within(banner).getByText(/\d+ yrs/)).toBeInTheDocument();
-    expect(within(banner).getByText('03-Feb-1990')).toBeInTheDocument();
-    expect(within(banner).getByText('Patient number: PAT-00000001')).toBeInTheDocument();
+    expect(within(banner).getByText('DOB 03-Feb-1990')).toBeInTheDocument();
+    expect(within(banner).getByText('PAT-00000001').closest('.patient-chart__patient-number-badge'))
+      .not.toBeNull();
   });
 
   it('renders the photo or a placeholder', () => {    const { rerender } = render(<PatientChart {...props} />);
@@ -386,7 +804,7 @@ describe('Patient chart', () => {
   it('renders no section nav in content — the contextual sidebar owns navigation', () => {
     render(<PatientChart {...props} />);
 
-    // 13 section links live in the app sidebar (see navigation.test.tsx),
+    // 15 section links live in the app sidebar (see navigation.test.tsx),
     // never duplicated inside the chart content.
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Allergies' })).not.toBeInTheDocument();
@@ -409,28 +827,60 @@ describe('Patient chart', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Amina Juma' })).toBeInTheDocument();
-    expect(screen.getByText('Active visit')).toBeInTheDocument();
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    expect(within(banner).getByRole('heading', { name: 'Amina Juma' })).toBeInTheDocument();
+    expect(within(banner).getByText('Active visit')).toBeInTheDocument();
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 
-  it('shows no Active visit tag without an active encounter', () => {
+  it('shows no Active visit tag in the banner without an active encounter', () => {
     render(<PatientChart {...props} />);
 
-    expect(screen.queryByText('Active visit')).not.toBeInTheDocument();
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    const nameRow = banner.querySelector('.patient-chart__name-row');
+    expect(nameRow).not.toBeNull();
+    expect(nameRow).toHaveTextContent('No active visit');
+    expect(within(banner).queryByText('Active visit')).not.toBeInTheDocument();
+    expect(within(banner).queryByLabelText('Patient details')).toBeInTheDocument();
   });
 
-  it('offers walk-in check-in via Actions menu and rail, not an inline body button', () => {
+  it('does not show a restricted-allergies badge in the patient banner', () => {
+    render(
+      <PatientChart
+        {...props}
+        activeEncounter={{
+          encounterId: 'encounter-1',
+          encounterNumber: 'ENC-1',
+          encounterType: 'OUTPATIENT',
+          status: 'ACTIVE',
+          departmentId: null,
+          unitId: null,
+          arrivedAt: '2026-09-01T10:00:00Z',
+          startedAt: null,
+        }}
+        chart={{ ...props.chart, restricted: ['allergies'] }}
+      />,
+    );
+
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    expect(within(banner).queryByText('Allergies restricted')).not.toBeInTheDocument();
+    expect(within(banner).queryByText('No active allergies recorded')).not.toBeInTheDocument();
+  });
+
+  it('offers walk-in check-in via the Actions menu, not an inline body button', () => {
     render(<PatientChart {...props} />);
 
-    // Inline body check-in was removed once the header Actions menu landed —
-    // entry is Actions > Add visit plus the Quick actions rail icon.
+    // Inline body check-in was removed once the header Actions menu landed.
     expect(screen.queryByRole('button', { name: 'Check in Amina Juma' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Actions/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Check in' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    const checkIn = screen.getByRole('menuitem', { name: 'Check in patient' });
+    expect(checkIn).not.toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(checkIn);
+
+    expect(screen.getByRole('dialog', { name: 'Check in patient' })).toBeInTheDocument();
   });
 
-  it('shows no inline check-in button when an active encounter exists', () => {
+  it('hides check-in in the Actions menu when an active encounter exists', () => {
     render(
       <PatientChart
         {...props}
@@ -447,35 +897,145 @@ describe('Patient chart', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Check in Amina Juma' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    expect(screen.queryByRole('menuitem', { name: 'Check in patient' })).not.toBeInTheDocument();
   });
 
-  it('renders the action rail constant across tabs — never hidden by section', () => {
+  it('hides the Actions menu when no patient or workflow actions are available', () => {
+    state.canUpdate = false;
+    state.canCreate = false;
+    render(<PatientChart {...props} />);
+
+    expect(screen.queryByRole('button', { name: 'Actions' })).not.toBeInTheDocument();
+  });
+
+  it('opens the active nursing assessment from chart Actions', () => {
+    state.canOpenVitalsWorkflow = true;
+    render(
+      <PatientChart
+        {...props}
+        activeEncounter={{
+          encounterId: 'encounter-1',
+          encounterNumber: 'ENC-1',
+          encounterType: 'OUTPATIENT',
+          status: 'ACTIVE',
+          departmentId: null,
+          unitId: null,
+          arrivedAt: '2026-09-01T10:00:00Z',
+          startedAt: '2026-09-01T10:20:00Z',
+        }}
+        queueEntry={{
+          entryId: 'entry-1',
+          queueId: 'queue-1',
+          serviceCapability: 'TRIAGE',
+          ticketNumber: 'T-001',
+          priority: 'NORMAL',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Continue nursing assessment' }));
+
+    expect(state.routerVisit).toHaveBeenCalledWith('/workspaces/nurse-station/entries/entry-1');
+  });
+
+  it('opens consultation only when the user has consultation access', () => {
+    state.canOpenVitalsWorkflow = true;
+    state.canReadConsultations = true;
+    render(
+      <PatientChart
+        {...props}
+        activeEncounter={{
+          encounterId: 'encounter-1',
+          encounterNumber: 'ENC-1',
+          encounterType: 'OUTPATIENT',
+          status: 'ACTIVE',
+          departmentId: null,
+          unitId: null,
+          arrivedAt: '2026-09-01T10:00:00Z',
+          startedAt: '2026-09-01T10:20:00Z',
+        }}
+        queueEntry={{
+          entryId: 'entry-2',
+          queueId: 'queue-2',
+          serviceCapability: 'CONSULTATION',
+          ticketNumber: 'T-002',
+          priority: 'NORMAL',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Continue consultation' }));
+
+    expect(state.routerVisit).toHaveBeenCalledWith('/workspaces/clinician/entries/entry-2');
+  });
+
+  it('hides consultation continuation without consultation access', () => {
+    state.canOpenVitalsWorkflow = true;
+    render(
+      <PatientChart
+        {...props}
+        activeEncounter={{
+          encounterId: 'encounter-1',
+          encounterNumber: 'ENC-1',
+          encounterType: 'OUTPATIENT',
+          status: 'ACTIVE',
+          departmentId: null,
+          unitId: null,
+          arrivedAt: '2026-09-01T10:00:00Z',
+          startedAt: '2026-09-01T10:20:00Z',
+        }}
+        queueEntry={{
+          entryId: 'entry-2',
+          queueId: 'queue-2',
+          serviceCapability: 'CONSULTATION',
+          ticketNumber: 'T-002',
+          priority: 'NORMAL',
+          status: 'IN_SERVICE',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+
+    expect(screen.queryByRole('menuitem', { name: 'Continue consultation' })).not.toBeInTheDocument();
+    expect(state.routerVisit).not.toHaveBeenCalled();
+  });
+
+  it('keeps patient actions in the banner across sections', () => {
     state.canBook = true;
     render(<PatientChart {...props} />);
 
-    expect(screen.getByRole('complementary', { name: 'Quick actions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Book appointment' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Check in' })).toBeInTheDocument();
-    // Inline overview Edit button was removed with the Actions menu — only the rail icon remains.
-    expect(screen.getAllByRole('button', { name: 'Edit demographics' })).toHaveLength(1);
+    const banner = screen.getByRole('banner', { name: 'Patient header' });
+    fireEvent.click(within(banner).getByRole('button', { name: 'Actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Book appointment' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Check in patient' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Edit patient details' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Quick actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 
-  it('keeps the full rail on the appointments tab', () => {
+  it('keeps banner actions and one section booking entry on the appointments tab', () => {
     state.url = '/patient/patient-1/chart/appointments';
     state.canBook = true;
     render(<PatientChart {...props} />);
 
-    expect(screen.getAllByRole('button', { name: 'Book appointment' })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Edit demographics' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Check in' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Book appointment' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Book appointment' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Check in patient' })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Edit patient details' })).toBeInTheDocument();
   });
 
-  it('opens walk-in check-in from the rail without an appointment', () => {
+  it('opens walk-in check-in from the Actions menu without an appointment', () => {
     render(<PatientChart {...props} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Check in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Check in patient' }));
     const dialog = screen.getByRole('dialog', { name: 'Check in patient' });
     const patient = within(dialog).getByRole('group', { name: 'Selected patient' });
     expect(within(patient).getByText('Amina Juma')).toBeInTheDocument();
@@ -483,7 +1043,88 @@ describe('Patient chart', () => {
     expect(within(dialog).queryByText(/Appointment:/)).not.toBeInTheDocument();
   });
 
-  it('hides rail check-in once an active encounter exists', () => {
+  it('shows the in-panel review only after routing choices are made and requires confirmation', async () => {
+    state.canPlaceQueue = true;
+    state.getJson.mockResolvedValue({
+      facilityId: 'facility-1',
+      facilityName: 'Demo',
+      departments: [{
+        id: 'department-nursing',
+        name: 'Nursing',
+        code: 'NUR',
+        units: [{ id: 'unit-triage', name: 'Triage', code: 'TRI' }],
+      }],
+    });
+    render(
+      <PatientChart
+        {...props}
+        availableQueues={[{
+          id: 'queue-triage',
+          departmentId: 'department-nursing',
+          name: 'Nursing Triage',
+          code: 'NUR-TRI',
+          serviceCapability: 'TRIAGE',
+          roomNames: ['Triage Room 1'],
+        }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Check in patient' }));
+    fireEvent.change(screen.getByLabelText('Encounter type'), { target: { value: 'OUTPATIENT' } });
+    expect(screen.queryByRole('region', { name: 'Check-in preview' })).not.toBeInTheDocument();
+    await screen.findByLabelText('Department');
+    fireEvent.change(screen.getByLabelText('Department'), { target: { value: 'department-nursing' } });
+    expect(screen.queryByRole('region', { name: 'Check-in preview' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Unit (optional)'), { target: { value: 'unit-triage' } });
+    fireEvent.change(screen.getByLabelText('Place into queue (optional)'), { target: { value: 'queue-triage' } });
+    expect(screen.queryByRole('region', { name: 'Selected initial destination' })).not.toBeInTheDocument();
+
+    const preview = await screen.findByRole('region', { name: 'Check-in preview' });
+    expect(within(preview).getByText('Outpatient')).toBeInTheDocument();
+    expect(within(preview).getByText('Nursing')).toBeInTheDocument();
+    expect(within(preview).getByText('Triage')).toBeInTheDocument();
+    expect(within(preview).getByText('Nursing Triage')).toBeInTheDocument();
+    expect(within(preview).getByText('ROUTINE')).toBeInTheDocument();
+    expect(within(preview).getByText('Triage Room 1')).toBeInTheDocument();
+    const checkInButton = screen.getByRole('button', { name: 'Check in patient' });
+    expect(checkInButton).toBeDisabled();
+    expect(state.inertiaPost).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'I’ve reviewed these details and confirm check-in.' }));
+    expect(checkInButton).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'URGENT' } });
+    await waitFor(() => expect(checkInButton).toBeDisabled());
+    fireEvent.click(screen.getByRole('checkbox', { name: 'I’ve reviewed these details and confirm check-in.' }));
+    fireEvent.click(checkInButton);
+
+    expect(state.inertiaPost).toHaveBeenCalledWith(
+      '/workspaces/reception/check-in',
+      { preserveScroll: true },
+    );
+  });
+
+  it('explicitly confirms check-in without queue placement when no queue is selected', async () => {
+    render(<PatientChart {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Check in patient' }));
+    fireEvent.change(screen.getByLabelText('Encounter type'), { target: { value: 'OUTPATIENT' } });
+    expect(screen.queryByRole('region', { name: 'Selected initial destination' })).not.toBeInTheDocument();
+    const preview = await screen.findByRole('region', { name: 'Check-in preview' });
+    expect(within(preview).getByText('No queue placement')).toBeInTheDocument();
+    expect(state.inertiaPost).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'I’ve reviewed these details and confirm check-in.' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Check in patient' }));
+    expect(state.inertiaPost).toHaveBeenCalledWith(
+      '/workspaces/reception/check-in',
+      { preserveScroll: true },
+    );
+  });
+
+  it('hides check-in once an active encounter exists while keeping booking available', () => {
     state.canBook = true;
     render(
       <PatientChart
@@ -501,68 +1142,41 @@ describe('Patient chart', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Check in' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Book appointment' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    expect(screen.queryByRole('menuitem', { name: 'Check in patient' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Book appointment' })).not.toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('toggles the booking dialog from the rail icon', () => {
+  it('opens the booking panel from the Actions menu', () => {
     state.canBook = true;
     render(<PatientChart {...props} />);
 
-    const railIcon = (): HTMLElement => {
-      const rail = screen.getByRole('complementary', { name: 'Quick actions' });
-      const icon = within(rail)
-        .getAllByRole('button', { name: 'Book appointment' })
-        .find((button) => button.className.includes('icon-only'));
-      if (!icon) throw new Error('rail book icon not rendered');
-      return icon;
-    };
-
-    fireEvent.click(railIcon());
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Book appointment' }));
     expect(screen.getByRole('dialog', { name: 'Book appointment' })).toBeInTheDocument();
-
-    fireEvent.click(railIcon());
-    expect(screen.queryByRole('dialog', { name: 'Book appointment' })).not.toBeInTheDocument();
   });
 
-  it('switches pristine workspaces freely without a discard prompt', () => {
+  it('opens a patient action without a discard prompt when no draft is dirty', () => {
     state.canBook = true;
     render(<PatientChart {...props} />);
 
-    const rail = screen.getByRole('complementary', { name: 'Quick actions' });
-    const railIcon = (name: string): HTMLElement => {
-      const icon = within(rail)
-        .getAllByRole('button', { name })
-        .find((button) => button.className.includes('icon-only'));
-      if (!icon) throw new Error(`rail ${name} icon not rendered`);
-      return icon;
-    };
-
-    fireEvent.click(railIcon('Edit demographics'));
-    expect(screen.getByRole('dialog', { name: 'Edit demographics' })).toBeInTheDocument();
-
-    // Nothing typed: switching straight through, no modal.
-    fireEvent.click(railIcon('Book appointment'));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Book appointment' }));
     expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Book appointment' })).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: 'Edit demographics' })).not.toBeInTheDocument();
   });
 
-  it('insets chart workspace panels beside the rail instead of covering it', () => {
+  it('docks chart workspace panels at the content edge without a quick-action rail', () => {
     state.canBook = true;
     render(<PatientChart {...props} />);
 
-    const rail = screen.getByRole('complementary', { name: 'Quick actions' });
-    const icon = within(rail)
-      .getAllByRole('button', { name: 'Book appointment' })
-      .find((button) => button.className.includes('icon-only'));
-    if (!icon) throw new Error('rail book icon not rendered');
-    fireEvent.click(icon);
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Book appointment' }));
 
     const panel = document.querySelector('.afy-dock');
     expect(panel).not.toBeNull();
-    expect(panel).toHaveStyle({ right: '3rem' });
-    expect(rail.compareDocumentPosition(panel as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel).toHaveStyle({ right: '0px' });
+    expect(screen.queryByRole('complementary', { name: 'Quick actions' })).not.toBeInTheDocument();
   });
 
   it('wires chart appointment rows with check-in context from the chart', () => {
@@ -622,10 +1236,40 @@ describe('Patient chart', () => {
       />,
     );
 
-    expect(screen.getByText(/General Consultation · Dr. Asha Mwinyi/)).toBeInTheDocument();
+    expect(screen.getByText('General Consultation')).toBeInTheDocument();
+    expect(screen.getByText('Dr. Asha Mwinyi')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reschedule' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('hides Cancel for appointments outside cancellable lifecycle states', () => {
+    state.url = '/patient/patient-1/chart/appointments';
+    state.canManage = true;
+    const nonCancellableStatuses = ['ARRIVED', 'IN_SERVICE', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', 'NO_SHOW'];
+
+    render(
+      <PatientChart
+        {...props}
+        chart={{
+          ...props.chart,
+          appointments: nonCancellableStatuses.map((status, index) => ({
+            id: `appt-${index}`,
+            number: `APT-${index}`,
+            resourceId: 'res-1',
+            appointmentTypeId: 'type-1',
+            appointmentTypeName: 'General Consultation',
+            resourceName: 'Dr. Asha Mwinyi',
+            start: '2030-05-06T09:00:00+03:00',
+            end: '2030-05-06T09:30:00+03:00',
+            status,
+            reason: null,
+          })),
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
   });
 
   it('keeps View but hides Reschedule and Cancel without manage permission', () => {
@@ -739,7 +1383,8 @@ describe('Patient chart', () => {
     });
     render(<PatientChart {...props} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Check in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Check in patient' }));
     expect(screen.getByRole('dialog', { name: 'Check in patient' })).toBeInTheDocument();
     const encounterType = screen.getByRole('combobox', { name: 'Encounter type' });
     fireEvent.change(encounterType, { target: { value: 'OUTPATIENT' } });
@@ -756,8 +1401,9 @@ describe('Patient chart', () => {
     render(<PatientChart {...props} />);
 
     expect(screen.getByRole('region', { name: 'Allergies' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Penicillin' })).toBeInTheDocument();
-    expect(screen.getByText('Rash')).toBeInTheDocument();
+    const allergies = screen.getByRole('region', { name: 'Allergies' });
+    expect(within(allergies).getByText('Penicillin')).toBeInTheDocument();
+    expect(within(allergies).getByText('Rash')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Patient details' })).not.toBeInTheDocument();
   });
 
@@ -804,7 +1450,7 @@ describe('Patient chart', () => {
     state.url = '/patient/patient-1/chart/conditions';
     render(<PatientChart {...props} />);
 
-    expect(screen.getByText('No conditions to display')).toBeInTheDocument();
+    expect(screen.getByText('No problems recorded')).toBeInTheDocument();
   });
 
   it('selects and renders populated visits from encounter history', () => {
@@ -835,10 +1481,10 @@ describe('Patient chart', () => {
       />,
     );
 
-    expect(screen.getByRole('region', { name: 'Visits' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'ENC-00000001' })).toBeInTheDocument();
-    expect(screen.getByText('Outpatient')).toBeInTheDocument();
-    expect(screen.getByText('Room 1')).toBeInTheDocument();
+    const visits = screen.getByRole('region', { name: 'Visits' });
+    expect(within(visits).getByText('ENC-00000001')).toBeInTheDocument();
+    expect(within(visits).getAllByText('Outpatient')).toHaveLength(2);
+    expect(within(visits).getByText('Room 1')).toBeInTheDocument();
   });
 
   it('renders the shared EmptyState for visits without history', () => {
@@ -846,22 +1492,108 @@ describe('Patient chart', () => {
     render(<PatientChart {...props} />);
 
     expect(screen.getByRole('region', { name: 'Visits' })).toBeInTheDocument();
-    expect(screen.getByText('No visits to display')).toBeInTheDocument();
+    expect(screen.getByText('No visits recorded')).toBeInTheDocument();
+  });
+
+  it('renders billing account context and humanized ledger entries', () => {
+    state.url = '/patient/patient-1/chart/billing-history';
+    render(
+      <PatientChart
+        {...props}
+        chart={{
+          ...props.chart,
+          billing: {
+            account: { accountNumber: 'FA-1', status: 'ACTIVE', currency: 'TZS' },
+            outstanding: {
+              financialAccountId: 'account-1',
+              currency: 'TZS',
+              chargedTotal: '100.00',
+              paidTotal: '40.00',
+              writeOffTotal: '0.00',
+              adjustmentTotal: '0.00',
+              settledTotal: '40.00',
+              outstanding: '60.00',
+              entryCount: 1,
+            },
+            ledger: [{
+              entryType: 'CHARGE',
+              direction: 'DEBIT',
+              amount: '100.00',
+              currency: 'TZS',
+              postedAt: '2026-09-01T10:00:00Z',
+            }],
+          },
+        }}
+      />,
+    );
+
+    const billing = screen.getByRole('region', { name: 'Billing' });
+    expect(within(billing).getByText('FA-1')).toBeInTheDocument();
+    expect(within(billing).getByText('60.00 TZS')).toBeInTheDocument();
+    expect(within(billing).getByText('Charge')).toBeInTheDocument();
+    expect(within(billing).getByText('Debit')).toBeInTheDocument();
+  });
+
+  it('renders lab reference ranges and released result status', () => {
+    state.url = '/patient/patient-1/chart/lab-results';
+    render(
+      <PatientChart
+        {...props}
+        chart={{
+          ...props.chart,
+          labOrders: [{
+            orderId: 'lab-order-1',
+            orderNumber: 'LAB-1',
+            priority: 'ROUTINE',
+            status: 'COMPLETED',
+            createdAt: '2026-09-01T10:00:00Z',
+            items: [{ testCode: 'HGB', testName: 'Hemoglobin', status: 'COMPLETED' }],
+          }, {
+            orderId: 'lab-order-old',
+            orderNumber: 'LAB-OLD',
+            priority: 'ROUTINE',
+            status: 'COMPLETED',
+            createdAt: '2025-09-01T10:00:00Z',
+            items: [{ testCode: 'WBC', testName: 'White blood cells', status: 'COMPLETED' }],
+          }],
+          labResults: {
+            'lab-order-1': [{
+              id: 'lab-result-1',
+              parameter: 'Hemoglobin',
+              value: '9.5',
+              unit: 'g/dL',
+              flag: 'LOW',
+              referenceLow: '12',
+              referenceHigh: '16',
+              referenceText: null,
+              status: 'FINAL',
+              releasedAt: '2026-09-02T10:00:00Z',
+            }],
+          },
+        }}
+      />,
+    );
+
+    const results = screen.getByRole('region', { name: 'Lab results' });
+    expect(within(results).getByText('12 – 16')).toBeInTheDocument();
+    expect(within(results).getByText('Final')).toBeInTheDocument();
+    expect(within(results).getByText('Low')).toBeInTheDocument();
+    expect(within(results).getByText('Results not loaded')).toBeInTheDocument();
   });
 
   it('renders the restricted state for a restricted section', () => {
     state.url = '/patient/patient-1/chart/medications';
     render(<PatientChart {...props} chart={{ ...props.chart, restricted: ['medications'] }} />);
 
-    expect(screen.getByText('Restricted section')).toBeInTheDocument();
-    expect(screen.queryByText('No medications to display')).not.toBeInTheDocument();
+    expect(screen.getByText('Restricted for your role')).toBeInTheDocument();
+    expect(screen.queryByText('No medications recorded')).not.toBeInTheDocument();
   });
 
-  it('renders the shared ErrorState for an unavailable section', () => {
+  it('renders the unavailable state for an unavailable section', () => {
     state.url = '/patient/patient-1/chart/imaging';
     render(<PatientChart {...props} chart={{ ...props.chart, unavailable: ['orders'] }} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Orders unavailable');
-    expect(screen.queryByText('No imaging to display')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Section temporarily unavailable');
+    expect(screen.queryByText('No imaging orders')).not.toBeInTheDocument();
   });
 });

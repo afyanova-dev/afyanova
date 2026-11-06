@@ -3,22 +3,57 @@
  */
 
 
-.front-desk-queue-destination.cds--inline-notification {
-  min-block-size: 0;
+.front-desk-check-in-preview {
+  display: grid;
+  gap: var(--cds-spacing-05, 1rem);
+  margin-block-start: var(--cds-spacing-05, 1rem);
+  padding: var(--cds-spacing-05, 1rem);
+  border: 1px solid var(--cds-border-subtle-01, #c6c6c6);
+  border-inline-start: 3px solid var(--cds-border-interactive, #0f62fe);
+  border-radius: 0.25rem;
+  background: var(--cds-layer-01, #f4f4f4);
+}
+
+.front-desk-check-in-preview h3 {
+  margin: 0;
+  color: var(--cds-text-primary, #161616);
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+}
+
+.front-desk-check-in-preview__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cds-spacing-05, 1rem);
+  margin: 0;
+}
+
+.front-desk-check-in-preview__details > div {
+  display: grid;
+  align-content: start;
+  gap: var(--cds-spacing-02, 0.25rem);
   min-inline-size: 0;
-  max-inline-size: none;
 }
 
-.front-desk-queue-destination .cds--inline-notification__details {
-  margin-inline: 0.5rem;
+.front-desk-check-in-preview__details dt {
+  margin: 0;
+  color: var(--cds-text-secondary, #525252);
+  font-size: var(--cds-label-01-font-size, 0.75rem);
 }
 
-.front-desk-queue-destination .cds--inline-notification__icon {
-  margin-block-start: 0.5rem;
+.front-desk-check-in-preview__details dd {
+  margin: 0;
+  color: var(--cds-text-primary, #161616);
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-.front-desk-queue-destination .cds--inline-notification__text-wrapper {
-  padding-block: 0.5rem;
+@media (max-width: 26rem) {
+  .front-desk-check-in-preview__details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--cds-spacing-04, 0.75rem);
+  }
 }
 
 /* ---- Front Desk (Today board) ---- */
@@ -140,48 +175,4 @@
 .front-desk-row__meta {
   margin: 0;
   overflow-wrap: anywhere;
-}
-
-/* Front-desk visit summary peek (roster rows): plain trigger. The panel
-   portals to the body with fixed positioning so it never stretches the
-   table's scroll region into a horizontal scrollbar. */
-.front-desk-visit-summary__anchor {
-  display: inline;
-}
-
-.front-desk-visit-summary__trigger {
-  padding: 0;
-  text-align: start;
-}
-
-.front-desk-visit-summary__panel {
-  position: fixed;
-  z-index: 9000;
-  inline-size: max-content;
-  max-inline-size: 20rem;
-  padding: var(--cds-spacing-04, 0.75rem) var(--cds-spacing-05, 1rem);
-}
-
-.front-desk-visit-summary__title {
-  margin: 0 0 var(--cds-spacing-03, 0.5rem);
-}
-
-.front-desk-visit-summary__list {
-  display: grid;
-  gap: var(--cds-spacing-02, 0.25rem);
-  margin: 0;
-}
-
-.front-desk-visit-summary__list > div {
-  display: flex;
-  gap: var(--cds-spacing-03, 0.5rem);
-}
-
-.front-desk-visit-summary__list dt {
-  flex: none;
-  min-inline-size: 6rem;
-}
-
-.front-desk-visit-summary__list dd {
-  margin: 0;
 }

@@ -11,7 +11,8 @@ use InvalidArgumentException;
 
 /**
  * Read one Pharmacy Order (16-pharmacy-domain.md §22; ADR-182 D-E).
- * `view` gates on the coarse `pharmacy.access`.
+ * `view` gates on the coarse `pharmacy.access`; the handler applies
+ * current-context facility authorization.
  */
 #[ProtectedQuery(ability: 'view', subjectType: PharmacyOrder::class)]
 final readonly class GetPharmacyOrder

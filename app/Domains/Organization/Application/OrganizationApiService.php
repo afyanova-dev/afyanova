@@ -6,6 +6,7 @@ namespace App\Domains\Organization\Application;
 
 use App\Domains\Organization\Contracts\Dto\FacilityStructure;
 use App\Domains\Organization\Contracts\Dto\InitialTenantStructure;
+use App\Domains\Organization\Contracts\Dto\RoomSummary;
 use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Domains\Organization\Infrastructure\Reader\CapabilityReader;
 use App\Domains\Organization\Infrastructure\Reader\FacilityReader;
@@ -55,6 +56,16 @@ final class OrganizationApiService implements OrganizationApi
     public function roomExists(string $facilityId, string $roomId): bool
     {
         return $this->structure->roomExists($facilityId, $roomId);
+    }
+
+    public function activeRoomsForFacility(string $facilityId): array
+    {
+        return $this->structure->activeRoomsForFacility($facilityId);
+    }
+
+    public function activeRoomForFacility(string $facilityId, string $roomId): ?RoomSummary
+    {
+        return $this->structure->activeRoomForFacility($facilityId, $roomId);
     }
 
     public function getFacilityStructure(string $facilityId): ?FacilityStructure

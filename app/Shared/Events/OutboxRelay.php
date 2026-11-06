@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 use stdClass;
 use Throwable;
@@ -74,13 +75,14 @@ final class OutboxRelay extends Command
     {
         try {
             $event = $this->hydrate($row);
+            $facilityId = $this->facilityId($event);
 
             foreach (EventRegistry::listeners((string) $row->event_class) as $listenerClass) {
                 DispatchListenerJob::dispatch(
                     (string) $row->tenant_id,
                     $listenerClass,
                     $event,
-                    null,
+                    $facilityId,
                     $row->correlation_id !== null ? (string) $row->correlation_id : null,
                     (string) $row->id, // the delivered event is the cause of anything the listener does
                 );
@@ -141,6 +143,21 @@ final class OutboxRelay extends Command
         $payload = json_decode((string) $row->payload, true, 512, JSON_THROW_ON_ERROR);
 
         return new $class(...$payload);
+    }
+
+    private function facilityId(object $event): ?string
+    {
+        $properties = get_object_vars($event);
+        if (! array_key_exists('facilityId', $properties) || $properties['facilityId'] === null) {
+            return null;
+        }
+
+        $facilityId = $properties['facilityId'];
+        if (! is_string($facilityId) || ! Str::isUuid($facilityId)) {
+            throw new RuntimeException('Outbox event ['.$event::class.'] has an invalid facilityId.');
+        }
+
+        return $facilityId;
     }
 
     private function backoff(int $attempts): int

@@ -146,7 +146,7 @@ describe('Inventory catalogue filters', () => {
     expect(screen.getByRole('row', { name: /PARA-500/ })).toBeInTheDocument();
     expect(screen.queryByRole('row', { name: /GLOVE-M/ })).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search item catalogue' }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search inventory items' }), {
       target: { value: 'analgesics' },
     });
     expect(screen.getByRole('row', { name: /PARA-500/ })).toBeInTheDocument();

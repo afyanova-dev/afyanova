@@ -13,6 +13,8 @@ import {
   procurementSectionFromUrl,
 } from '@/layouts/AppLayout/navigation';
 import { AppSideNav } from '@/layouts/AppLayout/SideNav';
+import { workspaceIcon } from '@/layouts/AppLayout/workspaceIcon';
+import { Flow, HealthCross, List, Microscope, UserSettings } from '@/icons';
 
 const state = vi.hoisted(() => ({
   post: vi.fn(),
@@ -30,14 +32,18 @@ const state = vi.hoisted(() => ({
       'encounter.encounters.read': true,
       'sch.access': true,
       'queue.ticket.view': true,
+      'queue.definition.manage': false,
       'clinical.access': true,
       'clinical.triage.record': true,
       'clinical.consultations.read': true,
+      'clinical.diagnoses.read': false,
       'clinical.notes.create': true,
       'billing.access': true,
       'pharmacy.access': true,
       'inventory.access': true,
       'procurement.access': true,
+      'laboratory.catalog.read': false,
+      'laboratory.catalog.manage': false,
       'hr.person.manage': false,
       'hr.staff.read': false,
       'hr.staff.manage': false,
@@ -80,6 +86,7 @@ const allPermissions = [
   permissions.encounter.read,
   permissions.scheduling.access,
   permissions.queue.ticketView,
+  permissions.queue.definitionManage,
   permissions.clinical.access,
   permissions.clinical.triageRecord,
   permissions.clinical.consultationsRead,
@@ -124,13 +131,14 @@ describe('two-level workspace navigation', () => {
 
     // Only slices with real pages are offered; unbuilt workspaces stay
     // hidden until their slice lands (BUILT_WORKSPACES). Full list lives in
-    // the app-menu Switcher; direct header icon buttons are Patients + Register.
+    // the app-menu Switcher; registration remains the direct header shortcut.
     expect(navigation.workspaces.map((item) => item.label)).toEqual([
       'Dashboard',
       'Admin',
       'Patients',
       'Appointments',
       'Front Desk',
+      'Patient Flow',
       'Service Queues',
       'Nurse Station',
       'Clinician',
@@ -141,11 +149,7 @@ describe('two-level workspace navigation', () => {
     ]);
     expect(navigation.activeWorkspace).toBe('patients');
     expect(navigation.workspaces.find((item) => item.id === 'patients')?.active).toBe(true);
-    expect(navigation.primaryLinks.map((item) => item.label)).toEqual(['Patients', 'Register']);
-    expect(navigation.primaryLinks.find((item) => item.id === 'primary-patients')).toMatchObject({
-      href: '/workspaces/patient',
-      active: true,
-    });
+    expect(navigation.primaryLinks.map((item) => item.label)).toEqual(['Register']);
     // No two-item sidebar on list pages — header + Switcher own that choice.
     expect(navigation.sidebar).toEqual([]);
   });
@@ -191,9 +195,19 @@ describe('two-level workspace navigation', () => {
     expect(createOnly.workspaces.some((item) => item.id === 'attention')).toBe(false);
 
     const readOnly = workspaceNavigation('/workspaces/patient', canWith(permissions.patient.read));
-    expect(readOnly.primaryLinks.map((item) => item.id)).toEqual(['primary-patients']);
+    expect(readOnly.primaryLinks).toEqual([]);
     expect(readOnly.sidebar).toEqual([]);
     expect(readOnly.workspaces.find((item) => item.id === 'patients')?.href).toBe('/workspaces/patient');
+  });
+
+  it('shows the laboratory catalog to read-only catalog users', () => {
+    const navigation = workspaceNavigation(
+      '/workspaces/laboratory/catalog',
+      canWith(permissions.laboratory.catalogRead),
+    );
+
+    expect(navigation.activeWorkspace).toBe('laboratory');
+    expect(navigation.workspaces.map((item) => item.id)).toEqual(['dashboard', 'laboratory']);
   });
 
   it('requires consultation access separately from clinical note creation', () => {
@@ -214,6 +228,27 @@ describe('two-level workspace navigation', () => {
     expect(clinicianNavigation.workspaces.some((item) => item.id === 'clinician')).toBe(true);
   });
 
+  it('shows diagnosis catalogue in the app menu with read access even without diagnosis creation access', () => {
+    const navigation = workspaceNavigation('/workspaces/clinician', canWith(
+      permissions.clinical.access,
+      permissions.clinical.diagnosesRead,
+    ));
+
+    expect(navigation.appMenuItems.find((item) => item.id === 'clinician-diagnosis-catalog')).toMatchObject({
+      label: 'Diagnosis catalogue',
+      href: '/workspaces/clinician/diagnoses',
+      active: false,
+    });
+  });
+
+  it('hides diagnosis catalogue from the app menu without diagnosis read access', () => {
+    const navigation = workspaceNavigation('/workspaces/clinician', canWith(
+      permissions.clinical.access,
+    ));
+
+    expect(navigation.appMenuItems.some((item) => item.id === 'clinician-diagnosis-catalog')).toBe(false);
+  });
+
   it('turns the sidebar into the chart section list on chart pages', () => {
     expect(workspaceNavigation('/workspaces/patient', canWith(permissions.patient.read)).sidebar).toEqual([]);
     expect(workspaceNavigation('/workspaces/patient/register', canWith(permissions.patient.create)).primaryLinks[0]).toMatchObject({
@@ -223,15 +258,16 @@ describe('two-level workspace navigation', () => {
 
     const chart = workspaceNavigation('/patient/patient-123/chart/lab-results', canWith(permissions.patient.read));
     expect(chart.activeWorkspace).toBe('patients');
-    expect(chart.sidebar).toHaveLength(14);
+    expect(chart.sidebar).toHaveLength(15);
     expect(chart.sidebar.map((item) => item.id)).toEqual([
       'chart-overview',
-      'chart-allergies',
+      'chart-timeline',
       'chart-conditions',
-      'chart-procedures',
-      'chart-plans',
-      'chart-vitals',
+      'chart-allergies',
       'chart-medications',
+      'chart-vitals',
+      'chart-plans',
+      'chart-procedures',
       'chart-lab-results',
       'chart-imaging',
       'chart-appointments',
@@ -243,6 +279,15 @@ describe('two-level workspace navigation', () => {
     expect(chart.sidebar.find((item) => item.id === 'chart-lab-results')).toMatchObject({
       href: '/patient/patient-123/chart/lab-results',
       active: true,
+      group: 'Diagnostics',
+    });
+    expect(chart.sidebar.find((item) => item.id === 'chart-conditions')).toMatchObject({
+      label: 'Problems',
+      group: 'Clinical',
+    });
+    expect(chart.sidebar.find((item) => item.id === 'chart-timeline')).toMatchObject({
+      href: '/patient/patient-123/chart/timeline',
+      group: undefined,
     });
     expect(chart.sidebar.find((item) => item.id === 'chart-overview')).toMatchObject({
       href: '/patient/patient-123/chart/overview',
@@ -333,7 +378,7 @@ describe('two-level workspace navigation', () => {
     }));
   });
 
-  it('gives the staff profile sidebar the same chart treatment (width and right border)', () => {
+  it('gives the staff profile sidebar the same chart navigation treatment', () => {
     installMatchMedia();
     const profile = workspaceNavigation(
       '/workspaces/hr/staff/staff-123?section=employment',
@@ -357,18 +402,72 @@ describe('two-level workspace navigation', () => {
     unmount();
 
     const chart = workspaceNavigation('/patient/patient-123/chart', canWith(permissions.patient.read));
+    const onChartNavigate = vi.fn();
     const { unmount: unmountChart } = render(
       <AppSideNav
         expanded
         isDesktop
         workspace={chart.activeWorkspace}
         items={chart.sidebar}
-        onNavigate={vi.fn()}
+        onNavigate={onChartNavigate}
       />,
     );
     expect(screen.getByRole('navigation', { name: 'Workspace navigation' }))
       .toHaveClass('afyanova-chart-side-nav');
+    const chartNavigation = screen.getByRole('tree', { name: 'Patient chart sections' });
+    for (const group of ['Clinical', 'Diagnostics', 'Care']) {
+      const groupNode = chartNavigation.querySelector(`#chart-group-${group.toLowerCase()}`);
+      expect(groupNode)
+        .toHaveAttribute('role', 'treeitem');
+      expect(groupNode)
+        .toHaveAttribute('aria-expanded', 'true');
+    }
+    for (const item of chart.sidebar) {
+      expect(within(chartNavigation).getByRole('treeitem', { name: item.label }))
+        .toBeVisible();
+    }
+    const summary = within(chartNavigation).getByRole('treeitem', { name: 'Patient Summary' });
+    expect(summary).toHaveAttribute('href', '/patient/patient-123/chart/overview');
+    expect(summary).toHaveAttribute('aria-current', 'page');
+    const timeline = within(chartNavigation).getByRole('treeitem', { name: 'Timeline' });
+    expect(timeline).toHaveAttribute('href', '/patient/patient-123/chart/timeline');
+    const billing = within(chartNavigation).getByRole('treeitem', { name: 'Billing' });
+    expect(billing).toHaveAttribute('href', '/patient/patient-123/chart/billing-history');
+    expect(billing.closest('.cds--tree-parent-node')).toBeNull();
+    expect(chartNavigation.querySelector('#chart-group-record')).toBeNull();
+
+    const clinicalGroup = chartNavigation.querySelector('#chart-group-clinical');
+    const clinicalToggle = clinicalGroup!.querySelector('.cds--tree-parent-node__toggle');
+    expect(clinicalToggle).not.toBeNull();
+    fireEvent.click(clinicalToggle!);
+    expect(clinicalGroup).toHaveAttribute('aria-expanded', 'false');
+    const clinicalSubtree = chartNavigation.querySelector('#chart-group-clinical-subtree');
+    expect(clinicalSubtree).toHaveClass('cds--tree-node--hidden');
+    fireEvent.click(clinicalToggle!);
+    expect(clinicalGroup).toHaveAttribute('aria-expanded', 'true');
+    expect(clinicalSubtree).not.toHaveClass('cds--tree-node--hidden');
+
+    timeline.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    fireEvent.click(timeline);
+    expect(onChartNavigate).toHaveBeenCalledOnce();
     unmountChart();
+
+    const problemsChart = workspaceNavigation('/patient/patient-123/chart/conditions', canWith(permissions.patient.read));
+    const { unmount: unmountProblemsChart } = render(
+      <AppSideNav
+        expanded
+        isDesktop
+        workspace={problemsChart.activeWorkspace}
+        items={problemsChart.sidebar}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const problemsNavigation = screen.getByRole('tree', { name: 'Patient chart sections' });
+    expect(problemsNavigation.querySelector('#chart-group-clinical'))
+      .toHaveAttribute('aria-expanded', 'true');
+    expect(within(problemsNavigation).getByRole('treeitem', { name: 'Problems' }))
+      .toHaveAttribute('aria-current', 'page');
+    unmountProblemsChart();
 
     render(
       <AppSideNav
@@ -386,6 +485,26 @@ describe('two-level workspace navigation', () => {
     );
     expect(screen.getByRole('navigation', { name: 'Workspace navigation' }))
       .not.toHaveClass('afyanova-chart-side-nav');
+  });
+
+  it('navigates patient chart tree links through Inertia', () => {
+    state.visit.mockReset();
+    const chart = workspaceNavigation('/patient/patient-123/chart', canWith(permissions.patient.read));
+    const onNavigate = vi.fn();
+    render(
+      <AppSideNav
+        expanded
+        isDesktop
+        workspace={chart.activeWorkspace}
+        items={chart.sidebar}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('treeitem', { name: 'Timeline' }));
+
+    expect(state.visit).toHaveBeenCalledWith('/patient/patient-123/chart/timeline');
+    expect(onNavigate).toHaveBeenCalledOnce();
   });
 
   it('keeps the pharmacy workspace free of sidebar navigation — views switch through tabs', () => {
@@ -411,9 +530,17 @@ describe('two-level workspace navigation', () => {
     expect(visibleWorkspaces(canWith(permissions.pharmacy.access)).map((item) => item.id))
       .toEqual(['dashboard', 'pharmacy']);
     expect(visibleWorkspaces(canWith(...allPermissions)).map((item) => item.id))
-      .toEqual(['dashboard', 'admin', 'patients', 'appointments', 'reception', 'serviceQueues', 'nurseStation', 'clinician', 'billing', 'pharmacy', 'inventory', 'procurement']);
+      .toEqual(['dashboard', 'admin', 'patients', 'appointments', 'reception', 'patientFlow', 'serviceQueues', 'nurseStation', 'clinician', 'billing', 'pharmacy', 'inventory', 'procurement']);
     expect(visibleWorkspaces(canWith(permissions.admin.workspaceAccess)).map((item) => item.id))
       .toEqual(['admin']);
+    expect(visibleWorkspaces(canWith(permissions.admin.workspaceAccess), false, true).map((item) => item.id))
+      .toEqual(['admin', 'laboratoryCatalogEditors']);
+    expect(workspaceNavigation(
+      '/workspaces/admin',
+      canWith(permissions.admin.workspaceAccess),
+      false,
+      true,
+    ).workspaces.map((item) => item.id)).toEqual(['admin', 'laboratoryCatalogEditors']);
     expect(visibleWorkspaces(canWith(permissions.hr.staffManage)).map((item) => item.id))
       .toEqual(['dashboard', 'hrStaff']);
     expect(workspaceNavigation('/workspaces/hr/staff', canWith(permissions.hr.staffManage))).toMatchObject({
@@ -431,7 +558,7 @@ describe('two-level workspace navigation', () => {
     expect(workspaceNavigation('/workspaces/admin', canWith(
       permissions.admin.workspaceAccess,
       permissions.identity.assignmentsManage,
-    )).appMenuItems).toContainEqual(expect.objectContaining({
+    )).sidebar).toContainEqual(expect.objectContaining({
       id: 'admin-staff-assignments',
       label: 'Staff placements to review',
       href: '/workspaces/hr/staff/onboarding?focus=placements',
@@ -468,43 +595,48 @@ describe('two-level workspace navigation', () => {
         expect.objectContaining({ id: 'admin', label: 'Admin', href: '/workspaces/admin', active: true }),
       ],
       appMenuItems: [
-        expect.objectContaining({ id: 'admin-overview', label: 'Admin overview', active: true }),
+        expect.objectContaining({ id: 'admin', label: 'Admin', active: true }),
       ],
-      sidebar: [],
+      sidebar: [
+        expect.objectContaining({ id: 'admin-overview', label: 'Overview', active: true }),
+      ],
     });
     const auditNavigation = workspaceNavigation('/workspaces/admin/audit', canWith(
       permissions.admin.workspaceAccess,
       permissions.audit.eventsRead,
     ));
-    expect(auditNavigation.sidebar).toEqual([]);
-    expect(auditNavigation.appMenuItems).toContainEqual(
+    expect(auditNavigation.sidebar).toContainEqual(
       expect.objectContaining({ id: 'admin-audit', href: '/workspaces/admin/audit', active: true }),
+    );
+    expect(auditNavigation.appMenuItems).toContainEqual(
+      expect.objectContaining({ id: 'admin', href: '/workspaces/admin', active: true }),
     );
     const organizationNavigation = workspaceNavigation('/workspaces/admin/organization', canWith(
       permissions.admin.workspaceAccess,
       permissions.organization.facilitiesRead,
     ));
-    expect(organizationNavigation.sidebar).toEqual([]);
-    expect(organizationNavigation.appMenuItems).toContainEqual(expect.objectContaining({
+    expect(organizationNavigation.sidebar).toContainEqual(expect.objectContaining({
       id: 'admin-organization',
       href: '/workspaces/admin/organization',
       active: true,
     }));
+    expect(organizationNavigation.appMenuItems).toContainEqual(
+      expect.objectContaining({ id: 'admin', href: '/workspaces/admin', active: true }),
+    );
     expect(workspaceNavigation('/workspaces/admin/organization', canWith(
       permissions.admin.workspaceAccess,
-    )).appMenuItems).not.toContainEqual(expect.objectContaining({ id: 'admin-organization' }));
+    )).sidebar).not.toContainEqual(expect.objectContaining({ id: 'admin-organization' }));
     const approvalsNavigation = workspaceNavigation('/workspaces/admin/identity/role-promotions', canWith(
       permissions.admin.workspaceAccess,
       permissions.identity.assignmentsRead,
     ));
-    expect(approvalsNavigation.sidebar).toEqual([]);
-    expect(approvalsNavigation.appMenuItems).toContainEqual(
+    expect(approvalsNavigation.sidebar).toContainEqual(
       expect.objectContaining({ id: 'admin-role-promotions', href: '/workspaces/admin/identity/role-promotions', active: true }),
     );
     expect(workspaceNavigation('/workspaces/admin/audit', canWith(
       permissions.admin.workspaceAccess,
-    )).appMenuItems).toEqual([
-      expect.objectContaining({ id: 'admin-overview' }),
+    )).sidebar).toEqual([
+      expect.objectContaining({ id: 'admin-overview', label: 'Overview' }),
     ]);
     expect(workspaceForUrl('/settings/sessions')).toBeNull();
   });
@@ -546,8 +678,23 @@ describe('two-level workspace navigation', () => {
     expect(workspaceForUrl('/workspaces/procurement/suppliers')).toBe('procurement');
   });
 
-  it('resolves the Service Queues workspace for queue viewers', () => {
-    expect(workspaceForUrl('/workspaces/service-queues')).toBe('serviceQueues');
+  it('resolves Patient Flow and Service Queues by their route, permission, and icon', () => {
+    expect(workspaceForUrl('/workspaces/service-queues')).toBe('patientFlow');
+    expect(workspaceForUrl('/workspaces/service-queues/manage')).toBe('serviceQueues');
+    expect(workspaceIcon('patientFlow')).toBe(Flow);
+    expect(workspaceIcon('serviceQueues')).toBe(List);
+  });
+
+  it('uses a clinical icon for the diagnosis catalogue app menu entry', () => {
+    expect(workspaceIcon('clinician-diagnosis-catalog')).toBe(HealthCross);
+  });
+
+  it('uses a staff-access icon for Laboratory Test Setup Access', () => {
+    expect(workspaceIcon('laboratoryCatalogEditors')).toBe(UserSettings);
+  });
+
+  it('uses a microscope icon for Lab Tests & Panels', () => {
+    expect(workspaceIcon('laboratory')).toBe(Microscope);
   });
 
   it('resolves the Inventory workspace for inventory viewers', () => {
@@ -569,7 +716,7 @@ describe('two-level workspace navigation', () => {
       'Stock counts',
       'Adjustments',
       'Reservations',
-      'Item catalogue',
+      'Inventory Items',
       'Locations & types',
     ]);
     expect(inventory.sidebar.find((item) => item.id === 'inventory-overview')?.active).toBe(true);
@@ -582,15 +729,28 @@ describe('two-level workspace navigation', () => {
     expect(withReceipts.sidebar.find((item) => item.id === 'inventory-receipts')?.active).toBe(true);
     expect(inventorySectionFromUrl('/workspaces/inventory?section=receipts')).toBe('receipts');
     const queues = workspaceNavigation('/workspaces/service-queues', canWith(permissions.queue.ticketView));
-    expect(queues.activeWorkspace).toBe('serviceQueues');
+    expect(queues.activeWorkspace).toBe('patientFlow');
     expect(queues.workspaces).toContainEqual(expect.objectContaining({
-      id: 'serviceQueues',
-      label: 'Service Queues',
+      id: 'patientFlow',
+      label: 'Patient Flow',
       href: '/workspaces/service-queues',
       active: true,
     }));
     expect(workspaceNavigation('/workspaces/service-queues', canWith(permissions.queue.ticketPlace)).workspaces)
-      .not.toContainEqual(expect.objectContaining({ id: 'serviceQueues' }));
+      .not.toContainEqual(expect.objectContaining({ id: 'patientFlow' }));
+
+    const configuration = workspaceNavigation(
+      '/workspaces/service-queues/manage',
+      canWith(permissions.queue.definitionManage),
+    );
+    expect(configuration.activeWorkspace).toBe('serviceQueues');
+    expect(configuration.workspaces).toContainEqual(expect.objectContaining({
+      id: 'serviceQueues',
+      label: 'Service Queues',
+      href: '/workspaces/service-queues/manage',
+      active: true,
+    }));
+    expect(configuration.workspaces).not.toContainEqual(expect.objectContaining({ id: 'patientFlow' }));
   });
 
   it('resolves the Front Desk workspace with no contextual sidebar', () => {
@@ -746,26 +906,23 @@ describe('application header context', () => {
 
     const header = screen.getByRole('link', { name: 'AfyaNova' }).closest('header');
     if (!header) throw new Error('Header name is not in the header.');
-    // Text links are gone — Patients/Register are icon buttons in the
-    // utility cluster, not a Primary nav.
+    // Patients is available in the app menu; Register remains a header icon
+    // shortcut in the utility cluster, not a Primary nav.
     expect(screen.queryByRole('navigation', { name: 'Primary' })).not.toBeInTheDocument();
     expect(header.querySelector('.afyanova-primary-link')).toBeNull();
     const searchBox = screen.getByRole('combobox', { name: 'Search patients' });
     if (!header.contains(searchBox)) throw new Error('Patient quick search is not in the header.');
 
-    const patientsAction = screen.getByRole('button', { name: 'Patients' });
+    expect(screen.queryByRole('button', { name: 'Patients' })).not.toBeInTheDocument();
     const registerAction = screen.getByRole('button', { name: 'Register' });
-    expect(patientsAction).toHaveClass('cds--header__action--active');
     expect(registerAction).not.toHaveClass('cds--header__action--active');
 
     // Left-to-right order: facility context sits beside the app name, then
     // the expandable search first in the utility cluster (expanding grows
-    // leftward without shoving the icon buttons), then patient tasks.
+    // leftward without shoving the registration shortcut).
     const facilityButton = screen.getByRole('button', { name: 'Central Clinic' });
     expect(facilityButton).toBeInTheDocument();
     expect(facilityButton.compareDocumentPosition(searchBox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(searchBox.compareDocumentPosition(patientsAction) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
     fireEvent.click(registerAction);
     expect(state.visit).toHaveBeenCalledWith('/workspaces/patient/register');
 
@@ -773,6 +930,7 @@ describe('application header context', () => {
     expect(appMenu).toBeInTheDocument();
     fireEvent.click(appMenu);
     expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Patients' })).toHaveAttribute('href', '/workspaces/patient');
     expect(screen.getByRole('link', { name: 'Appointments' })).toHaveAttribute('href', '/workspaces/appointments/calendar');
     const profileMenu = screen.getByRole('button', { name: 'Account menu for Amina' });
     expect(profileMenu).toBeInTheDocument();
@@ -857,7 +1015,7 @@ describe('application header context', () => {
     }
   });
 
-  it('shows only the permitted primary icon button', () => {
+  it('keeps Patients in the app menu instead of rendering a header icon button', () => {
     installResizeObserver();
     const readOnly = workspaceNavigation('/workspaces/patient', canWith(permissions.patient.read));
     const { unmount } = render(
@@ -875,12 +1033,14 @@ describe('application header context', () => {
       { wrapper: CarbonThemeProvider },
     );
 
-    expect(screen.getByRole('button', { name: 'Patients' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Patients' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Register' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'App menu' }));
+    expect(screen.getByRole('link', { name: 'Patients' })).toHaveAttribute('href', '/workspaces/patient');
     unmount();
   });
 
-  it('shows permission-filtered Admin destinations in the app menu without a contextual sidebar', () => {
+  it('shows Admin in the app menu and permission-filtered destinations in the contextual sidebar', () => {
     installResizeObserver();
     const navigation = workspaceNavigation('/workspaces/admin/organization', canWith(
       permissions.admin.workspaceAccess,
@@ -902,18 +1062,21 @@ describe('application header context', () => {
     );
 
     expect(navigation.workspaces.map((item) => item.label)).toEqual(['Admin']);
-    expect(navigation.appMenuItems.map((item) => item.label)).toEqual(['Admin overview', 'Organization & facilities']);
+    expect(navigation.appMenuItems.map((item) => item.label)).toEqual(['Admin']);
+    expect(navigation.sidebar.map((item) => item.label)).toEqual(['Overview', 'Organization & facilities']);
     expect(screen.getByRole('link', { name: 'AfyaNova' })).toHaveAttribute('href', '/workspaces/admin');
-    expect(screen.queryByRole('button', { name: 'Open contextual navigation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open contextual navigation' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'App menu' }));
     expect(screen.getByRole('list', { name: 'App navigation' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Organization & facilities' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Organization & facilities' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Lab Test Setup Access' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Audit log' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('link', { name: 'Organization & facilities' }));
-    expect(state.visit).toHaveBeenCalledWith('/workspaces/admin/organization');
+    fireEvent.click(screen.getByRole('link', { name: 'Admin' }));
+    expect(state.visit).toHaveBeenCalledWith('/workspaces/admin');
   });
 
-  it('keeps Admin destinations in the app menu after navigating to Dashboard', () => {
+  it('keeps Admin in the app menu after navigating to Dashboard', () => {
     const permissionsForFacilityAdmin = [
       permissions.admin.workspaceAccess,
       permissions.organization.facilitiesRead,
@@ -933,19 +1096,18 @@ describe('application header context', () => {
     expect(dashboardNavigation.appMenuItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'dashboard', label: 'Dashboard', active: true }),
-        expect.objectContaining({ id: 'admin-overview', label: 'Admin overview', active: false }),
-        expect.objectContaining({ id: 'admin-organization', label: 'Organization & facilities' }),
-        expect.objectContaining({ id: 'admin-role-promotions', label: 'Role approvals' }),
+        expect.objectContaining({ id: 'admin', label: 'Admin', active: false }),
       ]),
     );
     expect(dashboardNavigation.appMenuItems.map(({ id }) => id)).toEqual(
       adminNavigation.appMenuItems.map(({ id }) => id),
     );
-    expect(dashboardNavigation.appMenuItems.find((item) => item.id === 'admin-organization')?.active).toBe(false);
-    expect(adminNavigation.appMenuItems.find((item) => item.id === 'admin-organization')?.active).toBe(true);
+    expect(dashboardNavigation.appMenuItems.find((item) => item.id === 'admin')?.active).toBe(false);
+    expect(adminNavigation.appMenuItems.find((item) => item.id === 'admin')?.active).toBe(true);
+    expect(adminNavigation.sidebar.find((item) => item.id === 'admin-organization')?.active).toBe(true);
   });
 
-  it('renders both Dashboard and permitted Admin destinations in the dashboard app menu', () => {
+  it('renders both Dashboard and Admin in the dashboard app menu', () => {
     installResizeObserver();
     const navigation = workspaceNavigation('/dashboard', canWith(
       permissions.admin.workspaceAccess,
@@ -969,15 +1131,10 @@ describe('application header context', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'App menu' }));
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard');
-    expect(screen.getByRole('link', { name: 'Admin overview' })).toHaveAttribute('href', '/workspaces/admin');
-    expect(screen.getByRole('link', { name: 'Organization & facilities' })).toHaveAttribute(
-      'href',
-      '/workspaces/admin/organization',
-    );
-    expect(screen.getByRole('link', { name: 'Role approvals' })).toHaveAttribute(
-      'href',
-      '/workspaces/admin/identity/role-promotions',
-    );
+    expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/workspaces/admin');
+    expect(screen.queryByRole('link', { name: 'Admin overview' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Organization & facilities' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Role approvals' })).not.toBeInTheDocument();
   });
 
   it('routes Switcher selections through the visit endpoint and closes the panel', () => {

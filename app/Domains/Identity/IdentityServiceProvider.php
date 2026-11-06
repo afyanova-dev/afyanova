@@ -10,6 +10,7 @@ use App\Domains\Identity\Application\LinkedStaffGrantEligibility;
 use App\Domains\Identity\Console\ManageAssignmentCommand;
 use App\Domains\Identity\Console\ManageRoleCommand;
 use App\Domains\Identity\Console\ManageStaffIdentityCommand;
+use App\Domains\Identity\Console\SyncLinkedStaffIdentitiesCommand;
 use App\Domains\Identity\Console\SyncRolePermissionsCommand;
 use App\Domains\Identity\Contracts\IdentityApi;
 use App\Domains\Identity\Contracts\LinkedStaffAccessGate;
@@ -45,6 +46,7 @@ final class IdentityServiceProvider extends ServiceProvider
                 ManageRoleCommand::class,
                 ManageAssignmentCommand::class,
                 ManageStaffIdentityCommand::class,
+                SyncLinkedStaffIdentitiesCommand::class,
                 SyncRolePermissionsCommand::class,
             ]);
         }

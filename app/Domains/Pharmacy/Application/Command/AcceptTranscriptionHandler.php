@@ -47,10 +47,11 @@ final class AcceptTranscriptionHandler
         $itemId = (string) $command->medication['inventory_item_id'];
         $item = $this->inventory->getItem($itemId);
         if ($item === null || ! $item->active || $item->itemType !== 'MEDICATION') {
-            throw new TranscriptionMedicationNotInCatalog();
+            throw new TranscriptionMedicationNotInCatalog;
         }
 
         $prescription->acceptTranscription([
+            'inventory_item_id' => $command->medication['inventory_item_id'],
             ...$command->medication,
             'medication_name' => $item->name,
             'medication_code' => $item->code,

@@ -9,8 +9,7 @@ use App\Shared\Domain\Repository;
 
 /**
  * Write-side port for the LabTestDefinition aggregate (IC §9; ADR-157 D-C).
- * Used ONLY by the `laboratory:define-test` console command — there is no HTTP
- * bus command for catalog authoring in Lab.1 (the CP.1 precedent).
+ * Used by the catalog workspace and the `laboratory:define-test` operator command.
  */
 interface LabTestDefinitionRepository extends Repository
 {

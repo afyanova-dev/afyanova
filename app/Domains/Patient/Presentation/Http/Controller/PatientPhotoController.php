@@ -6,10 +6,9 @@ namespace App\Domains\Patient\Presentation\Http\Controller;
 
 use App\Domains\Patient\Domain\PatientRepository;
 use App\Models\User;
-use App\Platform\Documents\Application\Query\GetDownloadStreamQuery;
-use App\Platform\Documents\Domain\Exception\DocumentNotAvailableException;
-use App\Platform\Documents\Domain\Exception\DocumentNotFoundException;
-use App\Shared\Bus\QueryBus;
+use App\Platform\Documents\Contracts\DocumentsApi;
+use App\Platform\Documents\Contracts\Exception\DocumentNotAvailableException;
+use App\Platform\Documents\Contracts\Exception\DocumentNotFoundException;
 use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\Request;
@@ -21,7 +20,7 @@ final class PatientPhotoController
         string $patientId,
         Request $request,
         TenantContext $context,
-        QueryBus $queryBus,
+        DocumentsApi $documents,
         PatientRepository $patients,
     ): Response {
         $user = $request->user();
@@ -37,11 +36,11 @@ final class PatientPhotoController
         abort_if($patient->photo_document_id === null, 404, 'No photo on record.');
 
         try {
-            $stream = $queryBus->dispatch(new GetDownloadStreamQuery(
+            $stream = $documents->getDownloadStream(
                 tenantId: (string) $context->tenantId(),
                 documentId: (string) $patient->photo_document_id,
                 actorId: (string) $user->getKey(),
-            ));
+            );
         } catch (DocumentNotAvailableException $e) {
             abort(403, $e->getMessage());
         } catch (DocumentNotFoundException) {

@@ -31,10 +31,11 @@ final class FollowUpPolicy extends BasePolicy
     public function manage(User $user, FollowUp $followUp, ?RecordFollowUpOutcome $command = null): bool
     {
         return $this->sameTenant($user, (string) $followUp->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $followUp->facility_id,
                 'care_coordination.followup.manage',
-                $this->scope->effectivePermissions($user, (string) $followUp->facility_id),
-                true,
             );
     }
 

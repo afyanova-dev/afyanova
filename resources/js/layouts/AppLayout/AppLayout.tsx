@@ -87,7 +87,12 @@ function AppShell({
 }: AppLayoutProps): ReactNode {
   const { props, url } = usePage<SharedProps>();
   const can = useCan();
-  const navigation = workspaceNavigation(url, can, props.auth.isPlatformSuperAdmin);
+  const navigation = workspaceNavigation(
+    url,
+    can,
+    props.auth.isPlatformSuperAdmin,
+    props.auth.isTenantAdmin,
+  );
   const isDesktop = useMediaQuery('(min-width: 66rem)');
   const appName = props.app.name || 'AfyaNova';
 

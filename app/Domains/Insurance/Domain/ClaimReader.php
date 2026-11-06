@@ -16,12 +16,14 @@ interface ClaimReader
     public function getByClaimNumber(string $claimNumber): ?ClaimSummary;
 
     /**
+     * @param  list<string>  $facilityIds
      * @return list<ClaimSummary>
      */
-    public function getPatientClaims(string $patientId, ?string $status = null): array;
+    public function getPatientClaims(string $patientId, array $facilityIds, ?string $status = null): array;
 
     /**
+     * @param  list<string>  $facilityIds
      * @return list<ClaimSummary>
      */
-    public function getPayerClaims(string $payerId, ?string $status = null): array;
+    public function getPayerClaims(string $payerId, array $facilityIds, ?string $status = null): array;
 }

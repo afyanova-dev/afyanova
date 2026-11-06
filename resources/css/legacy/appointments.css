@@ -333,9 +333,10 @@
   border-radius: var(--afy-radius-pill);
   background: color-mix(in srgb, var(--afy-link) 12%, transparent);
   color: var(--afy-link);
-  font-size: 0.6875rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
   white-space: nowrap;
 }
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Queueing\Presentation\Http\Controller;
 
-use App\Domains\Clinical\Application\Query\GetEncounterTriageAssessments;
+use App\Domains\Clinical\Contracts\ClinicalApi;
 use App\Domains\Clinical\Contracts\Dto\TriageAssessmentSummary;
 use App\Platform\Queueing\Contracts\DTO\QueueEntryDto;
 use App\Platform\Queueing\Contracts\DTO\TransferQueueDto;
@@ -14,7 +14,6 @@ use App\Platform\Queueing\Domain\Enum\ServiceCapability;
 use App\Platform\Queueing\Domain\Model\Queue;
 use App\Platform\Queueing\Domain\Model\QueueEntry;
 use App\Platform\Queueing\Presentation\Http\Request\NurseStationHandoffRequest;
-use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +24,7 @@ final class NurseStationHandoffController extends BaseQueueActionController
     public function __invoke(
         NurseStationHandoffRequest $request,
         TenantContext $context,
-        QueryBus $queryBus,
+        ClinicalApi $clinicalApi,
         QueueingApi $queueingApi,
         string $entry,
     ): RedirectResponse {
@@ -56,7 +55,7 @@ final class NurseStationHandoffController extends BaseQueueActionController
             ->findOrFail((string) $request->validated('destination_queue_id'));
 
         /** @var list<TriageAssessmentSummary> $assessments */
-        $assessments = $queryBus->dispatch(new GetEncounterTriageAssessments($ticket->encounter_id, currentOnly: true));
+        $assessments = $clinicalApi->getEncounterTriageAssessments($ticket->encounter_id, currentOnly: true);
         if ($assessments === []) {
             return $this->fail('handoff_error', 'Record a triage assessment before sending this patient to consultation.');
         }

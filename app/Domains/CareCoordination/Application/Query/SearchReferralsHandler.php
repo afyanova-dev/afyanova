@@ -10,6 +10,7 @@ use App\Domains\CareCoordination\Domain\ReferralReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class SearchReferralsHandler
     public function __construct(
         private readonly ReferralReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -30,7 +32,7 @@ final class SearchReferralsHandler
             throw new RuntimeException('SearchReferrals dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! in_array('care_coordination.access', $this->scope->effectivePermissions($user, $query->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $query->facilityId, 'care_coordination.access')) {
             throw NotFound::aggregate(Referral::class, $query->facilityId);
         }
 

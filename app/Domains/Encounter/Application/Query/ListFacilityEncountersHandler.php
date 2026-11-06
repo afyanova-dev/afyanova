@@ -8,6 +8,7 @@ use App\Domains\Encounter\Contracts\Dto\EncounterSummary;
 use App\Domains\Encounter\Domain\EncounterReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
@@ -27,6 +28,7 @@ final class ListFacilityEncountersHandler
     public function __construct(
         private readonly EncounterReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -39,10 +41,11 @@ final class ListFacilityEncountersHandler
             throw new RuntimeException('ListFacilityEncounters dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $query->facilityId,
             'encounter.encounters.read',
-            $this->scope->effectivePermissions($user, $query->facilityId),
-            true,
         )) {
             throw new AuthorizationException("User does not hold encounter.encounters.read at facility {$query->facilityId}");
         }

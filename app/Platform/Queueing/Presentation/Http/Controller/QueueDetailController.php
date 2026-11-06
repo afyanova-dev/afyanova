@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Platform\Queueing\Presentation\Http\Controller;
 
+use App\Domains\Organization\Contracts\OrganizationApi;
 use App\Domains\Patient\Contracts\PatientApi;
 use App\Models\User;
 use App\Platform\Queueing\Application\Query\GetQueueStatusBreakdownQuery;
@@ -26,6 +27,7 @@ final class QueueDetailController
         TenantContext $context,
         QueryBus $queryBus,
         PatientApi $patientApi,
+        OrganizationApi $organizationApi,
         string $queue,
     ): Response {
         $user = $request->user();
@@ -92,7 +94,7 @@ final class QueueDetailController
             'inServiceEntries' => $groups['inService'],
             'holdEntries' => $groups['onHold'],
             'queues' => $this->presentQueueOptions($facilityId),
-            'rooms' => $this->presentRooms($facilityId),
+            'rooms' => $this->presentRooms($facilityId, $organizationApi),
         ]);
     }
 }

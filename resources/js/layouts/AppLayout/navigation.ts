@@ -7,6 +7,7 @@ export type WorkspaceId =
   | 'patients'
   | 'appointments'
   | 'reception'
+  | 'patientFlow'
   | 'serviceQueues'
   | 'nurseStation'
   | 'clinician'
@@ -15,6 +16,9 @@ export type WorkspaceId =
   | 'pharmacy'
   | 'inventory'
   | 'procurement'
+  | 'laboratory'
+  | 'laboratoryExecution'
+  | 'laboratoryCatalogEditors'
   | 'hrStaff';
 
 export interface NavigationItem {
@@ -22,6 +26,8 @@ export interface NavigationItem {
   label: string;
   href: string;
   active: boolean;
+  /** Optional sidebar group. Items with the same label render under one Carbon TreeView parent. */
+  group?: string;
 }
 
 interface WorkspaceDefinition {
@@ -37,7 +43,7 @@ interface WorkspaceDefinition {
  * cannot render (app.tsx throws on missing pages). Move an id here when its
  * slice lands.
  */
-export const BUILT_WORKSPACES: readonly WorkspaceId[] = ['dashboard', 'admin', 'patients', 'appointments', 'reception', 'serviceQueues', 'nurseStation', 'clinician', 'hrStaff', 'billing', 'pharmacy', 'inventory', 'procurement'];
+export const BUILT_WORKSPACES: readonly WorkspaceId[] = ['dashboard', 'admin', 'patients', 'appointments', 'reception', 'patientFlow', 'serviceQueues', 'nurseStation', 'clinician', 'hrStaff', 'billing', 'pharmacy', 'inventory', 'procurement', 'laboratory', 'laboratoryExecution', 'laboratoryCatalogEditors'];
 const PLATFORM_ADMIN_WORKSPACES = [
   { id: 'platform-overview', label: 'Dashboard', href: routes.platformAdmin.index },
   { id: 'platform-tenants', label: 'Tenant registry', href: routes.platformAdmin.tenants },
@@ -80,10 +86,16 @@ const WORKSPACES: readonly WorkspaceDefinition[] = [
     permissions: [permissions.encounter.read, permissions.scheduling.access, permissions.patient.read],
   },
   {
-    id: 'serviceQueues',
-    label: 'Service Queues',
+    id: 'patientFlow',
+    label: 'Patient Flow',
     href: routes.workspaces.serviceQueues,
     permissions: [permissions.queue.ticketView],
+  },
+  {
+    id: 'serviceQueues',
+    label: 'Service Queues',
+    href: routes.workspaces.queueManagement,
+    permissions: [permissions.queue.definitionManage],
   },
   {
     id: 'nurseStation',
@@ -127,6 +139,24 @@ const WORKSPACES: readonly WorkspaceDefinition[] = [
     href: routes.workspaces.procurement,
     permissions: [permissions.procurement.access],
   },
+  {
+    id: 'laboratory',
+    label: 'Lab Tests & Panels',
+    href: routes.workspaces.laboratoryCatalog,
+    permissions: [permissions.laboratory.catalogRead, permissions.laboratory.catalogManage],
+  },
+  {
+    id: 'laboratoryExecution',
+    label: 'Lab test execution',
+    href: routes.workspaces.laboratoryExecutions,
+    permissions: [permissions.laboratory.access],
+  },
+  {
+    id: 'laboratoryCatalogEditors',
+    label: 'Lab Test Setup Access',
+    href: routes.workspaces.adminLaboratoryCatalogEditors,
+    permissions: [permissions.admin.workspaceAccess],
+  },
 ];
 
 type Can = (permission: Permission) => boolean;
@@ -159,7 +189,8 @@ export function workspaceForUrl(url: string): WorkspaceId | null {
   if (path === routes.workspaces.patientIndex || path.startsWith(`${routes.workspaces.patientIndex}/`) || path.startsWith('/patient/')) return 'patients';
   if (path === routes.workspaces.appointmentCalendar) return 'appointments';
   if (path === routes.workspaces.reception) return 'reception';
-  if (path === routes.workspaces.serviceQueues || path.startsWith(`${routes.workspaces.serviceQueues}/`)) return 'serviceQueues';
+  if (path === routes.workspaces.queueManagement || path.startsWith(`${routes.workspaces.queueManagement}/`)) return 'serviceQueues';
+  if (path === routes.workspaces.serviceQueues || path.startsWith(`${routes.workspaces.serviceQueues}/`)) return 'patientFlow';
   if (path === routes.workspaces.nurseStation || path.startsWith(`${routes.workspaces.nurseStation}/`)) return 'nurseStation';
   if (path === routes.workspaces.clinician || path.startsWith(`${routes.workspaces.clinician}/`)) return 'clinician';
   if (path === routes.workspaces.attention) return 'attention';
@@ -167,6 +198,9 @@ export function workspaceForUrl(url: string): WorkspaceId | null {
   if (path === routes.workspaces.pharmacy || path.startsWith(`${routes.workspaces.pharmacy}/`)) return 'pharmacy';
   if (path === routes.workspaces.inventory || path.startsWith(`${routes.workspaces.inventory}/`)) return 'inventory';
   if (path === routes.workspaces.procurement || path.startsWith(`${routes.workspaces.procurement}/`)) return 'procurement';
+  if (path === routes.workspaces.laboratoryExecutions || path.startsWith(`${routes.workspaces.laboratoryExecutions}/`)) return 'laboratoryExecution';
+  if (path === routes.workspaces.laboratoryCatalog) return 'laboratory';
+  if (path === routes.workspaces.adminLaboratoryCatalogEditors) return 'laboratoryCatalogEditors';
 
   return null;
 }
@@ -181,23 +215,25 @@ export function workspaceForUrl(url: string): WorkspaceId | null {
 export interface ChartSectionLink {
   id: string;
   label: string;
+  group?: string;
 }
 
 export const PATIENT_CHART_SECTIONS: readonly ChartSectionLink[] = [
   { id: 'overview', label: 'Patient Summary' },
-  { id: 'allergies', label: 'Allergies' },
-  { id: 'conditions', label: 'Conditions' },
-  { id: 'procedures', label: 'Procedures' },
-  { id: 'plans', label: 'Plans' },
-  { id: 'vitals', label: 'Vitals & Biometrics' },
-  { id: 'medications', label: 'Medications' },
-  { id: 'lab-results', label: 'Results' },
-  { id: 'imaging', label: 'Orders' },
-  { id: 'appointments', label: 'Appointments' },
-  { id: 'visits', label: 'Visits' },
-  { id: 'programs', label: 'Programs' },
-  { id: 'referrals', label: 'Referrals' },
-  { id: 'billing-history', label: 'Billing History' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'conditions', label: 'Problems', group: 'Clinical' },
+  { id: 'allergies', label: 'Allergies', group: 'Clinical' },
+  { id: 'medications', label: 'Medications', group: 'Clinical' },
+  { id: 'vitals', label: 'Vitals & biometrics', group: 'Clinical' },
+  { id: 'plans', label: 'Care plans', group: 'Clinical' },
+  { id: 'procedures', label: 'Procedures', group: 'Clinical' },
+  { id: 'lab-results', label: 'Lab results', group: 'Diagnostics' },
+  { id: 'imaging', label: 'Imaging', group: 'Diagnostics' },
+  { id: 'appointments', label: 'Appointments', group: 'Care' },
+  { id: 'visits', label: 'Visits', group: 'Care' },
+  { id: 'programs', label: 'Care programs', group: 'Care' },
+  { id: 'referrals', label: 'Referrals', group: 'Care' },
+  { id: 'billing-history', label: 'Billing' },
 ];
 
 export function chartSectionFromPath(path: string): string {
@@ -236,7 +272,7 @@ export const INVENTORY_SECTIONS: readonly ChartSectionLink[] = [
   { id: 'counts', label: 'Stock counts' },
   { id: 'adjustments', label: 'Adjustments' },
   { id: 'reservations', label: 'Reservations' },
-  { id: 'catalogue', label: 'Item catalogue' },
+  { id: 'catalogue', label: 'Inventory Items' },
   { id: 'locations', label: 'Locations & types' },
 ];
 
@@ -269,7 +305,11 @@ export function procurementSectionFromUrl(url: string): string {
   return PROCUREMENT_SECTIONS.some((item) => item.id === section) ? section as string : 'requests';
 }
 
-export function visibleWorkspaces(can: Can, isPlatformSuperAdmin = false): NavigationItem[] {
+export function visibleWorkspaces(
+  can: Can,
+  isPlatformSuperAdmin = false,
+  isTenantAdmin = false,
+): NavigationItem[] {
   if (isPlatformSuperAdmin) {
     return PLATFORM_ADMIN_WORKSPACES.map(({ id, label, href }) => ({
       id,
@@ -280,11 +320,13 @@ export function visibleWorkspaces(can: Can, isPlatformSuperAdmin = false): Navig
   }
 
   const available = WORKSPACES.filter(
-    (workspace) => BUILT_WORKSPACES.includes(workspace.id) && hasWorkspacePermission(workspace, can),
+    (workspace) => BUILT_WORKSPACES.includes(workspace.id)
+      && hasWorkspacePermission(workspace, can)
+      && (workspace.id !== 'laboratoryCatalogEditors' || isTenantAdmin),
   );
 
   const hasOperationalWorkspace = available.some(
-    (workspace) => workspace.id !== 'dashboard' && workspace.id !== 'admin',
+    (workspace) => !['dashboard', 'admin', 'laboratoryCatalogEditors'].includes(workspace.id),
   );
   const isAdminOnly = available.some((workspace) => workspace.id === 'admin') && !hasOperationalWorkspace;
 
@@ -303,11 +345,8 @@ export function visibleWorkspaces(can: Can, isPlatformSuperAdmin = false): Navig
 }
 
 /**
- * Global-header primary tasks (Carbon §3 header actions). Keep only the
- * patient fast paths here; HR destinations live in the app menu.
- *
- * - Patients → search & browse (needs patient.read), active on index + chart.
- * - Register → registration form (needs patient.create), active on register.
+ * Global-header primary tasks (Carbon §3 header actions). Patient browsing
+ * lives in the app-menu Switcher; registration remains a direct shortcut.
  */
 export function headerPrimaryLinks(url: string, can: Can, isPlatformSuperAdmin = false): NavigationItem[] {
   const path = pathname(url);
@@ -315,28 +354,23 @@ export function headerPrimaryLinks(url: string, can: Can, isPlatformSuperAdmin =
     return [];
   }
 
-  const links: NavigationItem[] = [];
-
-  if (can(permissions.patient.read)) {
-    links.push({
-      id: 'primary-patients',
-      label: 'Patients',
-      href: routes.workspaces.patientIndex,
-      active: path === routes.workspaces.patientIndex || path.startsWith('/patient/'),
-    });
-  }
   if (can(permissions.patient.create)) {
-    links.push({
+    return [{
       id: 'primary-register',
       label: 'Register',
       href: routes.workspaces.patientRegister,
       active: path === routes.workspaces.patientRegister,
-    });
+    }];
   }
-  return links;
+  return [];
 }
 
-export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin = false): {
+export function workspaceNavigation(
+  url: string,
+  can: Can,
+  isPlatformSuperAdmin = false,
+  isTenantAdmin = false,
+): {
   activeWorkspace: WorkspaceId | null;
   workspaces: NavigationItem[];
   appMenuItems: NavigationItem[];
@@ -352,7 +386,7 @@ export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin 
     ? staffRouteMatch
     : null;
   const platformPath = pathname(url);
-  const workspaces = visibleWorkspaces(can, isPlatformSuperAdmin).map((item) => ({
+  const workspaces = visibleWorkspaces(can, isPlatformSuperAdmin, isTenantAdmin).map((item) => ({
     ...item,
     active: isPlatformSuperAdmin
       ? item.id === 'platform-overview'
@@ -365,10 +399,10 @@ export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin 
       : item.id === activeWorkspace,
   }));
   const primaryLinks = headerPrimaryLinks(url, can, isPlatformSuperAdmin);
-  const adminMenuItems: NavigationItem[] = [
+  const adminSidebarItems: NavigationItem[] = [
     {
       id: 'admin-overview',
-      label: 'Admin overview',
+      label: 'Overview',
       href: routes.workspaces.admin,
       active: path === routes.workspaces.admin,
     },
@@ -378,17 +412,23 @@ export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin 
       href: routes.workspaces.adminOrganization,
       active: path === routes.workspaces.adminOrganization,
     }] : []),
-    ...(can(permissions.audit.eventsRead) ? [{
-      id: 'admin-audit',
-      label: 'Audit log',
-      href: routes.workspaces.adminAudit,
-      active: path === routes.workspaces.adminAudit,
-    }] : []),
     ...(can(permissions.identity.assignmentsRead) ? [{
       id: 'admin-role-promotions',
       label: 'Role approvals',
       href: routes.workspaces.adminRolePromotions,
       active: path === routes.workspaces.adminRolePromotions,
+    }] : []),
+    ...(can(permissions.procurement.approvalLimitsManage) ? [{
+      id: 'admin-procurement-limits',
+      label: 'Procurement limits',
+      href: routes.workspaces.adminProcurementLimits,
+      active: path === routes.workspaces.adminProcurementLimits,
+    }] : []),
+    ...(can(permissions.audit.eventsRead) ? [{
+      id: 'admin-audit',
+      label: 'Audit log',
+      href: routes.workspaces.adminAudit,
+      active: path === routes.workspaces.adminAudit,
     }] : []),
     ...(can(permissions.identity.assignmentsManage) ? [{
       id: 'admin-staff-assignments',
@@ -396,10 +436,13 @@ export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin 
       href: `${routes.workspaces.hrStaffOnboarding}?focus=placements`,
       active: path === routes.workspaces.hrStaffOnboarding,
     }] : []),
+    ...(isTenantAdmin ? [{
+      id: 'admin-lab-catalog-editors',
+      label: 'Lab Test Setup Access',
+      href: routes.workspaces.adminLaboratoryCatalogEditors,
+      active: path === routes.workspaces.adminLaboratoryCatalogEditors,
+    }] : []),
   ];
-  const withAdminNavigation = can(permissions.admin.workspaceAccess)
-    ? workspaces.flatMap((item) => item.id === 'admin' ? adminMenuItems : [item])
-    : workspaces;
   const canReviewStaffPlacements = (can(permissions.admin.workspaceAccess) && can(permissions.identity.assignmentsManage))
     || (can(permissions.hr.staffManage) && can(permissions.hr.assignmentManage));
   const canManageStaffAccess = (can(permissions.hr.staffManage) && can(permissions.hr.staffUserLinkManage))
@@ -442,14 +485,21 @@ export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin 
   ];
   const staffProfileSection = staffProfileSectionFromUrl(url);
   const appMenuItems = [
-    ...withAdminNavigation.filter((item) => item.id !== 'hrStaff'),
+    ...workspaces.filter((item) => item.id !== 'hrStaff' && item.id !== 'laboratoryCatalogEditors'),
     ...hrMenuItems,
+    ...(can(permissions.clinical.access) && can(permissions.clinical.diagnosesRead) ? [{
+      id: 'clinician-diagnosis-catalog',
+      label: 'Diagnosis catalogue',
+      href: routes.workspaces.clinicianDiagnoses,
+      active: path === routes.workspaces.clinicianDiagnoses,
+    }] : []),
   ];
   let sidebar: NavigationItem[] = [];
 
   switch (activeWorkspace) {
     case 'admin':
-      sidebar = [];
+    case 'laboratoryCatalogEditors':
+      sidebar = adminSidebarItems;
       break;
 
     case 'hrStaff':
@@ -481,12 +531,12 @@ export function workspaceNavigation(url: string, can: Can, isPlatformSuperAdmin 
           label: section.label,
           href: routes.patient.chart(selectedPatientId, section.id),
           active: section.id === activeSection,
+          group: section.group,
         }));
         break;
       }
-      // Search/browse + register live as header icon buttons (primaryLinks)
-      // and in the app-menu Switcher. A two-item sidebar here only repeats
-      // the header choice — no contextual nav on list pages.
+      // Search/browse lives in the app-menu Switcher. A sidebar here would
+      // repeat that destination on list pages.
       sidebar = [];
       break;
 

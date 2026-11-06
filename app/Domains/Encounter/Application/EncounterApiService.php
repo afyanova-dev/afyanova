@@ -6,6 +6,7 @@ namespace App\Domains\Encounter\Application;
 
 use App\Domains\Encounter\Application\Command\RecordEncounterRelationship;
 use App\Domains\Encounter\Application\Query\GetEncounter;
+use App\Domains\Encounter\Application\Query\GetPatientEncounters;
 use App\Domains\Encounter\Contracts\Dto\EncounterContext;
 use App\Domains\Encounter\Contracts\Dto\EncounterSummary;
 use App\Domains\Encounter\Contracts\EncounterApi;
@@ -82,5 +83,16 @@ final class EncounterApiService implements EncounterApi
         int $limit = 200,
     ): array {
         return $this->reader->forFacility($facilityId, null, $statuses, $limit);
+    }
+
+    /**
+     * @return list<EncounterSummary>
+     */
+    public function getPatientEncounters(string $patientId, string $facilityId): array
+    {
+        /** @var list<EncounterSummary> $encounters */
+        $encounters = $this->queryBus->dispatch(new GetPatientEncounters($patientId, $facilityId));
+
+        return $encounters;
     }
 }

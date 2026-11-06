@@ -10,6 +10,7 @@ use App\Domains\Theatre\Domain\Model\AnaesthesiaRecord;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetAnaesthesiaRecordForCaseHandler
     public function __construct(
         private readonly AnaesthesiaRecordReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetAnaesthesiaRecordForCase $query): ?AnaesthesiaRecordSummary
@@ -33,7 +35,7 @@ final class GetAnaesthesiaRecordForCaseHandler
             return null; // no record yet — the #[ProtectedQuery] `view` gate already confirmed theatre.access
         }
 
-        if (! in_array('theatre.access', $this->scope->effectivePermissions($user, $summary->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $summary->facilityId, 'theatre.access')) {
             throw NotFound::aggregate(AnaesthesiaRecord::class, $query->caseId);
         }
 

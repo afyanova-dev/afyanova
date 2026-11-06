@@ -1,10 +1,16 @@
 import { router, useForm } from '@inertiajs/react';
 import {
+  ActionableNotification,
   Button,
   Form,
   InlineNotification,
   Select,
   SelectItem,
+  Tab,
+  TabListVertical,
+  TabPanel,
+  TabPanels,
+  TabsVertical,
   Tag,
   TextArea,
   TextInput,
@@ -15,7 +21,7 @@ import { FormErrors } from '@/components/ui';
 import { AppLayout } from '@/layouts/AppLayout';
 import { QueuePatientBanner } from '@/features/clinical/QueuePatientBanner';
 import type { NurseStationShowProps, NurseStationVitals } from '@/features/nurse-station/types';
-import { Checkmark, Send } from '@/icons';
+import { Checkmark, HealthCross, Send, Task } from '@/icons';
 
 type VitalsForm = {
   patient_id: string;
@@ -46,6 +52,25 @@ type HandoffForm = {
   handoff_error: string;
 };
 
+type VitalInputField =
+  | 'temperature'
+  | 'heart_rate'
+  | 'respiratory_rate'
+  | 'oxygen_saturation'
+  | 'weight'
+  | 'height'
+  | 'pain_score';
+
+type NurseWorkspaceTab = 'vitals' | 'triage' | 'handoff';
+
+function availableWorkspaceTabs(props: NurseStationShowProps): NurseWorkspaceTab[] {
+  return [
+    ...(props.canRecordVitals ? ['vitals' as const] : []),
+    ...(props.canRecordTriage ? ['triage' as const] : []),
+    ...(props.canHandoff ? ['handoff' as const] : []),
+  ];
+}
+
 function formatDate(value: string | null): string {
   if (!value) return 'Not recorded';
   const date = new Date(value);
@@ -58,31 +83,31 @@ function measurement(value: number | null, unit = ''): string {
 
 function VitalsSummary({ observation }: { observation: NurseStationVitals }): ReactNode {
   const measurements = [
-    ['Temperature', measurement(observation.temperature, ' °C')],
-    ['Heart rate', measurement(observation.heartRate, ' bpm')],
-    ['Respiratory rate', measurement(observation.respiratoryRate, ' /min')],
+    ['Temperature', measurement(observation.temperature), '°C'],
+    ['Pulse', measurement(observation.heartRate), 'bpm'],
     ['Blood pressure', observation.systolicBp === null || observation.diastolicBp === null
       ? '—'
-      : `${observation.systolicBp}/${observation.diastolicBp} mmHg`],
-    ['Oxygen saturation', measurement(observation.oxygenSaturation, '%')],
-    ['Weight', measurement(observation.weight, ' kg')],
-    ['Height', measurement(observation.height, ' cm')],
-    ['Pain score', measurement(observation.painScore, '/10')],
+      : `${observation.systolicBp}/${observation.diastolicBp}`, 'mmHg'],
+    ['SpO₂', measurement(observation.oxygenSaturation), '%'],
+    ['Resp. rate', measurement(observation.respiratoryRate), '/min'],
+    ['Pain', measurement(observation.painScore), '/10'],
+    ['Weight', measurement(observation.weight), 'kg'],
+    ['Height', measurement(observation.height), 'cm'],
   ];
 
   return (
-    <div style={{ paddingBlock: '0.75rem' }}>
-      <p style={{ margin: '0 0 0.6rem' }}>
+    <div className="nurse-station-vitals">
+      <p className="nurse-station-vitals__meta">
         {formatDate(observation.occurredAt)} · {observation.authoredContext ?? 'Clinical'}
       </p>
-      <div className="nurse-station-vitals__measurements">
-        {measurements.map(([label, value]) => (
+      <dl className="nurse-station-vitals__measurements">
+        {measurements.map(([label, value, unit]) => (
           <div key={label}>
-            <div className="nurse-station-vitals__label">{label}</div>
-            <strong className="nurse-station-vitals__value">{value}</strong>
+            <dt>{label}</dt>
+            <dd>{value} <small>{unit}</small></dd>
           </div>
         ))}
-      </div>
+      </dl>
     </div>
   );
 }
@@ -91,7 +116,16 @@ export default function NurseStationShow(props: NurseStationShowProps): ReactNod
   const [startingService, setStartingService] = useState(false);
   const [startServiceError, setStartServiceError] = useState<string | null>(null);
   const [startServiceSuccess, setStartServiceSuccess] = useState<string | null>(null);
-  const [triageSuccess, setTriageSuccess] = useState<string | null>(null);
+  const [callingPatient, setCallingPatient] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
+  const [selectedCallRoom, setSelectedCallRoom] = useState(() => props.callRooms[0]?.id ?? '');
+  const workspaceTabs = availableWorkspaceTabs(props);
+  const [selectedWorkspaceTab, setSelectedWorkspaceTab] = useState<NurseWorkspaceTab>(
+    () => workspaceTabs[0] ?? 'vitals',
+  );
+  const activeWorkspaceTab = workspaceTabs.includes(selectedWorkspaceTab)
+    ? selectedWorkspaceTab
+    : workspaceTabs[0];
   const vitalsForm = useForm<VitalsForm>({
     patient_id: props.patient.patientId,
     temperature: '',
@@ -119,9 +153,27 @@ export default function NurseStationShow(props: NurseStationShowProps): ReactNod
     handoff_error: '',
   });
 
+  function renderVitalInput(field: VitalInputField, label: string): ReactNode {
+    return (
+      <TextInput
+        key={field}
+        id={`vitals-${field}`}
+        labelText={label}
+        type="number"
+        step={field === 'temperature' || field === 'weight' || field === 'height' ? '0.1' : '1'}
+        value={vitalsForm.data[field]}
+        onChange={(event) => vitalsForm.setData(field, event.target.value)}
+        disabled={props.entry.status !== 'IN_SERVICE'}
+        invalid={Boolean(vitalsForm.errors[field])}
+        invalidText={vitalsForm.errors[field]}
+      />
+    );
+  }
+
   function saveVitals(event: FormEvent): void {
     event.preventDefault();
     vitalsForm.post(routes.workspaces.encounterVitals(props.encounter.encounterId), {
+      preserveState: true,
       preserveScroll: true,
       onSuccess: () => vitalsForm.reset(
         'temperature', 'heart_rate', 'respiratory_rate', 'systolic_bp',
@@ -132,12 +184,11 @@ export default function NurseStationShow(props: NurseStationShowProps): ReactNod
 
   function saveTriage(event: FormEvent): void {
     event.preventDefault();
-    setTriageSuccess(null);
     triageForm.post(routes.workspaces.encounterTriage(props.encounter.encounterId), {
+      preserveState: true,
       preserveScroll: true,
       onSuccess: () => {
         triageForm.reset('chief_complaint', 'acuity', 'consciousness');
-        setTriageSuccess('Triage assessment recorded.');
       },
     });
   }
@@ -147,7 +198,35 @@ export default function NurseStationShow(props: NurseStationShowProps): ReactNod
     handoffForm.post(routes.workspaces.nurseStationHandoff(props.entry.id));
   }
 
+  function callPatient(): void {
+    if (callingPatient) {
+      return;
+    }
+
+    setCallError(null);
+    setCallingPatient(true);
+    const returnTo = typeof window === 'undefined'
+      ? routes.workspaces.nurseStation
+      : `${window.location.pathname}${window.location.search}`;
+
+    router.post(
+      routes.workspaces.ticketCall(props.entry.id),
+      { room: selectedCallRoom || null, return_to: returnTo },
+      {
+        preserveScroll: true,
+        onError: (errors) => setCallError(
+          errors.call ?? errors.room ?? 'The patient could not be called. Check the queue and try again.',
+        ),
+        onFinish: () => setCallingPatient(false),
+      },
+    );
+  }
+
   function confirmPatientPresent(): void {
+    if (startingService) {
+      return;
+    }
+
     setStartServiceError(null);
     setStartServiceSuccess(null);
     setStartingService(true);
@@ -169,302 +248,398 @@ export default function NurseStationShow(props: NurseStationShowProps): ReactNod
 
   return (
     <AppLayout>
-      <QueuePatientBanner
-        workflow="nursing"
-        patient={props.patient}
-        entry={props.entry}
-        queueNavigation={props.queueNavigation}
-        queueHref={routes.workspaces.nurseStation}
-        queueLabel="Open assessment queue"
-        entryHref={routes.workspaces.nurseStationEntry}
-        chartHref={routes.patient.chart(props.patient.patientId)}
-      />
-      {props.entry.status === 'WAITING' ? (
-        <InlineNotification
-          className="nurse-station-status-notification"
-          kind="info"
-          lowContrast
-          hideCloseButton
-          title="Waiting to be called"
-          subtitle="This patient is in the triage queue but has not yet been called to the room. Review the chart if needed; do not begin assessment until the patient arrives."
-          style={{ marginBlockEnd: '1rem' }}
-        />
-      ) : null}
-      {props.entry.status === 'CALLED' ? (
-        <InlineNotification
-          className="nurse-station-status-notification"
-          kind="warning"
-          lowContrast
-          hideCloseButton
-          title="Confirm the patient is present"
-          subtitle="The patient has been called to the room. Confirm they have arrived before starting triage assessment."
-          style={{ marginBlockEnd: '1rem' }}
-        />
-      ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '1rem' }}>
-        <section
-          aria-labelledby="nursing-context-heading"
-          style={{
-            display: 'grid',
-            alignContent: 'start',
-            gap: '1.25rem',
-            padding: '1rem',
+      <div className={`clinical-entry-shell${props.entry.status === 'IN_SERVICE' ? ' clinical-entry-shell--active' : ''}`}>
+        <QueuePatientBanner
+          workflow="nursing"
+          patient={props.patient}
+          entry={props.entry}
+          queueNavigation={props.queueNavigation}
+          queueHref={routes.workspaces.nurseStation}
+          queueLabel="Open assessment queue"
+          entryHref={routes.workspaces.nurseStationEntry}
+          encounter={{
+            encounterType: props.encounter.type,
+            status: props.encounter.status,
           }}
-        >
-          <div>
-            <h2 id="nursing-context-heading" style={{ margin: '0 0 0.75rem' }}>Visit context</h2>
-            <dl style={{ display: 'grid', gap: '0.625rem', margin: 0 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '7rem minmax(0, 1fr)', gap: '0.75rem' }}>
-                <dt>Ticket</dt>
-                <dd style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.375rem', margin: 0 }}>
-                  <Tag type="blue">{props.entry.ticketNumber}</Tag>
-                  <span>{props.entry.queue}</span>
-                </dd>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '7rem minmax(0, 1fr)', gap: '0.75rem' }}>
-                <dt>Queue status</dt>
-                <dd style={{ margin: 0 }}>
-                  <Tag type={props.entry.status === 'IN_SERVICE' ? 'green' : props.entry.status === 'CALLED' ? 'blue' : 'gray'}>
-                    {props.entry.status.replaceAll('_', ' ')}
-                  </Tag>
-                </dd>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '7rem minmax(0, 1fr)', gap: '0.75rem' }}>
-                <dt>Encounter</dt>
-                <dd style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.375rem', margin: 0 }}>
-                  <span>{props.encounter.type.replaceAll('_', ' ')}</span>
-                  <Tag type="gray">{props.encounter.status}</Tag>
-                </dd>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '7rem minmax(0, 1fr)', gap: '0.75rem' }}>
-                <dt>Patient status</dt>
-                <dd style={{ margin: 0 }}><Tag type="gray">{props.patient.status}</Tag></dd>
-              </div>
-            </dl>
-          </div>
-
-          <section aria-labelledby="current-triage-heading" style={{ paddingTop: '1rem' }}>
-            <h3 id="current-triage-heading" style={{ margin: '0 0 0.75rem' }}>Current triage</h3>
-            {props.triage ? (
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                <div>
-                  <Tag type={props.triage.priority === 'EMERGENCY' ? 'red' : props.triage.priority === 'URGENT' ? 'purple' : 'blue'}>
-                    {props.triage.priority}
-                  </Tag>
-                </div>
-                <p style={{ margin: 0 }}>{props.triage.chiefComplaint}</p>
-                {(props.triage.acuity || props.triage.consciousness) ? (
-                  <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(9rem, 1fr))', gap: '0.75rem 1rem', margin: 0 }}>
-                    {props.triage.acuity ? (
-                      <div>
-                        <dt>Acuity</dt>
-                        <dd style={{ margin: '0.2rem 0 0' }}>{props.triage.acuity}</dd>
-                      </div>
-                    ) : null}
-                    {props.triage.consciousness ? (
-                      <div>
-                        <dt>Consciousness</dt>
-                        <dd style={{ margin: '0.2rem 0 0' }}>{props.triage.consciousness}</dd>
-                      </div>
-                    ) : null}
-                  </dl>
-                ) : null}
-                <p style={{ margin: 0,  }}>
-                  Recorded {formatDate(props.triage.occurredAt)}
-                </p>
-              </div>
-            ) : <p style={{ margin: 0 }}>No triage assessment recorded.</p>}
-          </section>
-
-          <section aria-labelledby="recent-vitals-heading" style={{ paddingTop: '1rem' }}>
-            <h3 id="recent-vitals-heading" style={{ margin: '0 0 0.5rem' }}>Recent vitals</h3>
-            {props.vitals.length === 0
-              ? <p style={{ margin: 0 }}>No vital signs recorded.</p>
-              : props.vitals.map((observation, index) => <VitalsSummary key={`${observation.occurredAt}-${index}`} observation={observation} />)}
-          </section>
-        </section>
-
-        <div style={{ display: 'grid', alignContent: 'start', gap: '1rem' }}>
-          {props.canRecordVitals ? (
-            <section
-              aria-labelledby="record-vitals-heading"
-              style={{
-                padding: '1rem',
-              }}
+          chartHref={routes.patient.chart(props.patient.patientId)}
+        />
+        {props.entry.status === 'WAITING' && props.canCall ? (
+          <ActionableNotification
+            className="nurse-station-status-notification nurse-station-call-notification"
+            kind="info"
+            lowContrast
+            inline
+            role="status"
+            hideCloseButton
+            title="Waiting to be called"
+            subtitle="This patient is in the triage queue but has not yet been called to the room. Call them now, then confirm they have arrived before starting triage assessment."
+            actionButtonLabel={callingPatient ? 'Calling…' : 'Call patient'}
+            onActionButtonClick={callPatient}
+          >
+            {props.callRooms.length > 1 ? (
+              <Select
+                id="nurse-station-call-room"
+                className="nurse-station-call-notification__room"
+                labelText="Call to"
+                value={selectedCallRoom}
+                onChange={(event) => setSelectedCallRoom(event.currentTarget.value)}
+              >
+                {props.callRooms.map((room) => (
+                  <SelectItem key={room.id} value={room.id} text={`${room.name} (${room.code})`} />
+                ))}
+              </Select>
+            ) : null}
+            {callError ? (
+              <p className="nurse-station-form__message nurse-station-form__message--error" role="alert">{callError}</p>
+            ) : null}
+          </ActionableNotification>
+        ) : null}
+        {props.entry.status === 'WAITING' && !props.canCall ? (
+          <InlineNotification
+            className="nurse-station-status-notification"
+            kind="info"
+            lowContrast
+            hideCloseButton
+            title="Waiting to be called"
+            subtitle="This patient is in the triage queue but has not yet been called to the room. Review the chart if needed; do not begin assessment until the patient arrives."
+          />
+        ) : null}
+        {props.entry.status === 'CALLED' ? (
+          props.canStartService ? (
+            <ActionableNotification
+              className="nurse-station-status-notification"
+              kind="warning"
+              lowContrast
+              inline
+              role="status"
+              hideCloseButton
+              title="Confirm the patient is present"
+              subtitle="The patient has been called to the room. Confirm they have arrived before starting triage assessment."
+              actionButtonLabel={startingService ? 'Confirming…' : 'Confirm patient present'}
+              onActionButtonClick={confirmPatientPresent}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <div>
-                  <h2 id="record-vitals-heading" style={{ marginTop: 0 }}>Record vital signs</h2>
-                  {props.entry.status !== 'IN_SERVICE' ? (
-                    <p role="note" style={{ marginBlock: 0 }}>Available after the patient is called and confirmed present in the triage room.</p>
-                  ) : null}
-                </div>
-                {props.entry.status === 'CALLED' && props.canStartService ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={startingService}
-                    onClick={confirmPatientPresent}
-                  >
-                    {startingService ? 'Starting…' : 'Confirm patient present'}
-                  </Button>
-                ) : null}
-              </div>
-              {startServiceSuccess ? <p role="status" aria-live="polite">{startServiceSuccess}</p> : null}
-              {startServiceError ? <p role="alert">{startServiceError}</p> : null}
-              <FormErrors errors={vitalsForm.errors} fields={[
-                'patient_id', 'temperature', 'heart_rate', 'respiratory_rate',
-                'systolic_bp', 'diastolic_bp', 'oxygen_saturation', 'weight',
-                'height', 'pain_score',
-              ]} />
-              <Form onSubmit={saveVitals}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                  {([
-                    ['temperature', 'Temperature (°C)'],
-                    ['heart_rate', 'Heart rate (bpm)'],
-                    ['respiratory_rate', 'Respiratory rate (/min)'],
-                    ['systolic_bp', 'Systolic BP (mmHg)'],
-                    ['diastolic_bp', 'Diastolic BP (mmHg)'],
-                    ['oxygen_saturation', 'Oxygen saturation (%)'],
-                    ['weight', 'Weight (kg)'],
-                    ['height', 'Height (cm)'],
-                    ['pain_score', 'Pain score (0–10)'],
-                  ] as const).map(([field, label]) => (
-                    <TextInput
-                      key={field}
-                      id={`vitals-${field}`}
-                      labelText={label}
-                      type="number"
-                      step={field === 'temperature' || field === 'weight' || field === 'height' ? '0.1' : '1'}
-                      value={vitalsForm.data[field]}
-                      onChange={(event) => vitalsForm.setData(field, event.target.value)}
-                      disabled={props.entry.status !== 'IN_SERVICE'}
-                      invalid={Boolean(vitalsForm.errors[field])}
-                      invalidText={vitalsForm.errors[field]}
-                    />
-                  ))}
-                </div>
-                <Button size="lg" renderIcon={Checkmark} type="submit" disabled={props.entry.status !== 'IN_SERVICE' || vitalsForm.processing} style={{ marginTop: '1rem' }}>
-                  {vitalsForm.processing ? 'Saving…' : 'Save vital signs'}
-                </Button>
-              </Form>
-            </section>
-          ) : null}
-
-          {props.canRecordTriage ? (
-            <section
-              aria-labelledby="record-triage-heading"
-              aria-disabled={props.entry.status !== 'IN_SERVICE'}
-              style={{
-                padding: '1rem',
-              }}
-            >
-              <h2 id="record-triage-heading" style={{ marginTop: 0 }}>Record triage assessment</h2>
-              {props.entry.status !== 'IN_SERVICE' ? (
-                <p role="note">Available after the patient is called and confirmed present in the triage room.</p>
+              {startServiceError ? (
+                <p className="nurse-station-form__message nurse-station-form__message--error" role="alert">{startServiceError}</p>
               ) : null}
-              {triageSuccess ? <p role="status" aria-live="polite">{triageSuccess}</p> : null}
-              <FormErrors errors={triageForm.errors} fields={[
-                'patient_id', 'chief_complaint', 'triage_priority', 'acuity', 'consciousness',
-              ]} />
-              <Form onSubmit={saveTriage}>
-                <TextArea
-                  id="triage-chief-complaint"
-                  labelText="Chief complaint"
-                  rows={3}
-                  value={triageForm.data.chief_complaint}
-                  onChange={(event) => triageForm.setData('chief_complaint', event.target.value)}
-                  disabled={props.entry.status !== 'IN_SERVICE'}
-                  invalid={Boolean(triageForm.errors.chief_complaint)}
-                  invalidText={triageForm.errors.chief_complaint}
-                  required
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
-                  <Select
-                    id="triage-priority"
-                    labelText="Assigned triage priority"
-                    value={triageForm.data.triage_priority}
-                    onChange={(event) => triageForm.setData('triage_priority', event.currentTarget.value)}
-                    disabled={props.entry.status !== 'IN_SERVICE'}
-                    invalid={Boolean(triageForm.errors.triage_priority)}
-                    invalidText={triageForm.errors.triage_priority}
-                  >
-                    {['EMERGENCY', 'URGENT', 'HIGH', 'NORMAL', 'LOW'].map((priority) => (
-                      <SelectItem key={priority} value={priority} text={priority} />
-                    ))}
-                  </Select>
-                  <TextInput
-                    id="triage-acuity"
-                    labelText="Acuity (optional; facility protocol)"
-                    value={triageForm.data.acuity}
-                    onChange={(event) => triageForm.setData('acuity', event.target.value)}
-                    disabled={props.entry.status !== 'IN_SERVICE'}
-                    invalid={Boolean(triageForm.errors.acuity)}
-                    invalidText={triageForm.errors.acuity}
-                  />
-                  <TextInput
-                    id="triage-consciousness"
-                    labelText="Consciousness (optional)"
-                    value={triageForm.data.consciousness}
-                    onChange={(event) => triageForm.setData('consciousness', event.target.value)}
-                    disabled={props.entry.status !== 'IN_SERVICE'}
-                    invalid={Boolean(triageForm.errors.consciousness)}
-                    invalidText={triageForm.errors.consciousness}
-                  />
+            </ActionableNotification>
+          ) : (
+            <InlineNotification
+              className="nurse-station-status-notification"
+              kind="warning"
+              lowContrast
+              hideCloseButton
+              title="Confirm the patient is present"
+              subtitle="The patient has been called to the room. Confirm they have arrived before starting triage assessment."
+            />
+          )
+        ) : null}
+        <div className="clinical-entry-workspace nurse-station-workspace">
+          <aside className="clinical-entry-workspace__sidebar nurse-station-workspace__sidebar" aria-label="Visit context">
+            <section
+              className="afy-card nurse-station-panel nurse-station-context-card"
+              aria-labelledby="nursing-context-heading"
+            >
+              <div className="nurse-station-context__heading">
+                <h2 id="nursing-context-heading" className="nurse-station-panel__title">Visit context</h2>
+                <Tag
+                  size="sm"
+                  type={props.entry.status === 'IN_SERVICE' ? 'green' : props.entry.status === 'CALLED' ? 'blue' : 'cool-gray'}
+                >
+                  {props.entry.status.replaceAll('_', ' ')}
+                </Tag>
+              </div>
+              <div className="nurse-station-context__ticket">
+                <span>Ticket {props.entry.ticketNumber}</span>
+                <strong>{props.entry.queue}</strong>
+              </div>
+              <dl className="nurse-station-context__details">
+                <div className="nurse-station-context__detail">
+                  <dt>Encounter</dt>
+                  <dd className="nurse-station-context__value">
+                    <span>{props.encounter.type.replaceAll('_', ' ')}</span>
+                    <Tag size="sm" type="cool-gray">{props.encounter.status}</Tag>
+                  </dd>
                 </div>
-                <Button size="lg" renderIcon={Checkmark} type="submit" disabled={props.entry.status !== 'IN_SERVICE' || triageForm.processing} style={{ marginTop: '1rem' }}>
-                  {triageForm.processing ? 'Saving…' : 'Save triage assessment'}
-                </Button>
-              </Form>
+                <div className="nurse-station-context__detail">
+                  <dt>Patient status</dt>
+                  <dd className="nurse-station-context__value">
+                    <Tag size="sm" type="cool-gray">{props.patient.status}</Tag>
+                  </dd>
+                </div>
+              </dl>
             </section>
-          ) : null}
 
-          {props.canHandoff ? (
-            <section style={{ padding: '1rem' }}>
-              <h2 style={{ marginTop: 0 }}>Send to consultation</h2>
-              <p>
-                This transfers the existing encounter and the triage-assigned queue priority. Triage priority is not recalculated here.
-              </p>
-              <Form onSubmit={handoffToConsultation}>
-                <FormErrors errors={handoffForm.errors} fields={['destination_queue_id', 'reason']} />
-                <Select
-                  id="nurse-handoff-destination"
-                  labelText="Consultation queue"
-                  value={handoffForm.data.destination_queue_id}
-                  onChange={(event) => handoffForm.setData('destination_queue_id', event.currentTarget.value)}
-                  invalid={Boolean(handoffForm.errors.destination_queue_id)}
-                  invalidText={handoffForm.errors.destination_queue_id}
-                  disabled={!props.triage || props.consultationQueues.length === 0}
-                >
-                  <SelectItem value="" text="Choose a consultation queue" />
-                  {props.consultationQueues.map((queue) => (
-                    <SelectItem key={queue.id} value={queue.id} text={queue.name} />
-                  ))}
-                </Select>
-                <TextArea
-                  id="nurse-handoff-reason"
-                  labelText="Handoff note"
-                  rows={2}
-                  value={handoffForm.data.reason}
-                  onChange={(event) => handoffForm.setData('reason', event.target.value)}
-                  invalid={Boolean(handoffForm.errors.reason)}
-                  invalidText={handoffForm.errors.reason}
-                  required
-                />
-                {!props.triage ? <p>Record a triage assessment before consultation handoff.</p> : null}
-                {props.triage && props.consultationQueues.length === 0
-                  ? <p>No active consultation queue is configured for this facility.</p>
-                  : null}
-                <Button size="lg" renderIcon={Send}
-                  type="submit"
-                  disabled={!props.triage || props.consultationQueues.length === 0 || handoffForm.processing || !handoffForm.data.destination_queue_id}
-                  style={{ marginTop: '1rem' }}
-                >
-                  {handoffForm.processing ? 'Sending…' : 'Send to consultation'}
-                </Button>
-              </Form>
+            <section
+              className="afy-card nurse-station-panel"
+              aria-labelledby="current-triage-heading"
+            >
+              <div className="nurse-station-summary__heading">
+                <h2 id="current-triage-heading" className="nurse-station-panel__title">Current triage</h2>
+                {props.triage ? (
+                  <Tag
+                    size="sm"
+                    type={props.triage.priority === 'EMERGENCY' ? 'red' : props.triage.priority === 'URGENT' ? 'purple' : 'blue'}
+                  >
+                    {props.triage.priority === 'ROUTINE' ? 'Normal' : props.triage.priority}
+                  </Tag>
+                ) : null}
+              </div>
+              {props.triage ? (
+                <div className="nurse-station-triage">
+                  <p className="nurse-station-triage__complaint">{props.triage.chiefComplaint}</p>
+                  {(props.triage.acuity || props.triage.consciousness) ? (
+                    <dl className="nurse-station-triage__details">
+                      {props.triage.acuity ? (
+                        <div>
+                          <dt>Acuity</dt>
+                          <dd>{props.triage.acuity}</dd>
+                        </div>
+                      ) : null}
+                      {props.triage.consciousness ? (
+                        <div>
+                          <dt>Consciousness</dt>
+                          <dd>{props.triage.consciousness}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  ) : null}
+                  <p className="nurse-station-triage__recorded">
+                    Recorded {formatDate(props.triage.occurredAt)}
+                  </p>
+                </div>
+              ) : <p className="nurse-station-panel__empty">No triage assessment recorded.</p>}
             </section>
-          ) : null}
+
+            <section
+              className="afy-card nurse-station-panel"
+              aria-labelledby="recent-vitals-heading"
+            >
+              <div className="nurse-station-summary__heading">
+                <h2 id="recent-vitals-heading" className="nurse-station-panel__title">Recent vitals</h2>
+                {props.vitals.length > 0 ? <span className="nurse-station-vitals__count">{props.vitals.length} recorded</span> : null}
+              </div>
+              {props.vitals.length === 0
+                ? <p className="nurse-station-panel__empty">No vital signs recorded.</p>
+                : props.vitals.map((observation, index) => <VitalsSummary key={`${observation.occurredAt}-${index}`} observation={observation} />)}
+            </section>
+          </aside>
+
+          <div className="clinical-entry-workspace__workbench nurse-station-workspace__workbench">
+            {workspaceTabs.length > 0 ? (
+              <section
+                className="clinical-entry-workspace-navigation nurse-station-workspace-navigation"
+                aria-label="Nursing assessment workspace"
+              >
+                <TabsVertical
+                  selectedIndex={activeWorkspaceTab ? workspaceTabs.indexOf(activeWorkspaceTab) : 0}
+                  onChange={({ selectedIndex }) => setSelectedWorkspaceTab(workspaceTabs[selectedIndex] ?? 'vitals')}
+                >
+                  <TabListVertical
+                    aria-label="Nursing assessment workspace"
+                    className="clinical-entry-workspace__vertical-tabs nurse-station-workspace__vertical-tabs"
+                    size="md"
+                  >
+                    {props.canRecordVitals ? <Tab renderIcon={HealthCross}>Vital signs</Tab> : null}
+                    {props.canRecordTriage ? <Tab renderIcon={Task}>Triage</Tab> : null}
+                    {props.canHandoff ? <Tab renderIcon={Send}>Handoff</Tab> : null}
+                  </TabListVertical>
+                  <TabPanels>
+                    {workspaceTabs.map((tab) => (
+                      <TabPanel key={tab}>
+                        {activeWorkspaceTab === tab ? (
+                          <div className="clinical-entry-tab-content nurse-station-workspace__tab-content">
+                            {tab === 'vitals' ? (
+                              <section
+                                className="afy-card nurse-station-panel"
+                                aria-labelledby="record-vitals-heading"
+                              >
+                                <h2 id="record-vitals-heading" className="nurse-station-panel__title">Record vital signs</h2>
+                                {props.entry.status !== 'IN_SERVICE' ? (
+                                  <p className="nurse-station-panel__note" role="note">Available after the patient is called and confirmed present in the triage room.</p>
+                                ) : null}
+                                {startServiceSuccess ? <p className="nurse-station-form__message" role="status" aria-live="polite">{startServiceSuccess}</p> : null}
+                                <FormErrors errors={vitalsForm.errors} fields={[
+                                  'patient_id', 'temperature', 'heart_rate', 'respiratory_rate',
+                                  'systolic_bp', 'diastolic_bp', 'oxygen_saturation', 'weight',
+                                  'height', 'pain_score',
+                                ]} />
+                                <Form onSubmit={saveVitals}>
+                                  <div className="nurse-station-form-grid nurse-station-form-grid--vitals">
+                                    {([
+                                      ['temperature', 'Temperature (°C)'],
+                                      ['heart_rate', 'Heart rate (bpm)'],
+                                      ['respiratory_rate', 'Respiratory rate (/min)'],
+                                    ] as const).map(([field, label]) => renderVitalInput(field, label))}
+                                    <fieldset
+                                      className="nurse-station-blood-pressure"
+                                      disabled={props.entry.status !== 'IN_SERVICE'}
+                                    >
+                                      <legend className="cds--label">Blood pressure (mmHg)</legend>
+                                      <div className="nurse-station-blood-pressure__values">
+                                        <TextInput
+                                          id="vitals-systolic_bp"
+                                          labelText="Systolic"
+                                          hideLabel
+                                          type="number"
+                                          step="1"
+                                          value={vitalsForm.data.systolic_bp}
+                                          onChange={(event) => vitalsForm.setData('systolic_bp', event.target.value)}
+                                          invalid={Boolean(vitalsForm.errors.systolic_bp)}
+                                          invalidText={vitalsForm.errors.systolic_bp}
+                                        />
+                                        <span aria-hidden="true">/</span>
+                                        <TextInput
+                                          id="vitals-diastolic_bp"
+                                          labelText="Diastolic"
+                                          hideLabel
+                                          type="number"
+                                          step="1"
+                                          value={vitalsForm.data.diastolic_bp}
+                                          onChange={(event) => vitalsForm.setData('diastolic_bp', event.target.value)}
+                                          invalid={Boolean(vitalsForm.errors.diastolic_bp)}
+                                          invalidText={vitalsForm.errors.diastolic_bp}
+                                        />
+                                      </div>
+                                    </fieldset>
+                                    {([
+                                      ['oxygen_saturation', 'Oxygen saturation (%)'],
+                                      ['weight', 'Weight (kg)'],
+                                      ['height', 'Height (cm)'],
+                                      ['pain_score', 'Pain score (0–10)'],
+                                    ] as const).map(([field, label]) => renderVitalInput(field, label))}
+                                  </div>
+                                  <Button className="nurse-station-form__submit" size="lg" renderIcon={Checkmark} type="submit" disabled={props.entry.status !== 'IN_SERVICE' || vitalsForm.processing}>
+                                    {vitalsForm.processing ? 'Saving…' : 'Save vital signs'}
+                                  </Button>
+                                </Form>
+                              </section>
+                            ) : null}
+
+                            {tab === 'triage' ? (
+                              <section
+                                className="afy-card nurse-station-panel"
+                                aria-labelledby="record-triage-heading"
+                                aria-disabled={props.entry.status !== 'IN_SERVICE'}
+                              >
+                                <h2 id="record-triage-heading" className="nurse-station-panel__title">Record triage assessment</h2>
+                                {props.entry.status !== 'IN_SERVICE' ? (
+                                  <p className="nurse-station-panel__note" role="note">Available after the patient is called and confirmed present in the triage room.</p>
+                                ) : null}
+                                <FormErrors errors={triageForm.errors} fields={[
+                                  'patient_id', 'chief_complaint', 'triage_priority', 'acuity', 'consciousness',
+                                ]} />
+                                <Form onSubmit={saveTriage}>
+                                  <TextArea
+                                    id="triage-chief-complaint"
+                                    labelText="Chief complaint"
+                                    rows={3}
+                                    value={triageForm.data.chief_complaint}
+                                    onChange={(event) => triageForm.setData('chief_complaint', event.target.value)}
+                                    disabled={props.entry.status !== 'IN_SERVICE'}
+                                    invalid={Boolean(triageForm.errors.chief_complaint)}
+                                    invalidText={triageForm.errors.chief_complaint}
+                                    required
+                                  />
+                                  <div className="nurse-station-form-grid nurse-station-form-grid--triage">
+                                    <Select
+                                      id="triage-priority"
+                                      labelText="Assigned triage priority"
+                                      value={triageForm.data.triage_priority}
+                                      onChange={(event) => triageForm.setData('triage_priority', event.currentTarget.value)}
+                                      disabled={props.entry.status !== 'IN_SERVICE'}
+                                      invalid={Boolean(triageForm.errors.triage_priority)}
+                                      invalidText={triageForm.errors.triage_priority}
+                                    >
+                                      {['EMERGENCY', 'URGENT', 'HIGH', 'NORMAL', 'LOW'].map((priority) => (
+                                        <SelectItem key={priority} value={priority} text={priority} />
+                                      ))}
+                                    </Select>
+                                    <TextInput
+                                      id="triage-acuity"
+                                      labelText="Acuity (optional; facility protocol)"
+                                      value={triageForm.data.acuity}
+                                      onChange={(event) => triageForm.setData('acuity', event.target.value)}
+                                      disabled={props.entry.status !== 'IN_SERVICE'}
+                                      invalid={Boolean(triageForm.errors.acuity)}
+                                      invalidText={triageForm.errors.acuity}
+                                    />
+                                    <TextInput
+                                      id="triage-consciousness"
+                                      labelText="Consciousness (optional)"
+                                      value={triageForm.data.consciousness}
+                                      onChange={(event) => triageForm.setData('consciousness', event.target.value)}
+                                      disabled={props.entry.status !== 'IN_SERVICE'}
+                                      invalid={Boolean(triageForm.errors.consciousness)}
+                                      invalidText={triageForm.errors.consciousness}
+                                    />
+                                  </div>
+                                  <Button className="nurse-station-form__submit" size="lg" renderIcon={Checkmark} type="submit" disabled={props.entry.status !== 'IN_SERVICE' || triageForm.processing}>
+                                    {triageForm.processing ? 'Saving…' : 'Save triage assessment'}
+                                  </Button>
+                                </Form>
+                              </section>
+                            ) : null}
+
+                            {tab === 'handoff' ? (
+                              <section className="afy-card nurse-station-panel">
+                                <h2 className="nurse-station-panel__title">Send to consultation</h2>
+                                <p className="nurse-station-panel__description">
+                                  This transfers the existing encounter and the triage-assigned queue priority. Triage priority is not recalculated here.
+                                </p>
+                                <Form onSubmit={handoffToConsultation}>
+                                  <FormErrors errors={handoffForm.errors} fields={['destination_queue_id', 'reason']} />
+                                  <Select
+                                    id="nurse-handoff-destination"
+                                    labelText="Consultation queue"
+                                    value={handoffForm.data.destination_queue_id}
+                                    onChange={(event) => handoffForm.setData('destination_queue_id', event.currentTarget.value)}
+                                    invalid={Boolean(handoffForm.errors.destination_queue_id)}
+                                    invalidText={handoffForm.errors.destination_queue_id}
+                                    disabled={!props.triage || props.consultationQueues.length === 0}
+                                  >
+                                    <SelectItem value="" text="Choose a consultation queue" />
+                                    {props.consultationQueues.map((queue) => (
+                                      <SelectItem key={queue.id} value={queue.id} text={queue.name} />
+                                    ))}
+                                  </Select>
+                                  <TextArea
+                                    id="nurse-handoff-reason"
+                                    labelText="Handoff note"
+                                    rows={2}
+                                    value={handoffForm.data.reason}
+                                    onChange={(event) => handoffForm.setData('reason', event.target.value)}
+                                    invalid={Boolean(handoffForm.errors.reason)}
+                                    invalidText={handoffForm.errors.reason}
+                                    required
+                                  />
+                                  {!props.triage ? <p className="nurse-station-panel__note">Record a triage assessment before consultation handoff.</p> : null}
+                                  {props.triage && props.consultationQueues.length === 0
+                                    ? <p className="nurse-station-panel__note">No active consultation queue is configured for this facility.</p>
+                                    : null}
+                                  <Button size="lg" renderIcon={Send}
+                                    type="submit"
+                                    disabled={!props.triage || props.consultationQueues.length === 0 || handoffForm.processing || !handoffForm.data.destination_queue_id}
+                                    className="nurse-station-form__submit"
+                                  >
+                                    {handoffForm.processing ? 'Sending…' : 'Send to consultation'}
+                                  </Button>
+                                </Form>
+                              </section>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </TabPanel>
+                    ))}
+                  </TabPanels>
+                </TabsVertical>
+              </section>
+            ) : (
+              <section className="afy-card nurse-station-panel">
+                <h2 className="nurse-station-panel__title">Nursing assessment</h2>
+                <p className="nurse-station-panel__description">No nursing assessment actions are available for this encounter.</p>
+              </section>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>

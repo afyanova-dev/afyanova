@@ -96,22 +96,22 @@ export function InventoryItemsTable({
     <section aria-labelledby="inventory-items-heading" className="afy-section">
       <div className="afy-section__heading">
         <div>
-          <h2 id="inventory-items-heading" className="afy-section__title">Master item catalogue</h2>
+          <h2 id="inventory-items-heading" className="afy-section__title">Inventory Items</h2>
           <p className="afy-section__description">
-            Tenant-wide inventory items including medications, clinical supplies, and protective
-            equipment.
+            Shared list of medicines, laboratory reagents and supplies, protective equipment, and
+            other items used for ordering and stock management.
           </p>
         </div>
       </div>
 
       <StatisticsCards
-        label="Catalogue summary"
+        label="Inventory summary"
         cards={[
           {
             id: 'catalogue-items',
-            label: 'Items in catalogue',
+            label: 'Inventory items',
             value: items.length,
-            detail: 'Shared vocabulary for every facility',
+            detail: 'Shared across all facilities',
             borderTone: 'information',
             icon: <Box aria-hidden="true" />,
           },
@@ -138,15 +138,15 @@ export function InventoryItemsTable({
         rows={rows}
         headers={headers}
         title={`Items (${filteredItems.length} of ${items.length})`}
-        ariaLabel="Inventory item catalogue"
+        ariaLabel="Inventory items"
         emptyState={<EmptyState title="No matches" description="No items match the selected search and filters." />}
         toolbar={(onInputChange) => (
           <>
             <TableToolbarSearch
               persistent
               onChange={onInputChange}
-              placeholder="Search item catalogue"
-              aria-label="Search item catalogue"
+              placeholder="Search inventory items"
+              aria-label="Search inventory items"
             />
             <TableToolbarMenu
               renderIcon={Filter}

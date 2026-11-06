@@ -165,19 +165,26 @@ p.patient-register__span {
 }
 
 .patient-register__photo-empty span {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: var(--cds-heading-compact-01-font-weight, 600);
+  line-height: var(--cds-heading-compact-01-line-height, 1.28572);
+  letter-spacing: var(--cds-heading-compact-01-letter-spacing, 0.16px);
 }
 
 .patient-register__photo-empty small {
   color: var(--cds-text-placeholder, #a8a8a8);
-  font-size: 0.75rem;
+  font-size: var(--cds-caption-01-font-size, 0.75rem);
+  font-weight: var(--cds-caption-01-font-weight, 400);
+  line-height: var(--cds-caption-01-line-height, 1.33333);
+  letter-spacing: var(--cds-caption-01-letter-spacing, 0.32px);
 }
 
 .patient-register__photo-help {
   color: var(--cds-text-secondary, #525252);
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  font-weight: var(--cds-body-01-font-weight, 400);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+  letter-spacing: var(--cds-body-01-letter-spacing, 0.16px);
 }
 
 .patient-register__photo-actions {

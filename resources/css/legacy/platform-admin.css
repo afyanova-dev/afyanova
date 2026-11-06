@@ -96,8 +96,10 @@
 .platform-admin__tenant-slug {
   margin-block: var(--afy-space-2xs) 0;
   color: var(--afy-text-secondary);
-  font-size: 0.75rem;
-  letter-spacing: 0.32px;
+  font-size: var(--cds-caption-01-font-size, 0.75rem);
+  font-weight: var(--cds-caption-01-font-weight, 400);
+  line-height: var(--cds-caption-01-line-height, 1.33333);
+  letter-spacing: var(--cds-caption-01-letter-spacing, 0.32px);
 }
 
 .platform-admin__audit-filters {
@@ -281,7 +283,10 @@
   padding: 0.25rem 0.625rem;
   border: 1px solid var(--afy-hairline);
   border-radius: var(--afy-radius-pill);
-  font-size: 0.75rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 400);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
   color: var(--afy-text-secondary);
   transition: border-color var(--afy-duration-fast) var(--afy-easing),
     color var(--afy-duration-fast) var(--afy-easing);
@@ -312,7 +317,10 @@
 
 .platform-admin__expansion-structure > span:first-child {
   color: var(--afy-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 400);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
 }
 
 .platform-admin__expansion-missing {
@@ -391,5 +399,8 @@
 
 .platform-admin__flat-list li span {
   color: var(--afy-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
+  font-weight: var(--cds-label-01-font-weight, 400);
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
 }

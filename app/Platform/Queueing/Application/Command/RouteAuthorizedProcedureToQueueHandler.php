@@ -48,7 +48,10 @@ final class RouteAuthorizedProcedureToQueueHandler
             ));
         }
 
-        $queue = Queue::query()->where('facility_id', $command->facilityId)->find($mapping->queue_id);
+        $queue = Queue::query()
+            ->where('facility_id', $command->facilityId)
+            ->whereKey($mapping->queue_id)
+            ->first();
         if ($queue === null
             || $queue->service_capability !== ServiceCapability::PROCEDURE->value
             || ! $queue->is_active

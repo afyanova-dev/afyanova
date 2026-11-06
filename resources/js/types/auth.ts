@@ -18,6 +18,7 @@ export interface SharedAuth {
   activeFacility: string | null;
   contextMode: 'general' | 'facility' | 'unresolved';
   canUseGeneral: boolean;
+  isTenantAdmin: boolean;
   isPlatformSuperAdmin: boolean;
 }
 

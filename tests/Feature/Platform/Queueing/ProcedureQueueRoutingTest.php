@@ -57,11 +57,11 @@ test('queue administrators can map active procedure definitions to procedure que
                 'queue_id' => $queue->id,
             ]],
         ])
-        ->assertRedirect(route('service-queues.index'))
+        ->assertRedirect(route('service-queues.manage'))
         ->assertSessionHas('status', 'Procedure queue routing updated.');
 
     $this->actingAs($fixture['user'])
-        ->get(route('service-queues.index'))
+        ->get(route('service-queues.manage'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('procedureRouting.definitions.0.definitionId', $definitionId)
@@ -86,8 +86,13 @@ test('queue administrators can map active procedure definitions to procedure que
         ->and(json_decode($auditEvent->metadata, true, 512, JSON_THROW_ON_ERROR))->toBe(['mapping_count' => 1]);
 });
 
-test('authorized procedure routing issues an idempotent order-linked ticket per procedure', function (): void {
-    $fixture = queueingFixture();
+test('procedure mapping replacement only routes future procedures', function (): void {
+    $fixture = queueingFixture([
+        'queue.access',
+        'queue.ticket.view',
+        'queue.definition.manage',
+        'clinical.procedures.read',
+    ]);
     $tenantId = (string) $fixture['tenant']->id;
     $facilityId = (string) $fixture['facility']->id;
     $queue = TenantContextScope::run($tenantId, $facilityId, function () use ($tenantId, $facilityId): Queue {
@@ -107,23 +112,23 @@ test('authorized procedure routing issues an idempotent order-linked ticket per 
 
         return $queue;
     });
-    $definitionId = (string) Str::uuid7();
+    $definitionId = clinicalDefineProcedure($tenantId, [
+        'code' => 'ROUTE-REPLACEMENT',
+        'name' => 'Queue Route Replacement',
+    ]);
     $encounterId = (string) Str::uuid7();
     $patientId = (string) Str::uuid7();
     $procedureId = (string) Str::uuid7();
     $secondProcedureId = (string) Str::uuid7();
 
-    TenantContextScope::run($tenantId, $facilityId, function () use ($tenantId, $facilityId, $definitionId, $queue): void {
-        DB::table('qms_procedure_queue_mappings')->insert([
-            'id' => (string) Str::uuid7(),
-            'tenant_id' => $tenantId,
-            'facility_id' => $facilityId,
-            'procedure_definition_id' => $definitionId,
-            'queue_id' => $queue->id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    });
+    $this->actingAs($fixture['user'])
+        ->put(route('service-queues.procedure-routing'), [
+            'mappings' => [[
+                'definition_id' => $definitionId,
+                'queue_id' => $queue->id,
+            ]],
+        ])
+        ->assertRedirect(route('service-queues.manage'));
 
     $route = new RouteAuthorizedProcedureToQueue(
         eventId: (string) Str::uuid7(),
@@ -135,6 +140,35 @@ test('authorized procedure routing issues an idempotent order-linked ticket per 
     );
 
     TenantContextScope::run($tenantId, $facilityId, fn () => app(CommandBus::class)->dispatch($route));
+    TenantContextScope::run($tenantId, $facilityId, fn () => app(CommandBus::class)->dispatch($route));
+
+    $replacementQueue = TenantContextScope::run($tenantId, $facilityId, function () use ($tenantId, $facilityId): Queue {
+        $queue = queueTestQueue($tenantId, $facilityId, 'PROC-NEW');
+        $queue->service_capability = 'PROCEDURE';
+        $queue->save();
+        $room = queueTestRoom($tenantId, $facilityId, 'PROC-ROOM-2');
+        DB::table('qms_queue_rooms')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'facility_id' => $facilityId,
+            'queue_id' => $queue->id,
+            'room_id' => $room->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $queue;
+    });
+
+    $this->actingAs($fixture['user'])
+        ->put(route('service-queues.procedure-routing'), [
+            'mappings' => [[
+                'definition_id' => $definitionId,
+                'queue_id' => $replacementQueue->id,
+            ]],
+        ])
+        ->assertRedirect(route('service-queues.manage'));
+
     TenantContextScope::run($tenantId, $facilityId, fn () => app(CommandBus::class)->dispatch($route));
     TenantContextScope::run($tenantId, $facilityId, fn () => app(CommandBus::class)->dispatch(
         new RouteAuthorizedProcedureToQueue(
@@ -149,11 +183,12 @@ test('authorized procedure routing issues an idempotent order-linked ticket per 
 
     $entries = TenantContextScope::run($tenantId, $facilityId, fn () => DB::table('qms_queue_entries')
         ->where('order_type', 'PROCEDURE_BOOKING')
-        ->get());
+        ->get()
+        ->keyBy('source_order_ref'));
 
     expect($entries)->toHaveCount(2)
-        ->and($entries->pluck('source_order_ref')->all())->toContain($procedureId, $secondProcedureId)
-        ->and($entries->pluck('queue_id')->unique()->all())->toBe([$queue->id])
+        ->and($entries->get($procedureId)?->queue_id)->toBe($queue->id)
+        ->and($entries->get($secondProcedureId)?->queue_id)->toBe($replacementQueue->id)
         ->and($entries->pluck('encounter_id')->unique()->all())->toBe([$encounterId])
         ->and($entries->pluck('patient_id')->unique()->all())->toBe([$patientId]);
 });

@@ -6,6 +6,8 @@ namespace App\Domains\HR\Application\Command;
 
 use App\Domains\HR\Domain\Exception\StaffUserLinkNotFoundException;
 use App\Domains\HR\Domain\StaffUserLinkRepository;
+use App\Domains\Identity\Contracts\IdentityApi;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -17,6 +19,8 @@ final class UnlinkStaffFromUserHandler
 {
     public function __construct(
         private readonly StaffUserLinkRepository $links,
+        private readonly IdentityApi $identity,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(UnlinkStaffFromUser $command): void
@@ -30,6 +34,10 @@ final class UnlinkStaffFromUserHandler
         $unlinkedBy = $command->unlinkedBy ?? (string) Auth::id();
 
         $link->recordUnlink($unlinkedBy, $command->reason);
+        $this->identity->unlinkStaffIdentity(
+            tenantId: $this->context->tenantId(),
+            userId: $link->user_id,
+        );
 
         $this->links->delete($link);
     }

@@ -8,8 +8,7 @@ use App\Domains\Laboratory\Domain\Model\LabPanel;
 use App\Shared\Domain\Repository;
 
 /**
- * Write-side port for the LabPanel aggregate (ADR-162 D-C). Used ONLY by the
- * `laboratory:define-panel` console command.
+ * Write-side port for the LabPanel aggregate (ADR-162 D-C).
  */
 interface LabPanelRepository extends Repository
 {

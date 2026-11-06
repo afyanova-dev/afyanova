@@ -6,7 +6,7 @@ namespace App\Domains\Authentication\Console;
 
 use App\Domains\Authentication\Mail\AdminBootstrapInvitation;
 use App\Domains\Authentication\Support\OneTimeInvitationMailGuard;
-use App\Domains\Identity\Application\TenantAdminRoleProvisioner;
+use App\Domains\Identity\Contracts\IdentityApi;
 use App\Domains\Identity\Contracts\TenantAdminRoleDefinition;
 use App\Models\Tenant;
 use App\Shared\Audit\AuditLogger;
@@ -29,7 +29,7 @@ final class BootstrapTenantAdminCommand extends Command
 
     protected $description = 'Provision or resend the one-time initial Tenant Admin invitation.';
 
-    public function handle(AuditLogger $audit): int
+    public function handle(AuditLogger $audit, IdentityApi $identityApi): int
     {
         $tenantId = trim((string) $this->option('tenant'));
         $name = trim((string) $this->option('name'));
@@ -79,6 +79,7 @@ final class BootstrapTenantAdminCommand extends Command
             $changeReference,
             $resend,
             $audit,
+            $identityApi,
         ): array {
             $tenant = DB::table('shared_tenants')->where('id', $tenantId)->lockForUpdate()->first();
             if ($tenant === null || $tenant->status !== 'ACTIVE') {
@@ -137,10 +138,9 @@ final class BootstrapTenantAdminCommand extends Command
             }
 
             try {
-                $roleId = app(TenantAdminRoleProvisioner::class)->provision(
-                    tenantId: $tenantId,
-                    actorId: null,
-                    reason: 'Provisioned during initial Tenant Admin bootstrap.',
+                $roleId = $identityApi->provisionAccountSetupTenantAdmin(
+                    $tenantId,
+                    'Provisioned during initial Tenant Admin bootstrap.',
                 );
             } catch (\RuntimeException $exception) {
                 return ['error' => $exception->getMessage()];

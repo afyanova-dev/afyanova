@@ -70,19 +70,25 @@ export interface ActivePatientEncounter {
 export interface PatientChartAllergy {
   id: string;
   substance: string;
+  category?: string | null;
   severity: string | null;
   status: string | null;
   verification: string | null;
   reaction: string | null;
   onset: string | null;
+  resolvedAt?: string | null;
+  recordedAt?: string | null;
 }
 
 export interface PatientChartCondition {
   id: string;
   description: string;
   code: string | null;
+  codeSystem?: string | null;
   status: string;
   onset: string | null;
+  resolvedAt?: string | null;
+  recordedAt?: string | null;
 }
 
 export interface PatientChartProcedure {
@@ -112,7 +118,9 @@ export interface PatientChartVital {
   oxygenSaturation: number | null;
   weight: number | null;
   height: number | null;
+  painScore?: number | null;
   occurredAt: string;
+  recordedAt?: string | null;
 }
 
 export interface PatientChartMedication {
@@ -122,7 +130,13 @@ export interface PatientChartMedication {
   medication: string | null;
   dose: string | null;
   frequency: string | null;
+  route?: string | null;
+  duration?: string | null;
+  instructions?: string | null;
+  urgency?: string | null;
+  prescriberName?: string | null;
   status: string;
+  occurredAt?: string | null;
   recordedAt: string;
 }
 
@@ -142,10 +156,16 @@ export interface PatientChartLabItem {
 }
 
 export interface PatientChartLabResult {
+  id?: string;
   parameter: string;
   value: number | string | null;
   unit: string | null;
   flag: string | null;
+  referenceLow?: string | null;
+  referenceHigh?: string | null;
+  referenceText?: string | null;
+  status?: string | null;
+  releasedAt?: string | null;
 }
 
 export interface PatientChartImagingOrder {
@@ -265,10 +285,12 @@ export interface PatientChartProps {
     name: string;
     code: string;
     serviceCapability: string | null;
+    roomNames?: string[];
   }>;
   queueEntry: {
     entryId: string;
     queueId: string;
+    serviceCapability: string | null;
     ticketNumber: string;
     priority: string;
     status: string;

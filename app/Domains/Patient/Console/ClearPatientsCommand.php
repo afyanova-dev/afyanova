@@ -110,7 +110,7 @@ final class ClearPatientsCommand extends Command
             return self::SUCCESS;
         }
 
-        $patientList = $patients->values()->all();
+        $patientList = array_values(array_map('strval', $patients->all()));
         $summary = $this->summarize($patientList);
 
         if ($this->option('dry-run')) {
@@ -162,6 +162,9 @@ final class ClearPatientsCommand extends Command
      * Return all patient-linked tables and the columns that reference patient ids.
      *
      * This intentionally covers the patient aggregate tables plus the most common cross-domain tables.
+     */
+    /**
+     * @return array<string, list<string>>
      */
     private function tablesToClean(): array
     {
@@ -227,6 +230,9 @@ final class ClearPatientsCommand extends Command
     /**
      * Discover any extra tables that have a patient_id column so this command remains useful as the schema grows.
      */
+    /**
+     * @return array<string, string>
+     */
     private function discoverPatientIdTables(): array
     {
         if (DB::connection()->getDriverName() === 'pgsql') {
@@ -264,6 +270,10 @@ final class ClearPatientsCommand extends Command
 
     /**
      * For dry-run output, show the number of rows that would be removed per table.
+     */
+    /**
+     * @param  list<string>  $patientList
+     * @return list<array{0: string, 1: int}>
      */
     private function summarize(array $patientList): array
     {

@@ -63,6 +63,26 @@ export const routes = {
   },
   workspaces: {
     admin: '/workspaces/admin',
+    adminLaboratoryCatalogEditors: '/workspaces/laboratory/catalog-editors',
+    laboratoryCatalog: '/workspaces/laboratory/catalog',
+    laboratoryInstruments: '/workspaces/laboratory/instruments',
+    laboratoryInstrument: (instrumentId: string) =>
+      `/workspaces/laboratory/instruments/${encodeURIComponent(instrumentId)}`,
+    laboratoryExecutions: '/workspaces/laboratory/executions',
+    laboratoryExecution: (executionId: string) =>
+      `/workspaces/laboratory/executions/${encodeURIComponent(executionId)}`,
+    laboratoryExecutionStart: (orderId: string, itemId: string) =>
+      `/workspaces/laboratory/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(itemId)}/executions`,
+    laboratoryExecutionMaterialUses: (executionId: string, requirementId: string) =>
+      `/workspaces/laboratory/executions/${encodeURIComponent(executionId)}/materials/${encodeURIComponent(requirementId)}/uses`,
+    laboratoryExecutionComplete: (executionId: string) =>
+      `/workspaces/laboratory/executions/${encodeURIComponent(executionId)}/complete`,
+    laboratoryExecutionAbort: (executionId: string) =>
+      `/workspaces/laboratory/executions/${encodeURIComponent(executionId)}/abort`,
+    laboratoryTestMethods: (definitionId: string) =>
+      `/workspaces/laboratory/catalog/tests/${encodeURIComponent(definitionId)}/methods`,
+    laboratoryTestMethod: (definitionId: string, methodId: string) =>
+      `/workspaces/laboratory/catalog/tests/${encodeURIComponent(definitionId)}/methods/${encodeURIComponent(methodId)}`,
     hrStaff: '/workspaces/hr/staff',
     hrPeopleSearch: '/workspaces/hr/api/search',
     hrUserDetail: (userId: string) => `/workspaces/hr/users/${userId}`,
@@ -117,6 +137,7 @@ export const routes = {
     adminOrganizationCapabilityStatus: (capability: string) =>
       `/workspaces/admin/organization/capabilities/${encodeURIComponent(capability)}/status`,
     adminAudit: '/workspaces/admin/audit',
+    adminRoleCatalog: '/workspaces/admin/identity/roles',
     /** Procurement single-actor approval limits (per facility / per department). */
     adminProcurementLimits: '/workspaces/admin/procurement-limits',
     adminRolePromotions: '/workspaces/admin/identity/role-promotions',
@@ -136,18 +157,30 @@ export const routes = {
       `/workspaces/admin/identity/role-promotions/${promotionId}/reject`,
     attention: '/workspaces/attention',
     serviceQueues: '/workspaces/service-queues',
+    queueManagement: '/workspaces/service-queues/manage',
     serviceQueue: (queueId: string) => `/workspaces/service-queues/${queueId}`,
+    queueDefinitions: '/workspaces/service-queues/queues',
+    queueDefinition: (queueId: string) => `/workspaces/service-queues/queues/${queueId}`,
     nurseStation: '/workspaces/nurse-station',
     nurseStationEntry: (entryId: string) => `/workspaces/nurse-station/entries/${entryId}`,
     nurseStationStart: (entryId: string) => `/workspaces/nurse-station/entries/${entryId}/start`,
     nurseStationHandoff: (entryId: string) => `/workspaces/nurse-station/entries/${entryId}/handoff`,
     clinician: '/workspaces/clinician',
+    clinicianDiagnoses: '/workspaces/clinician/diagnoses',
     clinicianEntry: (entryId: string) => `/workspaces/clinician/entries/${entryId}`,
     encounterVitals: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/vitals`,
     encounterTriage: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/triage`,
     encounterNote: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/notes`,
+    encounterDocumentationDraft: (encounterId: string) =>
+      `/workspaces/clinical/encounters/${encounterId}/documentation-drafts`,
+    encounterDocumentationDraftSection: (encounterId: string, section: 'NOTE' | 'DIAGNOSIS' | 'PLAN') =>
+      `/workspaces/clinical/encounters/${encounterId}/documentation-drafts/${section}`,
     encounterDiagnosis: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/diagnoses`,
     encounterPlan: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/plans`,
+    encounterMedication: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/medications`,
+    encounterLabOrder: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/lab-orders`,
+    clinicalNoteSign: (noteId: string) => `/workspaces/clinical/notes/${noteId}/sign`,
+    clinicalNoteAmend: (noteId: string) => `/workspaces/clinical/notes/${noteId}/amendments`,
     encounterProcedureRequest: (encounterId: string) => `/workspaces/clinical/encounters/${encounterId}/procedures`,
     procedureAuthorize: (encounterId: string, procedureId: string) =>
       `/workspaces/clinical/encounters/${encounterId}/procedures/${procedureId}/authorize`,

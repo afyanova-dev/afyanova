@@ -374,6 +374,12 @@
   min-inline-size: 0;
 }
 
+.clinician-start-notification.cds--actionable-notification,
+.clinician-start-notification.cds--inline-notification {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
 .clinician-panel__title,
 .clinician-panel__subtitle {
   margin: 0;

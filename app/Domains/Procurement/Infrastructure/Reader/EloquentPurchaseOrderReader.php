@@ -427,18 +427,19 @@ final class EloquentPurchaseOrderReader implements PurchaseOrderReader
             return null;
         }
 
-        $packSize = $row->price_pack_size !== null ? (string) $row->price_pack_size : null;
-        $unitPrice = Money::of((string) $row->price_unit_price);
+        $packSizeValue = $row->getAttribute('price_pack_size');
+        $packSize = $packSizeValue !== null ? (string) $packSizeValue : null;
+        $unitPrice = Money::of((string) $row->getAttribute('price_unit_price'));
 
         return new ItemPricePoint(
-            supplierId: (string) $row->price_supplier_id,
-            poNumber: (string) $row->price_po_number,
+            supplierId: (string) $row->getAttribute('price_supplier_id'),
+            poNumber: (string) $row->getAttribute('price_po_number'),
             unitPrice: $unitPrice,
             baseUnitPrice: $this->baseUnitPrice($unitPrice, $packSize),
-            unit: (string) $row->price_unit,
-            uom: (string) $row->price_uom,
+            unit: (string) $row->getAttribute('price_unit'),
+            uom: (string) $row->getAttribute('price_uom'),
             packSize: $packSize,
-            orderedAt: CarbonImmutable::parse((string) $row->price_recorded_at)->toIso8601String(),
+            orderedAt: CarbonImmutable::parse((string) $row->getAttribute('price_recorded_at'))->toIso8601String(),
         );
     }
 
@@ -471,13 +472,14 @@ final class EloquentPurchaseOrderReader implements PurchaseOrderReader
 
         foreach ($rows as $row) {
             $remaining = null;
-            $ceiling = $row->price_quantity_ceiling !== null
-                ? Quantity::of((string) $row->price_quantity_ceiling)
+            $ceilingValue = $row->getAttribute('price_quantity_ceiling');
+            $ceiling = $ceilingValue !== null
+                ? Quantity::of((string) $ceilingValue)
                 : null;
 
             if ($ceiling !== null) {
                 $committed = $this->contracts->committedQuantityForContractLine(
-                    (string) $row->price_contract_line_id,
+                    (string) $row->getAttribute('price_contract_line_id'),
                 );
 
                 if (bccomp($ceiling, $committed, Quantity::SCALE) <= 0) {
@@ -488,13 +490,13 @@ final class EloquentPurchaseOrderReader implements PurchaseOrderReader
             }
 
             return new ContractPriceReference(
-                contractId: (string) $row->price_contract_id,
-                contractNumber: (string) $row->price_contract_number,
-                unitPrice: Money::of((string) $row->price_unit_price),
-                uom: (string) $row->price_uom,
+                contractId: (string) $row->getAttribute('price_contract_id'),
+                contractNumber: (string) $row->getAttribute('price_contract_number'),
+                unitPrice: Money::of((string) $row->getAttribute('price_unit_price')),
+                uom: (string) $row->getAttribute('price_uom'),
                 remaining: $remaining,
-                effectiveDate: CarbonImmutable::parse((string) $row->price_effective_date)->toDateString(),
-                expiryDate: CarbonImmutable::parse((string) $row->price_expiry_date)->toDateString(),
+                effectiveDate: CarbonImmutable::parse((string) $row->getAttribute('price_effective_date'))->toDateString(),
+                expiryDate: CarbonImmutable::parse((string) $row->getAttribute('price_expiry_date'))->toDateString(),
             );
         }
 
@@ -503,11 +505,12 @@ final class EloquentPurchaseOrderReader implements PurchaseOrderReader
 
     private function baseUnitPrice(string $unitPrice, ?string $packSize): string
     {
-        $pack = $packSize !== null && bccomp($packSize, '0', Quantity::SCALE) > 0
-            ? Quantity::of($packSize)
-            : '1';
+        $pack = $packSize !== null ? Quantity::of($packSize) : Quantity::of('1');
+        if (! Quantity::isPositive($pack)) {
+            $pack = Quantity::of('1');
+        }
 
-        return bcdiv($unitPrice, $pack, 4);
+        return bcdiv(Money::of($unitPrice), $pack, 4);
     }
 
     public function orderTotal(string $purchaseOrderId): string

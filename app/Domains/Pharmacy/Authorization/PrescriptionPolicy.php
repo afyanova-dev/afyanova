@@ -15,10 +15,11 @@ use App\Shared\Authorization\BasePolicy;
 /**
  * Prescription record policy (ADR-181 D-F).
  *
- * `view` is a coarse `pharmacy.access` check (`SearchPrescriptions` re-checks
- * the acting user's scope at the facility). `accept` / `cancel` are per-subject
- * — the actor must hold `pharmacy.prescriptions.accept` at the prescription's
- * ORIGINATING facility (the `StockAdjustmentPolicy` shape).
+ * `view` is a coarse `pharmacy.access` check; query handlers enforce the
+ * current-context facility scope. `accept` / `cancel` are per-subject — the
+ * actor must hold `pharmacy.prescriptions.accept` at the prescription's
+ * ORIGINATING facility in the current context (the `StockAdjustmentPolicy`
+ * shape).
  */
 final class PrescriptionPolicy extends BasePolicy
 {
@@ -52,10 +53,11 @@ final class PrescriptionPolicy extends BasePolicy
     private function atFacility(User $user, Prescription $prescription, string $key): bool
     {
         return $this->sameTenant($user, (string) $prescription->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $prescription->facility_id,
                 $key,
-                $this->scope->effectivePermissions($user, (string) $prescription->facility_id),
-                true,
             );
     }
 }

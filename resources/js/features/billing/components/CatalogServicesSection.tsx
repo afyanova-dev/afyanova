@@ -188,8 +188,8 @@ export function CatalogServicesSection({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
-              <h3 id="billing-service-detail-heading" style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
-                {selectedName} <code style={{ fontSize: '0.875rem' }}>({selectedCode})</code>
+              <h3 id="billing-service-detail-heading" style={{ fontSize: 'var(--cds-heading-03-font-size, 1.25rem)', fontWeight: 600, margin: 0 }}>
+                {selectedName} <code style={{ fontSize: 'var(--cds-code-02-font-size, 0.875rem)' }}>({selectedCode})</code>
               </h3>
               <div style={{ margin: 0, color: 'var(--cds-text-secondary, #525252)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>{selectedCategory}</span>
@@ -215,23 +215,23 @@ export function CatalogServicesSection({
 
           <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))', gap: '1rem', margin: 0 }}>
             <div>
-              <dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Facility tariff</dt>
+              <dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Facility tariff</dt>
               <dd style={{ margin: 0, fontWeight: 600 }}>
                 {facilityAmount !== null ? `${facilityAmount} ${currency}` : 'None — falls back to tenant default'}
-                {facilityEffectiveFrom ? <div style={{ fontWeight: 400, fontSize: '0.75rem' }}>from {facilityEffectiveFrom}</div> : null}
+                {facilityEffectiveFrom ? <div style={{ fontWeight: 400, fontSize: 'var(--cds-label-01-font-size, 0.75rem)' }}>from {facilityEffectiveFrom}</div> : null}
               </dd>
             </div>
             <div>
-              <dt style={{ fontSize: '0.75rem', color: 'var(--cds-text-secondary, #525252)' }}>Tenant default tariff</dt>
+              <dt style={{ fontSize: 'var(--cds-label-01-font-size, 0.75rem)', color: 'var(--cds-text-secondary, #525252)' }}>Tenant default tariff</dt>
               <dd style={{ margin: 0, fontWeight: 600 }}>
                 {defaultAmount !== null ? `${defaultAmount} ${currency}` : 'None'}
-                {defaultEffectiveFrom ? <div style={{ fontWeight: 400, fontSize: '0.75rem' }}>from {defaultEffectiveFrom}</div> : null}
+                {defaultEffectiveFrom ? <div style={{ fontWeight: 400, fontSize: 'var(--cds-label-01-font-size, 0.75rem)' }}>from {defaultEffectiveFrom}</div> : null}
               </dd>
             </div>
           </dl>
 
           <div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBlockEnd: '0.75rem' }}>Tariff history (immutable)</h4>
+            <h4 style={{ fontSize: 'var(--cds-heading-compact-02-font-size, 1rem)', fontWeight: 600, marginBlockEnd: '0.75rem' }}>Tariff history (immutable)</h4>
             <CarbonDataTable
               rows={historyRows}
               headers={[

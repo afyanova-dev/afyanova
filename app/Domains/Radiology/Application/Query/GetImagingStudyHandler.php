@@ -10,6 +10,7 @@ use App\Domains\Radiology\Domain\Model\ImagingStudy;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetImagingStudyHandler
     public function __construct(
         private readonly ImagingStudyReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetImagingStudy $query): ImagingStudySummary
@@ -29,7 +31,7 @@ final class GetImagingStudyHandler
             throw new RuntimeException('GetImagingStudy dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! in_array('radiology.access', $this->scope->effectivePermissions($user, $summary->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $summary->facilityId, 'radiology.access')) {
             throw NotFound::aggregate(ImagingStudy::class, $query->imagingStudyId);
         }
 

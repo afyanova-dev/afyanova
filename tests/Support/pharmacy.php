@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domains\Inventory\Domain\Model\Item;
 use App\Domains\Inventory\Domain\Model\StockBalance;
 use App\Domains\Inventory\Domain\Model\StockLocation;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Pharmacy\Application\Command\AcceptPrescription;
 use App\Domains\Pharmacy\Application\Listener\OnPrescriptionIssued;
 use App\Domains\Pharmacy\Domain\Model\Dispensing;
@@ -57,6 +58,33 @@ if (! function_exists('pharmacyFixture')) {
     }
 }
 
+if (! function_exists('pharmacyFacilityForUser')) {
+    function pharmacyFacilityForUser(
+        string $tenantId,
+        string $organizationId,
+        string $userId,
+        string $roleId,
+    ): string {
+        return TenantContextScope::run($tenantId, null, function () use ($tenantId, $organizationId, $userId, $roleId): string {
+            $facility = Facility::factory()->forTenant($tenantId, $organizationId)->create();
+
+            DB::table('idn_access_assignments')->insert([
+                'id' => (string) Str::uuid7(),
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'role_id' => $roleId,
+                'facility_id' => (string) $facility->id,
+                'status' => 'ACTIVE',
+                'is_primary' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return (string) $facility->id;
+        });
+    }
+}
+
 if (! function_exists('pharmacyStockedItem')) {
     /**
      * A non-batch inventory item + a stock location at the fixture facility with
@@ -71,8 +99,7 @@ if (! function_exists('pharmacyStockedItem')) {
         string $facilityId,
         string $quantity = '100',
         ?string $itemId = null,
-    ): array
-    {
+    ): array {
         return TenantContextScope::run($tenantId, null, function () use ($tenantId, $facilityId, $quantity, $itemId): array {
             $item = $itemId !== null
                 ? Item::query()->findOrFail($itemId)

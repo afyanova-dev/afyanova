@@ -13,10 +13,16 @@ namespace App\Domains\Laboratory\Contracts\Dto;
  */
 final readonly class LabTestDefinitionSummary
 {
+    public const AVAILABILITY_AVAILABLE = 'AVAILABLE';
+
     public const AVAILABILITY_DISABLED = 'DISABLED';
 
+    public const AVAILABILITY_REFERRAL_ONLY = 'REFERRAL_ONLY';
+
+    public const AVAILABILITY_TEMPORARILY_UNAVAILABLE = 'TEMPORARILY_UNAVAILABLE';
+
     /**
-     * @param  list<array{code: string, name?: string|null, unit?: string|null}>|null  $parameters
+     * @param  list<array<string, mixed>>|null  $parameters
      */
     public function __construct(
         public string $definitionId,

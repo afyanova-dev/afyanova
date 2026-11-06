@@ -27,6 +27,7 @@
 @import './legacy/patient-chart.css';
 @import './legacy/pharmacy.css';
 @import './legacy/nurse-station.css';
+@import './legacy/clinician-workspace.css';
 @import './legacy/front-desk.css';
 @import './legacy/admin.css';
 @import './legacy/procurement.css';
@@ -35,6 +36,7 @@
 @import './legacy/appointments.css';
 @import './legacy/patient-registration.css';
 @import './legacy/hr-staff.css';
+@import './legacy/laboratory.css';
 @import './legacy/app-shell.css';
 
 /* Foundation layer: page scaffold + .afy-* design-system patterns. */

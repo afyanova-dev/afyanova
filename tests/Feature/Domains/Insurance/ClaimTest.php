@@ -24,8 +24,10 @@ use App\Domains\Insurance\Domain\Model\Claim;
 use App\Domains\Insurance\Domain\ValueObject\ClaimReadinessStatus;
 use App\Domains\Insurance\Domain\ValueObject\ClaimStatus;
 use App\Domains\Insurance\Domain\ValueObject\CoveredServiceCategory;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Models\User;
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -372,4 +374,41 @@ test('multi-tenant isolation: claims cannot be read across tenants', function ()
 
     expect(fn () => queryInsurance($t2, $f2, new GetClaim($claimId)))
         ->toThrow(ClaimNotFound::class);
+});
+
+test('a user in facility B cannot read or list facility A claims', function (): void {
+    ['t' => $tenantId, 'f' => $facilityAId, 'a' => $actorId, 'patient' => $patientId, 'invoice' => $invoiceId, 'payer' => $payerId] = claimSetup();
+    $claimId = insuranceCreateClaimFromInvoice($tenantId, $facilityAId, $actorId, $invoiceId);
+    $facilityA = DB::table('org_facilities')->where('id', $facilityAId)->first();
+    $roleId = DB::table('idn_access_assignments')
+        ->where('user_id', $actorId)
+        ->where('facility_id', $facilityAId)
+        ->value('role_id');
+
+    $facilityBId = TenantContextScope::run($tenantId, null, function () use ($tenantId, $facilityA, $actorId, $roleId): string {
+        $facilityB = Facility::factory()->forTenant($tenantId, (string) $facilityA->organization_id)->create();
+
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $actorId,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facilityB->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (string) $facilityB->id;
+    });
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetClaim($claimId)))
+        ->toThrow(ClaimNotFound::class);
+
+    expect(fn () => queryInsurance($tenantId, $facilityBId, new GetClaimReadiness($claimId)))
+        ->toThrow(ClaimNotFound::class);
+
+    expect(queryInsurance($tenantId, $facilityBId, new GetPatientClaims($patientId)))->toBe([])
+        ->and(queryInsurance($tenantId, $facilityBId, new GetPayerClaims($payerId)))->toBe([]);
 });

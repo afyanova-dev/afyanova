@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueueBoard } from './QueueBoard';
+import { QueueDefinitionAction } from './QueueDefinitionAction';
 import { QueueRoomRoutingAction } from './QueueRoomRoutingAction';
 
 const queueA = {
@@ -179,14 +180,16 @@ const props = {
     { queueId: 'queue-b', queue: 'Triage' },
   ],
   queueRoomAssignments: [
-    { queueId: 'queue-a', queue: 'General OPD', code: 'OPD', roomIds: ['room-1'] },
-    { queueId: 'queue-b', queue: 'Triage', code: 'TRI', roomIds: ['room-2'] },
+    { queueId: 'queue-a', queue: 'General OPD', code: 'OPD', roomIds: ['room-1'], restrictedRoomIds: ['room-1'] },
+    { queueId: 'queue-b', queue: 'Triage', code: 'TRI', roomIds: ['room-2'], restrictedRoomIds: ['room-2'] },
   ],
   myQueueRoomAssignments: [
     { queueId: 'queue-a', roomIds: ['room-1'] },
     { queueId: 'queue-b', roomIds: ['room-2'] },
   ],
 };
+
+const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia');
 
 const actionState = vi.hoisted(() => ({
   canCall: true,
@@ -199,6 +202,17 @@ const actionState = vi.hoisted(() => ({
   put: vi.fn(),
   reload: vi.fn(),
 }));
+
+vi.mock('@carbon/react', async (importOriginal) => {
+  const carbon = await importOriginal<typeof import('@carbon/react')>();
+  const { TestCarbonComboButton, TestCarbonMenuItem } = await import('@/test/carbon-floating-stubs');
+
+  return {
+    ...carbon,
+    ComboButton: TestCarbonComboButton,
+    MenuItem: TestCarbonMenuItem,
+  };
+});
 
 vi.mock('@inertiajs/react', () => ({
   router: { post: actionState.post, put: actionState.put, reload: actionState.reload },
@@ -276,27 +290,41 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+afterAll(() => {
+  if (originalMatchMedia) {
+    Object.defineProperty(window, 'matchMedia', originalMatchMedia);
+  } else {
+    Reflect.deleteProperty(window, 'matchMedia');
+  }
+});
+
 describe('QueueBoard', () => {
-  it('renders facility overview and all patient-flow groups', () => {
+  it('shows the queue overview first and all five patient-flow groups in the tab list', () => {
     render(<QueueBoard {...props} />);
 
-    const statistics = screen.getByRole('region', { name: 'Facility queue totals' });
-    expect(within(statistics).getByText('Waiting')).toBeInTheDocument();
+    const statistics = screen.getByRole('region', { name: 'Facility-wide activity' });
     expect(within(statistics).getByText('Called')).toBeInTheDocument();
-    expect(within(statistics).getByText('In service')).toBeInTheDocument();
     expect(within(statistics).getByText('On hold')).toBeInTheDocument();
     expect(within(statistics).getByText('Needs recall')).toBeInTheDocument();
-    expect(statistics.querySelectorAll('.afy-stat')).toHaveLength(5);
-    const facilityOverview = screen.getByRole('button', { name: 'Facility overview' });
-    expect(facilityOverview).toHaveAttribute('aria-expanded', 'false');
-    fireEvent.click(facilityOverview);
-    expect(facilityOverview).toHaveAttribute('aria-expanded', 'true');
+    expect(within(statistics).queryByText('Waiting')).not.toBeInTheDocument();
+    expect(within(statistics).queryByText('In service')).not.toBeInTheDocument();
+    expect(statistics.querySelectorAll('.afy-stat')).toHaveLength(3);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Overview (2)',
+      'Waiting (2)',
+      'Called (1)',
+      'In Service (1)',
+      'On Hold (1)',
+      'Needs Recall (2)',
+    ]);
+    expect(screen.getByRole('tab', { name: 'Overview (2)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('table', { name: 'Facility overview' })).toHaveAttribute('aria-label', 'Facility queues');
     expect(screen.getByRole('tab', { name: 'Waiting (2)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Called (1)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'In Service (1)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'On Hold (1)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Needs Recall (2)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (2)' }));
     expect(screen.getByRole('table', { name: 'Waiting · 2' })).toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('John Smith')).toBeInTheDocument();
@@ -323,6 +351,18 @@ describe('QueueBoard', () => {
     expect(screen.getByRole('table', { name: 'On Hold · 1' })).toBeInTheDocument();
   });
 
+  it('filters the overview table to the selected queue', () => {
+    render(<QueueBoard {...props} />);
+
+    fireEvent.change(screen.getByLabelText('Filter by queue'), {
+      target: { value: 'queue-a' },
+    });
+
+    const overview = screen.getByRole('table', { name: 'Facility overview' });
+    expect(within(overview).getByText('General OPD')).toBeInTheDocument();
+    expect(within(overview).queryByText('Triage')).not.toBeInTheDocument();
+  });
+
   describe('QueueRoomRoutingAction', () => {
     it('shows the queue room configuration action for queue administrators', () => {
       render(
@@ -332,10 +372,144 @@ describe('QueueBoard', () => {
         />,
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Configure queue rooms' }));
-      expect(screen.getByRole('dialog', { name: 'Configure queue rooms' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Manage service locations' }));
+      expect(screen.getByRole('dialog', { name: 'Manage service locations' })).toBeInTheDocument();
       expect(screen.getByLabelText('Queue')).toHaveValue('queue-a');
-      expect(screen.getByPlaceholderText('Search rooms by name or code')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search locations by name or code')).toBeInTheDocument();
+    });
+
+    describe('QueueDefinitionAction', () => {
+      it('organizes queue details, routing readiness, and search for facility administrators', () => {
+        render(
+          <QueueDefinitionAction
+            queues={[{
+              id: 'queue-a',
+              code: 'OPD',
+              name: 'General OPD',
+              departmentId: 'department-opd',
+              serviceCapability: 'CONSULTATION',
+              ticketPrefix: 'OPD',
+              isActive: true,
+            }, {
+              id: 'queue-c',
+              code: 'LAB',
+              name: 'Laboratory',
+              departmentId: null,
+              serviceCapability: 'LABORATORY',
+              ticketPrefix: 'LAB',
+              isActive: false,
+            }]}
+            departments={[{ id: 'department-opd', name: 'Outpatient', isActive: true }]}
+            serviceCapabilities={['TRIAGE', 'CONSULTATION']}
+            rooms={props.rooms}
+            roomAssignments={props.queueRoomAssignments}
+          />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Manage queues' }));
+        const directory = screen.getByRole('region', { name: 'Existing queue definitions' });
+        expect(screen.getByRole('region', { name: 'Queue definition totals' })).toBeInTheDocument();
+        expect(screen.getByText('Total queues')).toBeInTheDocument();
+        expect(within(directory).getByText('Outpatient')).toBeInTheDocument();
+        expect(within(directory).getByText('Consultation 1')).toBeInTheDocument();
+        expect(within(directory).getByText('Location optional')).toBeInTheDocument();
+
+        fireEvent.change(within(directory).getByRole('searchbox', { name: 'Search queue definitions' }), {
+          target: { value: 'laboratory' },
+        });
+
+        expect(within(directory).getByRole('heading', { name: 'Laboratory' })).toBeInTheDocument();
+        expect(within(directory).queryByRole('heading', { name: 'General OPD' })).not.toBeInTheDocument();
+      });
+
+      it('creates a queue definition for an authorized queue administrator', () => {
+        render(
+          <QueueDefinitionAction
+            queues={[]}
+            departments={[]}
+            serviceCapabilities={['TRIAGE', 'CONSULTATION']}
+            rooms={props.rooms}
+            roomAssignments={props.queueRoomAssignments}
+          />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Manage queues' }));
+        const queueList = screen.getByRole('dialog', { name: 'Manage service queues' });
+        expect(within(queueList).queryByLabelText('Queue code')).not.toBeInTheDocument();
+        const createButton = within(queueList).getByRole('button', { name: 'Create queue' });
+        expect(createButton.closest('.service-queues__definition-list-heading')).toBeInTheDocument();
+        expect(createButton.closest('.afy-dock__actions')).not.toBeInTheDocument();
+        fireEvent.click(createButton);
+        const editor = screen.getByRole('dialog', { name: 'Create service queue' });
+        expect(screen.queryByRole('dialog', { name: 'Manage service queues' })).not.toBeInTheDocument();
+        expect(editor).toHaveStyle({ width: 'min(32rem, 100%)' });
+        fireEvent.change(within(editor).getByLabelText('Queue code'), { target: { value: 'triage' } });
+        fireEvent.change(within(editor).getByLabelText('Queue name'), { target: { value: 'Nursing Triage' } });
+        fireEvent.click(within(editor).getByRole('button', { name: 'Create queue' }));
+
+        expect(actionState.post).toHaveBeenCalledWith(
+          '/workspaces/service-queues/queues',
+          expect.objectContaining({
+            code: 'TRIAGE',
+            name: 'Nursing Triage',
+            service_capability: '',
+            ticket_prefix: 'A',
+            is_active: true,
+          }),
+          expect.any(Object),
+        );
+      });
+
+      it('edits queue details without allowing the queue code to change', () => {
+        render(
+          <QueueDefinitionAction
+            queues={[{
+              id: 'queue-a',
+              code: 'OPD',
+              name: 'General OPD',
+              departmentId: 'department-opd',
+              serviceCapability: 'CONSULTATION',
+              ticketPrefix: 'OPD',
+              isActive: true,
+            }]}
+            departments={[{ id: 'department-opd', name: 'Outpatient', isActive: true }]}
+            serviceCapabilities={['TRIAGE', 'CONSULTATION']}
+            rooms={props.rooms}
+            roomAssignments={props.queueRoomAssignments}
+          />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Manage queues' }));
+        const queueList = screen.getByRole('dialog', { name: 'Manage service queues' });
+        fireEvent.click(within(queueList).getByRole('button', { name: 'Edit General OPD' }));
+        const editor = screen.getByRole('dialog', { name: 'Edit General OPD' });
+        expect(screen.queryByRole('dialog', { name: 'Manage service queues' })).not.toBeInTheDocument();
+        const codeInput = within(editor).getByLabelText('Queue code');
+        expect(codeInput).toBeDisabled();
+        fireEvent.change(within(editor).getByLabelText('Queue name'), { target: { value: 'OPD Consultation' } });
+        fireEvent.click(within(editor).getByRole('button', { name: 'Save changes' }));
+
+        expect(actionState.put).toHaveBeenCalledWith(
+          '/workspaces/service-queues/queues/queue-a',
+          expect.objectContaining({ code: 'OPD', name: 'OPD Consultation' }),
+          expect.any(Object),
+        );
+      });
+
+      it('hides queue definition management without permission', () => {
+        actionState.canManageRouting = false;
+        render(
+          <QueueDefinitionAction
+            queues={[]}
+            departments={[]}
+            serviceCapabilities={[]}
+            rooms={props.rooms}
+            roomAssignments={props.queueRoomAssignments}
+          />,
+        );
+
+        expect(screen.queryByRole('button', { name: 'Manage queues' })).not.toBeInTheDocument();
+      });
     });
 
     it('hides the configuration action without queue definition permission', () => {
@@ -347,7 +521,7 @@ describe('QueueBoard', () => {
         />,
       );
 
-      expect(screen.queryByRole('button', { name: 'Configure queue rooms' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Manage service locations' })).not.toBeInTheDocument();
     });
   });
 
@@ -395,10 +569,11 @@ describe('QueueBoard', () => {
   it('filters waiting and in-service entries by the selected queue', () => {
     render(<QueueBoard {...props} />);
 
-    fireEvent.change(screen.getByLabelText('Filter patient lists by queue'), {
+    fireEvent.change(screen.getByLabelText('Filter by queue'), {
       target: { value: 'queue-a' },
     });
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (1)' }));
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Waiting (1)' })).toBeInTheDocument();
@@ -424,10 +599,12 @@ describe('QueueBoard', () => {
     );
 
     expect(screen.getByText('No queues are available')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Overview (0)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Waiting (0)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Called (0)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'On Hold (0)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Needs Recall (0)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (0)' }));
     expect(screen.getByText('No patients are waiting')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'In Service (0)' }));
     expect(screen.getByText('No patients are in service')).toBeInTheDocument();
@@ -440,40 +617,65 @@ describe('QueueBoard', () => {
   it('opens the room selection dialog and posts a call to the selected room', () => {
     render(<QueueBoard {...props} />);
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (2)' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Call' })[0]!);
     expect(screen.getByRole('dialog', { name: 'Call ticket OPD-001' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Consultation 1 (CONS-1)' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Triage 1 (TRI-1)' })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Room'), { target: { value: 'room-1' } });
+    fireEvent.change(screen.getByLabelText('Service location'), { target: { value: 'room-1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Call patient' }));
 
     expect(actionState.post).toHaveBeenCalledWith(
       '/workspaces/service-queues/entries/entry-a/call',
-      expect.objectContaining({ room: 'room-1', return_to: '/workspaces/service-queues' }),
+      expect.objectContaining({ room: 'room-1', return_to: '/workspaces/service-queues?tab=waiting' }),
       expect.objectContaining({ preserveScroll: true }),
     );
   });
 
-  it('does not offer call when a queue has no assigned rooms', () => {
+  it('labels called tickets without a destination as in queue', () => {
+    render(
+      <QueueBoard
+        {...props}
+        calledEntries={[{ ...props.calledEntries[0]!, calledRoomId: null }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Called (1)' }));
+
+    expect(screen.getByText('In queue')).toBeInTheDocument();
+  });
+
+  it('allows calling without a specific service location when staff access is unrestricted', () => {
     render(
       <QueueBoard
         {...props}
         queueRoomAssignments={props.queueRoomAssignments.map((assignment) => (
-          assignment.queueId === 'queue-a' ? { ...assignment, roomIds: [] } : assignment
+          assignment.queueId === 'queue-a' ? { ...assignment, restrictedRoomIds: [] } : assignment
         ))}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Filter patient lists by queue'), {
+    fireEvent.change(screen.getByLabelText('Filter by queue'), {
       target: { value: 'queue-a' },
     });
-    expect(screen.getByText('Room routing is not configured for every waiting queue')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Call' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Call' }));
+    fireEvent.change(screen.getByLabelText('Service location'), { target: { value: '' } });
+    expect(screen.getByLabelText('Service location')).toHaveValue('');
+    expect(screen.getByRole('option', { name: 'No specific location' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Call patient' }));
+
+    expect(actionState.post).toHaveBeenCalledWith(
+      '/workspaces/service-queues/entries/entry-a/call',
+      { room: null, return_to: '/workspaces/service-queues?tab=waiting' },
+      expect.objectContaining({ preserveScroll: true }),
+    );
   });
 
   it('does not offer call or start service without a personal room assignment', () => {
     render(<QueueBoard {...props} myQueueRoomAssignments={[]} />);
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (2)' }));
     expect(screen.queryByRole('button', { name: 'Call' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Called (1)' }));
     expect(screen.queryByRole('button', { name: 'Start service' })).not.toBeInTheDocument();
@@ -490,7 +692,7 @@ describe('QueueBoard', () => {
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Called (1)' }));
 
-    expect(screen.getByText('A called ticket is assigned to a room that does not match its queue')).toBeInTheDocument();
+    expect(screen.getByText('A called ticket has a service location that is no longer assigned to its queue')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start service' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Additional actions' })).toBeInTheDocument();
   });
@@ -523,6 +725,7 @@ describe('QueueBoard', () => {
     actionState.canTransfer = false;
     render(<QueueBoard {...props} />);
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (2)' }));
     expect(screen.queryByRole('button', { name: 'Call' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Hold' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
@@ -538,8 +741,17 @@ describe('QueueBoard', () => {
   });
 
   it('holds a ticket with a reason and provenance, then releases it with clearance provenance', () => {
-    render(<QueueBoard {...props} />);
+    render(
+      <QueueBoard
+        {...props}
+        waitingEntries={props.waitingEntries.slice(0, 1)}
+        calledEntries={[]}
+        inServiceEntries={[]}
+        recallableEntries={[]}
+      />,
+    );
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (1)' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Additional actions' })[0]!);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Hold' }));
     fireEvent.change(screen.getByLabelText('Hold reason'), {
@@ -554,7 +766,7 @@ describe('QueueBoard', () => {
       {
         hold_reason: 'CLINICAL_HOLD',
         hold_provenance: 'Triage note #12',
-        return_to: '/workspaces/service-queues',
+        return_to: '/workspaces/service-queues?tab=waiting',
       },
       expect.objectContaining({ preserveScroll: true }),
     );
@@ -579,6 +791,7 @@ describe('QueueBoard', () => {
   it('skips a ticket with an optional reason', () => {
     render(<QueueBoard {...props} />);
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (2)' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Additional actions' })[0]!);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Skip' }));
     fireEvent.change(screen.getByLabelText('Reason (optional)'), {
@@ -588,17 +801,17 @@ describe('QueueBoard', () => {
 
     expect(actionState.post).toHaveBeenCalledWith(
       '/workspaces/service-queues/entries/entry-a/skip',
-      { reason: 'Patient did not respond', return_to: '/workspaces/service-queues' },
+      { reason: 'Patient did not respond', return_to: '/workspaces/service-queues?tab=waiting' },
       expect.objectContaining({ preserveScroll: true }),
     );
   });
 
-  it('recalls a skipped ticket with an optional room', () => {
+  it('recalls a skipped ticket with an optional service location', () => {
     render(<QueueBoard {...props} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Needs Recall (2)' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Recall' })[0]!);
     expect(screen.getByRole('dialog', { name: 'Recall ticket OPD-004' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Room (optional)'), {
+    fireEvent.change(screen.getByLabelText('Service location'), {
       target: { value: 'room-1' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Recall ticket' }));
@@ -611,6 +824,7 @@ describe('QueueBoard', () => {
 
   it('transfers a waiting ticket to another queue with an optional reason', () => {
     render(<QueueBoard {...props} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Waiting (2)' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Additional actions' })[0]!);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Transfer' }));
     const dialog = screen.getByRole('dialog', { name: 'Transfer ticket OPD-001' });
@@ -628,7 +842,7 @@ describe('QueueBoard', () => {
       {
         destination_queue_id: 'queue-b',
         reason: 'Referred to triage',
-        return_to: '/workspaces/service-queues',
+        return_to: '/workspaces/service-queues?tab=waiting',
       },
       expect.objectContaining({ preserveScroll: true }),
     );

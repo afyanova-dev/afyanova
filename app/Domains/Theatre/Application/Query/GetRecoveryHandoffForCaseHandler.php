@@ -10,6 +10,7 @@ use App\Domains\Theatre\Domain\RecoveryHandoffReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetRecoveryHandoffForCaseHandler
     public function __construct(
         private readonly RecoveryHandoffReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetRecoveryHandoffForCase $query): ?RecoveryHandoffSummary
@@ -33,7 +35,7 @@ final class GetRecoveryHandoffForCaseHandler
             return null; // the #[ProtectedQuery] `view` gate already confirmed theatre.access
         }
 
-        if (! in_array('theatre.access', $this->scope->effectivePermissions($user, $summary->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $summary->facilityId, 'theatre.access')) {
             throw NotFound::aggregate(RecoveryHandoff::class, $query->caseId);
         }
 

@@ -1,7 +1,6 @@
 /**
- * Mirrors the props returned by ServiceQueuesController for the queue index.
- * Keep this contract aligned with the backend presenter when the board UI is
- * implemented.
+ * Mirrors the props returned by ServiceQueuesController for Patient Flow.
+ * Keep this contract aligned with the backend presenter as the board evolves.
  */
 export interface QueueBoardTotals {
   waiting: number;
@@ -62,6 +61,7 @@ export interface QueueRoomAssignment {
   queue: string;
   code: string;
   roomIds: string[];
+  restrictedRoomIds: string[];
 }
 
 export interface QueueRoomStaffAssignment {
@@ -73,6 +73,22 @@ export interface QueueRoomStaffAssignment {
 export interface QueueRoomStaffMember {
   userId: string;
   name: string;
+}
+
+export interface QueueBoardDefinition {
+  id: string;
+  code: string;
+  name: string;
+  departmentId: string | null;
+  serviceCapability: string | null;
+  ticketPrefix: string;
+  isActive: boolean;
+}
+
+export interface QueueBoardDepartment {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 export interface ProcedureQueueRouting {
@@ -120,8 +136,16 @@ export interface QueueBoardProps {
   transferQueues: QueueBoardTransferQueue[];
   queueRoomAssignments: QueueRoomAssignment[];
   myQueueRoomAssignments?: Array<{ queueId: string; roomIds: string[] }>;
-  facilityStaff?: QueueRoomStaffMember[];
-  queueRoomStaffAssignments?: QueueRoomStaffAssignment[];
-  procedureRouting?: ProcedureQueueRouting | null;
-  procedureProtocolGovernance?: ProcedureProtocolGovernance | null;
+}
+
+export interface ServiceQueueManagementProps {
+  queueDefinitions: QueueBoardDefinition[];
+  queueDepartments: QueueBoardDepartment[];
+  serviceCapabilities: string[];
+  rooms: QueueBoardRoom[];
+  queueRoomAssignments: QueueRoomAssignment[];
+  facilityStaff: QueueRoomStaffMember[];
+  queueRoomStaffAssignments: QueueRoomStaffAssignment[];
+  procedureRouting: ProcedureQueueRouting | null;
+  procedureProtocolGovernance: ProcedureProtocolGovernance | null;
 }

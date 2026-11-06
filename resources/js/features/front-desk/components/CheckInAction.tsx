@@ -1,7 +1,7 @@
 import type { FormEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { InlineLoading, InlineNotification, Select, SelectItem, TextArea } from '@carbon/react';
+import { Checkbox, InlineLoading, InlineNotification, Select, SelectItem, TextArea } from '@carbon/react';
 import { routes } from '@/app/routes';
 import { FormErrors } from '@/components/ui';
 import { PatientSearchPhoto, PatientSearchText } from '@/components/patient-search/PatientSearchRow';
@@ -123,6 +123,8 @@ export function useCheckInForm(target: CheckInTarget, returnTo?: string) {
   const canPlaceTicket = can(permissions.queue.ticketPlace);
   const canRoute = can(permissions.organization.structureRead);
   const [departments, setDepartments] = useState<StructureDepartment[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(canRoute);
+  const [departmentsLoadFailed, setDepartmentsLoadFailed] = useState(false);
   const { data, setData, setDefaults, reset, post, processing, errors, isDirty } = useForm<CheckInForm>({
     patient_id: target.patientId,
     appointment_id: target.appointmentId ?? '',
@@ -139,14 +141,26 @@ export function useCheckInForm(target: CheckInTarget, returnTo?: string) {
   });
 
   useEffect(() => {
-    if (!canRoute) return;
+    if (!canRoute) {
+      setDepartmentsLoading(false);
+      return;
+    }
     let active = true;
+    setDepartmentsLoading(true);
+    setDepartmentsLoadFailed(false);
     void getJson<FacilityStructureResponse>(routes.api.facilityStructure)
       .then((response) => {
-        if (active) setDepartments(response.departments ?? []);
+        if (active) {
+          setDepartments(response.departments ?? []);
+          setDepartmentsLoading(false);
+        }
       })
       .catch(() => {
-        if (active) setDepartments([]);
+        if (active) {
+          setDepartments([]);
+          setDepartmentsLoadFailed(true);
+          setDepartmentsLoading(false);
+        }
       });
     return () => { active = false; };
   }, [canRoute]);
@@ -164,6 +178,8 @@ export function useCheckInForm(target: CheckInTarget, returnTo?: string) {
     errors,
     isDirty,
     departments,
+    departmentsLoading,
+    departmentsLoadFailed,
     departmentId,
     units,
     queueChosen: data.queue_id !== '',
@@ -177,16 +193,23 @@ export function CheckInFields({
   target,
   availableQueues,
   protocolProcedures = [],
+  onDepartmentChoice,
+  onQueueChoice,
+  onProtocolChoice,
+  onEncounterTypeChange,
 }: {
   form: ReturnType<typeof useCheckInForm>;
   target: CheckInTarget;
   availableQueues: CheckInQueueOption[];
   protocolProcedures?: CheckInProtocolProcedure[];
+  onDepartmentChoice?: () => void;
+  onQueueChoice?: () => void;
+  onProtocolChoice?: () => void;
+  onEncounterTypeChange?: () => void;
 }): ReactNode {
   const selectedProtocolProcedure = protocolProcedures.find(
     (procedure) => procedure.definitionId === form.data.protocol_procedure_definition_id,
   );
-  const selectedQueue = availableQueues.find((queue) => queue.id === form.data.queue_id);
   const departmentQueues = availableQueues.filter((queue) => (
     queue.departmentId === null || queue.departmentId === form.departmentId
   ));
@@ -229,12 +252,22 @@ export function CheckInFields({
           {target.appointmentLabel ? ` · ${target.appointmentLabel}` : ''}
         </p>
       ) : null}
+      {form.departmentsLoadFailed ? (
+        <InlineNotification
+          kind="warning"
+          lowContrast
+          title="Department options could not be loaded"
+          subtitle="You can continue check-in without department routing."
+          style={{ marginBlockEnd: '1rem' }}
+        />
+      ) : null}
 
       <Select
         id="check-in-encounter-type"
         labelText="Encounter type"
         value={form.data.encounter_type}
         onChange={(event) => {
+          onEncounterTypeChange?.();
           form.setData('encounter_type', event.currentTarget.value);
           form.setData('department_id', '');
           form.setData('unit_id', '');
@@ -260,6 +293,7 @@ export function CheckInFields({
             onChange={(event) => {
               const definitionId = event.currentTarget.value;
               const procedure = protocolProcedures.find((item) => item.definitionId === definitionId);
+              onProtocolChoice?.();
               form.setData('protocol_procedure_definition_id', definitionId);
               form.setData('queue_id', procedure?.queueId ?? '');
               form.setData('department_id', '');
@@ -306,6 +340,7 @@ export function CheckInFields({
               value={form.data.department_id}
               onChange={(event) => {
                 const value = event.currentTarget.value;
+                onDepartmentChoice?.();
                 form.setData('department_id', value);
                 form.setData('unit_id', '');
                 form.setData('queue_id', '');
@@ -347,6 +382,7 @@ export function CheckInFields({
               labelText="Place into queue (optional)"
               value={form.data.queue_id}
               onChange={(event) => {
+                onQueueChoice?.();
                 form.setData('queue_id', event.currentTarget.value);
               }}
               invalid={Boolean(form.errors.queue_id)}
@@ -360,25 +396,12 @@ export function CheckInFields({
                   text={
                     `${queue.name} (${queue.code})` +
                     `${queue.serviceCapability ? ` · ${queue.serviceCapability.replaceAll('_', ' ')}` : ''}` +
-                    `${queue.roomNames?.length ? '' : ' · No rooms configured'}`
+                    `${queue.roomNames?.length ? '' : ' · No specific location'}`
                   }
-                  disabled={!queue.roomNames?.length}
                 />
               ))}
             </Select>
           </div>
-          {selectedQueue && (selectedQueue.departmentId === null || selectedQueue.departmentId === form.departmentId) ? (
-            <InlineNotification
-              className="front-desk-queue-destination"
-              kind={selectedQueue.roomNames?.length ? 'info' : 'warning'}
-              lowContrast
-              hideCloseButton
-              subtitle={selectedQueue.roomNames?.length
-                ? `Called only to: ${selectedQueue.roomNames.join(', ')}.`
-                : 'Ask a queue administrator to configure its service rooms before calling the patient.'}
-              style={{ marginBlockStart: '0.5rem' }}
-            />
-          ) : null}
           {canChooseQueue && departmentQueues.length === 0 ? (
             <p role="status" style={{ marginBlockStart: '1rem' }}>
               No queues are configured for this department. You can still check in without queue placement.
@@ -426,6 +449,50 @@ export function CheckInAction({
   onDirtyChange?: (dirty: boolean) => void;
 }): ReactNode {
   const form = useCheckInForm(target, returnTo);
+  const [confirmedDetails, setConfirmedDetails] = useState<string | null>(null);
+  const [departmentChoiceMade, setDepartmentChoiceMade] = useState(false);
+  const [queueChoiceMade, setQueueChoiceMade] = useState(false);
+  const [protocolChoiceMade, setProtocolChoiceMade] = useState(false);
+  const selectedProtocolProcedure = protocolProcedures.find(
+    (procedure) => procedure.definitionId === form.data.protocol_procedure_definition_id,
+  );
+  const selectedQueue = availableQueues.find((queue) => queue.id === form.data.queue_id);
+  const selectedDepartment = form.departments.find((department) => department.id === form.data.department_id);
+  const selectedUnit = form.units.find((unit) => unit.id === form.data.unit_id);
+  const destinationQueueName = selectedQueue?.name ?? selectedProtocolProcedure?.queueName;
+  const encounterType = ENCOUNTER_TYPES.find((type) => type === form.data.encounter_type);
+  const confirmationKey = JSON.stringify([
+    form.data.patient_id,
+    form.data.appointment_id,
+    form.data.encounter_type,
+    form.data.department_id,
+    form.data.unit_id,
+    form.data.queue_id,
+    form.data.priority,
+    form.data.protocol_procedure_definition_id,
+    form.data.protocol_procedure_indication,
+  ]);
+  const destinationConfirmed = confirmedDetails === confirmationKey;
+  const departmentChoiceRequired = form.data.encounter_type !== ''
+    && !selectedProtocolProcedure
+    && form.canRoute
+    && form.departments.length > 0;
+  const queueChoiceRequired = form.data.encounter_type !== ''
+    && form.canPlaceTicket
+    && availableQueues.length > 0
+    && (!form.canRoute || form.departmentId !== '')
+    && !selectedProtocolProcedure
+    && availableQueues.some((queue) => queue.departmentId === null || queue.departmentId === form.departmentId);
+  const protocolChoiceRequired = form.data.encounter_type === 'PROCEDURE' && protocolProcedures.length > 0;
+  const reviewReady = form.data.encounter_type !== ''
+    && !form.departmentsLoading
+    && (!departmentChoiceRequired || departmentChoiceMade)
+    && (!queueChoiceRequired || queueChoiceMade)
+    && (!protocolChoiceRequired || protocolChoiceMade);
+
+  useEffect(() => {
+    setConfirmedDetails(null);
+  }, [confirmationKey]);
 
   useEffect(() => {
     onDirtyChange?.(form.isDirty);
@@ -433,25 +500,94 @@ export function CheckInAction({
 
   function submit(event: FormEvent): void {
     event.preventDefault();
+    if (!destinationConfirmed) return;
     form.post(routes.workspaces.receptionCheckIn, { preserveScroll: true });
   }
 
   return (
-    <DockedPanel
-      heading="Check in patient"
-      primaryLabel={form.processing ? 'Checking in…' : 'Check in'}
-      primaryDisabled={form.processing || form.data.encounter_type === ''}
-      offsetInlineEnd={offsetInlineEnd}
-      onClose={onClose}
-      onSubmit={submit}
-    >
-      <FormErrors errors={form.errors} fields={[
-        'patient_id', 'appointment_id', 'encounter_type', 'department_id', 'unit_id',
-        'queue_id', 'priority', 'protocol_procedure_definition_id',
-        'protocol_procedure_indication', 'return_to',
-      ]} />
-      <CheckInFields form={form} target={target} availableQueues={availableQueues} protocolProcedures={protocolProcedures} />
-      {form.processing ? <InlineLoading description="Checking in" /> : null}
-    </DockedPanel>
+    <>
+      <DockedPanel
+        heading="Check in patient"
+        primaryLabel={form.processing ? 'Checking in…' : 'Check in patient'}
+        primaryDisabled={form.processing || !reviewReady || !destinationConfirmed}
+        offsetInlineEnd={offsetInlineEnd}
+        onClose={onClose}
+        onSubmit={submit}
+      >
+        <FormErrors errors={form.errors} fields={[
+          'patient_id', 'appointment_id', 'encounter_type', 'department_id', 'unit_id',
+          'queue_id', 'priority', 'protocol_procedure_definition_id',
+          'protocol_procedure_indication', 'return_to',
+        ]} />
+        <CheckInFields
+          form={form}
+          target={target}
+          availableQueues={availableQueues}
+          protocolProcedures={protocolProcedures}
+          onDepartmentChoice={() => {
+            setDepartmentChoiceMade(true);
+            setQueueChoiceMade(false);
+          }}
+          onQueueChoice={() => setQueueChoiceMade(true)}
+          onProtocolChoice={() => setProtocolChoiceMade(true)}
+          onEncounterTypeChange={() => {
+            setDepartmentChoiceMade(false);
+            setQueueChoiceMade(false);
+            setProtocolChoiceMade(false);
+            setConfirmedDetails(null);
+          }}
+        />
+        {reviewReady ? (
+          <section className="front-desk-check-in-preview" aria-label="Check-in preview">
+            <h3>Review before check-in</h3>
+            <dl className="front-desk-check-in-preview__details">
+              <div>
+                <dt>Visit</dt>
+                <dd>{encounterType ? ENCOUNTER_TYPE_LABELS[encounterType] : form.data.encounter_type}</dd>
+              </div>
+              <div>
+                <dt>Department</dt>
+                <dd>{selectedDepartment?.name ?? 'Not selected'}</dd>
+              </div>
+              <div>
+                <dt>Unit</dt>
+                <dd>{selectedUnit?.name ?? 'Not selected'}</dd>
+              </div>
+              <div>
+                <dt>Destination</dt>
+                <dd>{destinationQueueName ?? 'No queue placement'}</dd>
+              </div>
+              {form.queueChosen ? (
+                <div>
+                  <dt>Priority</dt>
+                  <dd>{form.data.priority}</dd>
+                </div>
+              ) : null}
+              {selectedQueue?.roomNames?.length ? (
+                <div>
+                  <dt>Available locations</dt>
+                  <dd>{selectedQueue.roomNames.join(', ')}</dd>
+                </div>
+              ) : null}
+              {selectedProtocolProcedure ? (
+                <div>
+                  <dt>Procedure</dt>
+                  <dd>{selectedProtocolProcedure.name} ({selectedProtocolProcedure.code})</dd>
+                </div>
+              ) : null}
+            </dl>
+          </section>
+        ) : null}
+        {reviewReady ? (
+          <Checkbox
+            id="check-in-confirm-destination"
+            labelText="I’ve reviewed these details and confirm check-in."
+            checked={destinationConfirmed}
+            onChange={(_, { checked }) => setConfirmedDetails(checked ? confirmationKey : null)}
+          />
+        ) : null}
+        {form.processing ? <InlineLoading description="Checking in" /> : null}
+      </DockedPanel>
+    </>
   );
 }

@@ -6,7 +6,10 @@ import {
   Checkmark,
   Dashboard,
   Document,
+  Flow,
+  HealthCross,
   List,
+  Microscope,
   Money,
   Notification,
   Pills,
@@ -29,10 +32,11 @@ import {
 export function workspaceIcon(id: string): ComponentType | undefined {
   switch (id) {
     case 'dashboard':
-    case 'admin':
-    case 'admin-overview':
     case 'platform-overview':
       return Dashboard;
+    case 'admin':
+    case 'admin-overview':
+      return UserSettings;
     case 'platform-tenants':
     case 'admin-organization':
     case 'hrStaff':
@@ -63,18 +67,27 @@ export function workspaceIcon(id: string): ComponentType | undefined {
       return Calendar;
     case 'reception':
       return Time;
+    case 'patientFlow':
+      return Flow;
     case 'serviceQueues':
       return List;
     case 'nurseStation':
       return UserAvatar;
     case 'clinician':
       return UserSettings;
+    case 'clinician-diagnosis-catalog':
+    case 'laboratoryExecution':
+      return HealthCross;
+    case 'laboratory':
+      return Microscope;
     case 'attention':
       return Notification;
     case 'billing':
       return Money;
     case 'inventory':
       return Box;
+    case 'laboratoryCatalogEditors':
+      return UserSettings;
     case 'procurement':
       return Task;
     case 'pharmacy':

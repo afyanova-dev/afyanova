@@ -78,12 +78,14 @@ use App\Domains\Radiology\Application\Query\GetStudyReport;
 use App\Domains\Radiology\Application\Query\GetStudyReportHandler;
 use App\Domains\Radiology\Application\Query\SearchImagingOrders;
 use App\Domains\Radiology\Application\Query\SearchImagingOrdersHandler;
+use App\Domains\Radiology\Application\RadiologyApiService;
 use App\Domains\Radiology\Authorization\ImagingOrderPolicy;
 use App\Domains\Radiology\Authorization\ImagingStudyPolicy;
 use App\Domains\Radiology\Authorization\RadiologyCriticalFindingPolicy;
 use App\Domains\Radiology\Authorization\RadiologyReportPolicy;
 use App\Domains\Radiology\Console\DefineImagingServiceCommand;
 use App\Domains\Radiology\Console\DefineModalityCommand;
+use App\Domains\Radiology\Contracts\RadiologyApi;
 use App\Domains\Radiology\Domain\ImagingModalityReader;
 use App\Domains\Radiology\Domain\ImagingModalityRepository;
 use App\Domains\Radiology\Domain\ImagingOrderReader;
@@ -130,6 +132,8 @@ final class RadiologyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(RadiologyApi::class, RadiologyApiService::class);
+
         $this->app->bind(ImagingOrderRepository::class, EloquentImagingOrderRepository::class);
         $this->app->bind(ImagingModalityRepository::class, EloquentImagingModalityRepository::class);
         $this->app->bind(ImagingServiceRepository::class, EloquentImagingServiceRepository::class);

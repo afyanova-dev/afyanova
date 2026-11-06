@@ -1,4 +1,4 @@
-/* UI shell: header, workspace nav, switcher, search, docked panels, quick-actions rail, flash/toast sinks, workspace sheet motion — moved verbatim from app.css.
+/* UI shell: header, workspace nav, switcher, search, docked panels, flash/toast sinks, workspace sheet motion — moved verbatim from app.css.
  * Source: app.css lines 237..3868 (mechanical split, no edits).
  */
 
@@ -14,12 +14,18 @@
 
 .cds--side-nav.afyanova-chart-side-nav {
   box-sizing: border-box;
+  /* The record sidebar's tree paints its surface with --cds-layer-01, while
+   * Carbon gives .cds--side-nav the fixed --cds-side-nav-01. On gray-10 their
+   * tones nearly agree, but on gray-90/100 they diverge, so the sidebar's
+   * own background appears to stop where the tree ends ("tree only"). Paint
+   * the nav with the tree's surface so the panel spans its full height in
+   * every theme; the tree itself stays transparent. */
+  background-color: var(--cds-layer-01);
+  border-inline-end: 0;
 }
 
-/* Space above the first chart section (Patient Summary) equals one menu
-   item height (2rem) instead of Carbon's default 1rem. */
-.cds--side-nav.afyanova-chart-side-nav .cds--side-nav__items {
-  padding-block-start: 2rem;
+.afyanova-chart-nav .cds--side-nav__items {
+  padding-block-start: 0;
 }
 
 @media (min-width: 66rem) {
@@ -156,7 +162,10 @@
   margin: 0;
   padding: 0.75rem 1rem;
   color: var(--cds-text-secondary, #525252);
-  font-size: 0.875rem;
+  font-size: var(--cds-body-01-font-size, 0.875rem);
+  font-weight: var(--cds-body-01-font-weight, 400);
+  line-height: var(--cds-body-01-line-height, 1.42857);
+  letter-spacing: var(--cds-body-01-letter-spacing, 0.16px);
 }
 
 .afyanova-header-search__list {
@@ -207,16 +216,19 @@
 
 .afyanova-header-search__identity strong {
   color: var(--cds-text-primary, #161616);
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--cds-heading-compact-01-font-size, 0.875rem);
+  font-weight: var(--cds-heading-compact-01-font-weight, 600);
+  line-height: var(--cds-heading-compact-01-line-height, 1.28572);
+  letter-spacing: var(--cds-heading-compact-01-letter-spacing, 0.16px);
 }
 
 .afyanova-header-search__identity small,
 .afyanova-header-search__identity > span > span {
   color: var(--cds-text-secondary, #525252);
-  font-size: 0.75rem;
-  line-height: 1.3;
+  font-size: var(--cds-caption-01-font-size, 0.75rem);
+  font-weight: var(--cds-caption-01-font-weight, 400);
+  line-height: var(--cds-caption-01-line-height, 1.33333);
+  letter-spacing: var(--cds-caption-01-letter-spacing, 0.32px);
 }
 
 .afyanova-header-search__photo {
@@ -231,8 +243,10 @@ span.afyanova-header-search__photo {
   place-items: center;
   color: var(--cds-text-primary, #161616);
   background: var(--cds-layer-02, #e0e0e0);
-  font-size: 0.75rem;
+  font-size: var(--cds-label-01-font-size, 0.75rem);
   font-weight: 600;
+  line-height: var(--cds-label-01-line-height, 1.33333);
+  letter-spacing: var(--cds-label-01-letter-spacing, 0.32px);
 }
 
 img.afyanova-header-search__photo {
@@ -327,7 +341,10 @@ img.afyanova-header-search__photo {
   color: var(--afy-text-primary);
   background: var(--afy-surface);
   border: 1px solid var(--afy-hairline);
-  font-size: 0.8125rem;
+  font-size: var(--cds-body-compact-01-font-size, 0.875rem);
+  font-weight: var(--cds-body-compact-01-font-weight, 400);
+  line-height: var(--cds-body-compact-01-line-height, 1.28572);
+  letter-spacing: var(--cds-body-compact-01-letter-spacing, 0.16px);
 }
 
 .afyanova-flash-details summary {
@@ -343,35 +360,6 @@ img.afyanova-header-search__photo {
 .afyanova-page .cds--inline-notification {
   inline-size: 100%;
   max-inline-size: none;
-}
-
-/* Right icon rail must paint above its workspace panel (panel z-index 7000).
-   The rail stays visible via offsetInlineEnd, but its left-aligned tooltips
-   extend over the panel — without this they slide behind the open panel.
-   Full-height layer surface with flush, stacked 3rem buttons. */
-.afyanova-quick-actions {
-  position: fixed;
-  inset-block: 3rem 0;
-  inset-inline-end: 0;
-  inline-size: 3rem;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 0;
-  gap: 0;
-  z-index: 7010;
-  background: var(--cds-layer-01, #ffffff);
-  border-inline-start: 1px solid var(--cds-border-subtle, #e0e0e0);
-}
-
-.afyanova-quick-actions .cds--btn--icon-only {
-  inline-size: 3rem;
-  block-size: 3rem;
-}
-
-.afyanova-quick-actions .cds--popover,
-.afyanova-quick-actions .cds--tooltip {
-  z-index: 7010;
 }
 
 /* Full-width alert inside table containers: Carbon caps inline

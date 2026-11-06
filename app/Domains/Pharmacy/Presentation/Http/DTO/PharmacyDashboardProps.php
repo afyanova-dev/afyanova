@@ -25,6 +25,7 @@ final readonly class PharmacyDashboardProps
      * @param  list<RxItemOption>  $items
      * @param  list<RxLocationOption>  $locations
      * @param  list<RxStockEntry>  $stockByLocation
+     * @param  list<array{substanceName: string, severity: ?string, reaction: ?string}>|null  $selectedPatientAllergies
      */
     public function __construct(
         public string $facilityId,

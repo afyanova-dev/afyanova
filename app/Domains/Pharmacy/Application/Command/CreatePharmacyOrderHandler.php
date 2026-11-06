@@ -94,7 +94,12 @@ final class CreatePharmacyOrderHandler
             throw new RuntimeException('CreatePharmacyOrder dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array('pharmacy.orders.manage', $this->scope->effectivePermissions($user, $facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $facilityId,
+            'pharmacy.orders.manage',
+        )) {
             throw NotFound::aggregate(PharmacyOrder::class, $pharmacyOrderId);
         }
     }
