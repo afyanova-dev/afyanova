@@ -10,11 +10,11 @@ use App\Shared\Bus\ProtectedQuery;
 /**
  * Read the tenant's laboratory test catalog, optionally filtered
  * (14-laboratory-domain.md §12, §192; ADR-157 D-G) — a consumer needs it to
- * populate an order picker. Protected at the coarse `laboratory.access` key.
+ * populate an order picker. Protected for laboratory readers and order creators.
  * Tenant-wide (ADR-157 D-C); NO pagination (catalogs are small — the CP.1
  * `GetProcedureDefinitions` precedent).
  */
-#[ProtectedQuery(ability: 'view', subjectType: LabOrder::class)]
+#[ProtectedQuery(ability: 'viewCatalog', subjectType: LabOrder::class)]
 final readonly class GetLabTestDefinitions
 {
     public function __construct(

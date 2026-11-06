@@ -92,7 +92,12 @@ final class CollectSpecimenHandler
             throw new RuntimeException('CollectSpecimen dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array('laboratory.specimens.collect', $this->scope->effectivePermissions($user, $facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $facilityId,
+            'laboratory.specimens.collect',
+        )) {
             throw NotFound::aggregate(LabSpecimen::class, $specimenId);
         }
     }

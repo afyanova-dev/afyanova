@@ -56,6 +56,11 @@ final class LabSpecimenPolicy extends BasePolicy
     private function hasScope(User $user, LabSpecimen $specimen, string $permissionKey): bool
     {
         return $this->sameTenant($user, (string) $specimen->tenant_id)
-            && in_array($permissionKey, $this->scope->effectivePermissions($user, (string) $specimen->facility_id), true);
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $specimen->facility_id,
+                $permissionKey,
+            );
     }
 }

@@ -66,9 +66,24 @@ final class LabOrderPolicy extends BasePolicy
             && $this->permits($user, 'laboratory.access');
     }
 
+    public function viewCatalog(User $user): bool
+    {
+        return $this->context->hasTenant()
+            && (string) $user->tenant_id === $this->context->tenantId()
+            && (
+                $this->permits($user, 'laboratory.access')
+                || $this->permits($user, 'laboratory.orders.create')
+            );
+    }
+
     private function hasScope(User $user, LabOrder $order, string $permissionKey): bool
     {
         return $this->sameTenant($user, (string) $order->tenant_id)
-            && in_array($permissionKey, $this->scope->effectivePermissions($user, (string) $order->facility_id), true);
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $order->facility_id,
+                $permissionKey,
+            );
     }
 }

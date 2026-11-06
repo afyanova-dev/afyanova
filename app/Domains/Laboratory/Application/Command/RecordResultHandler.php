@@ -140,7 +140,12 @@ final class RecordResultHandler
             throw new RuntimeException('RecordResult dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array('laboratory.results.enter', $this->scope->effectivePermissions($user, $facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $facilityId,
+            'laboratory.results.enter',
+        )) {
             throw NotFound::aggregate(LabResult::class, $resultId);
         }
     }

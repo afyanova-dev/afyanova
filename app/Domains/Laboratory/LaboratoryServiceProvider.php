@@ -44,6 +44,7 @@ use App\Domains\Laboratory\Application\Command\SubmitLabOrder;
 use App\Domains\Laboratory\Application\Command\SubmitLabOrderHandler;
 use App\Domains\Laboratory\Application\Command\VerifyResult;
 use App\Domains\Laboratory\Application\Command\VerifyResultHandler;
+use App\Domains\Laboratory\Application\LaboratoryApiService;
 use App\Domains\Laboratory\Application\Query\GetCriticalResult;
 use App\Domains\Laboratory\Application\Query\GetCriticalResultHandler;
 use App\Domains\Laboratory\Application\Query\GetLabOrder;
@@ -83,6 +84,7 @@ use App\Domains\Laboratory\Authorization\LabResultPolicy;
 use App\Domains\Laboratory\Authorization\LabSpecimenPolicy;
 use App\Domains\Laboratory\Console\DefineLabPanelCommand;
 use App\Domains\Laboratory\Console\DefineLabTestCommand;
+use App\Domains\Laboratory\Contracts\LaboratoryApi;
 use App\Domains\Laboratory\Domain\LabCriticalResultReader;
 use App\Domains\Laboratory\Domain\LabCriticalResultRepository;
 use App\Domains\Laboratory\Domain\LabOrderReader;
@@ -131,6 +133,8 @@ final class LaboratoryServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(LaboratoryApi::class, LaboratoryApiService::class);
+
         $this->app->bind(LabOrderRepository::class, EloquentLabOrderRepository::class);
         $this->app->bind(LabTestDefinitionRepository::class, EloquentLabTestDefinitionRepository::class);
         $this->app->bind(LabSpecimenRepository::class, EloquentLabSpecimenRepository::class);
@@ -151,6 +155,7 @@ final class LaboratoryServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
+        $this->loadRoutesFrom(__DIR__.'/routes.php');
 
         PermissionRegistry::add(require __DIR__.'/Authorization/permissions.php');
 

@@ -7,6 +7,7 @@ use App\Domains\Laboratory\Application\Command\CancelLabOrder;
 use App\Domains\Laboratory\Application\Command\CreateLabOrder;
 use App\Domains\Laboratory\Application\Command\RejectLabOrder;
 use App\Domains\Laboratory\Application\Command\SubmitLabOrder;
+use App\Domains\Laboratory\Application\LaboratoryApiService;
 use App\Domains\Laboratory\Application\Query\GetLabOrder;
 use App\Domains\Laboratory\Application\Query\GetPatientLabOrders;
 use App\Domains\Laboratory\Application\Query\SearchLabOrders;
@@ -14,6 +15,7 @@ use App\Domains\Laboratory\Contracts\Event\LabOrderAccepted;
 use App\Domains\Laboratory\Contracts\Event\LabOrderCreated;
 use App\Domains\Laboratory\Contracts\Event\LabOrderRejected;
 use App\Domains\Laboratory\Contracts\Event\LabOrderSubmitted;
+use App\Domains\Laboratory\Contracts\LaboratoryApi;
 use App\Domains\Laboratory\Domain\Exception\EncounterNotEligibleForLabOrder;
 use App\Domains\Laboratory\Domain\Exception\IllegalLabOrderTransition;
 use App\Domains\Laboratory\Domain\Exception\LabOrderContextMismatch;
@@ -23,9 +25,11 @@ use App\Domains\Laboratory\Domain\Exception\PatientNotEligibleForLabOrder;
 use App\Domains\Laboratory\Domain\Model\LabOrder;
 use App\Domains\Laboratory\Domain\Model\LabOrderItem;
 use App\Domains\Laboratory\Domain\Model\LabTestDefinition;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Domains\Patient\Domain\Model\Patient;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
+use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -39,6 +43,10 @@ function dispatchLab(string $tenantId, ?string $facilityId, object $command): mi
 {
     return TenantContextScope::run($tenantId, $facilityId, fn () => app(CommandBus::class)->dispatch($command));
 }
+
+test('laboratory API contract resolves to its application service', function () {
+    expect(app(LaboratoryApi::class))->toBeInstanceOf(LaboratoryApiService::class);
+});
 
 test('CreateLabOrder creates a DRAFT order with snapshotted item lines, copies the encounter facility, emits a PHI-free event, audits', function () {
     ['tenant' => $tenant, 'facility' => $facility, 'user' => $user] = laboratoryFixture();
@@ -285,4 +293,56 @@ test('GetLabOrder, SearchLabOrders and GetPatientLabOrders return the order with
 
     $forPatient = TenantContextScope::run($t, $f, fn () => app(QueryBus::class)->dispatch(new GetPatientLabOrders(patientId: $patientId)));
     expect($forPatient)->toHaveCount(1)->and($forPatient[0]->orderId)->toBe($orderId);
+});
+
+test('facility-scoped lab reads and writes reject a different active facility', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = laboratoryFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, fn () => Facility::factory()
+        ->forTenant($tenantId, (string) $organization->id)
+        ->create());
+
+    DB::table('idn_access_assignments')->insert([
+        'id' => (string) Str::uuid7(),
+        'tenant_id' => $tenantId,
+        'user_id' => (string) $user->id,
+        'role_id' => $roleId,
+        'facility_id' => (string) $facilityB->id,
+        'status' => 'ACTIVE',
+        'is_primary' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $definition = seedLabTestDefinition($tenantId);
+    ['encounterId' => $encounterId, 'patientId' => $patientId] = seedActiveLabEncounter($tenantId, $facilityAId, (string) $user->id);
+    $orderId = (string) Str::uuid7();
+    dispatchLab($tenantId, $facilityAId, new CreateLabOrder(
+        orderId: $orderId,
+        actorId: (string) $user->id,
+        patientId: $patientId,
+        encounterId: $encounterId,
+        testDefinitionIds: [(string) $definition->id],
+    ));
+
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(QueryBus::class)->dispatch(
+        new GetLabOrder($orderId),
+    )))->toThrow(NotFound::class);
+
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(QueryBus::class)->dispatch(
+        new SearchLabOrders($facilityAId),
+    )))->toThrow(NotFound::class);
+
+    expect(fn () => dispatchLab($tenantId, (string) $facilityB->id, new CreateLabOrder(
+        orderId: (string) Str::uuid7(),
+        actorId: (string) $user->id,
+        patientId: $patientId,
+        encounterId: $encounterId,
+        testDefinitionIds: [(string) $definition->id],
+    )))->toThrow(NotFound::class);
+
+    dispatchLab($tenantId, $facilityAId, new SubmitLabOrder($orderId, (string) $user->id));
+    expect(fn () => dispatchLab($tenantId, (string) $facilityB->id, new AcceptLabOrder($orderId, (string) $user->id)))
+        ->toThrow(AuthorizationException::class);
 });

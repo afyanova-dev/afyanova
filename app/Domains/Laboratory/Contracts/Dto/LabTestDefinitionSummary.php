@@ -13,6 +13,8 @@ namespace App\Domains\Laboratory\Contracts\Dto;
  */
 final readonly class LabTestDefinitionSummary
 {
+    public const AVAILABILITY_DISABLED = 'DISABLED';
+
     /**
      * @param  list<array{code: string, name?: string|null, unit?: string|null}>|null  $parameters
      */

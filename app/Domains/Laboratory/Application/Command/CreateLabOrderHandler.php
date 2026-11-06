@@ -207,10 +207,11 @@ final class CreateLabOrderHandler
             throw new RuntimeException('CreateLabOrder dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'laboratory.orders.create',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(LabOrder::class, $orderId);
         }

@@ -29,7 +29,12 @@ final class LabCriticalResultPolicy extends BasePolicy
     public function acknowledge(User $user, LabCriticalResult $critical, ?AcknowledgeCriticalResult $command = null): bool
     {
         return $this->sameTenant($user, (string) $critical->tenant_id)
-            && in_array('laboratory.critical.manage', $this->scope->effectivePermissions($user, (string) $critical->facility_id), true);
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $critical->facility_id,
+                'laboratory.critical.manage',
+            );
     }
 
     public function view(User $user): bool

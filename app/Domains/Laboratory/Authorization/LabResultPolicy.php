@@ -68,6 +68,11 @@ final class LabResultPolicy extends BasePolicy
     private function hasScope(User $user, LabResult $result, string $permissionKey): bool
     {
         return $this->sameTenant($user, (string) $result->tenant_id)
-            && in_array($permissionKey, $this->scope->effectivePermissions($user, (string) $result->facility_id), true);
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $result->facility_id,
+                $permissionKey,
+            );
     }
 }

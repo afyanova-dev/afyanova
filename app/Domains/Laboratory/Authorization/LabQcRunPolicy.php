@@ -26,7 +26,12 @@ final class LabQcRunPolicy extends BasePolicy
     public function review(User $user, LabQcRun $run, ?ReviewQcRun $command = null): bool
     {
         return $this->sameTenant($user, (string) $run->tenant_id)
-            && in_array('laboratory.quality.manage', $this->scope->effectivePermissions($user, (string) $run->facility_id), true);
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $run->facility_id,
+                'laboratory.quality.manage',
+            );
     }
 
     public function view(User $user): bool

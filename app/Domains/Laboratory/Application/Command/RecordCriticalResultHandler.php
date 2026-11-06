@@ -83,7 +83,12 @@ final class RecordCriticalResultHandler
             throw new RuntimeException('RecordCriticalResult dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array('laboratory.critical.manage', $this->scope->effectivePermissions($user, $facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $facilityId,
+            'laboratory.critical.manage',
+        )) {
             throw NotFound::aggregate(LabCriticalResult::class, $criticalResultId);
         }
     }

@@ -11,6 +11,7 @@ use App\Domains\Laboratory\Domain\Model\LabSpecimen;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -20,6 +21,7 @@ final class GetOrderSpecimensHandler
         private readonly LabSpecimenReader $specimens,
         private readonly LabOrderReader $orders,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -34,7 +36,7 @@ final class GetOrderSpecimensHandler
             throw new RuntimeException('GetOrderSpecimens dispatched without an authenticated user (IC §6.1).');
         }
 
-        if (! in_array('laboratory.access', $this->scope->effectivePermissions($user, $order->facilityId), true)) {
+        if (! $this->scope->hasFacilityPermissionInContext($user, $this->context, $order->facilityId, 'laboratory.access')) {
             throw NotFound::aggregate(LabSpecimen::class, $query->orderId);
         }
 
