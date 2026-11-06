@@ -315,17 +315,18 @@ final class ProcedureWorkController
         TenantContext $context,
         QueueingApi $queueingApi,
     ): void {
-        abort_unless(
-            $ticket->calledRoomId !== null
-                && $queueingApi->userAssignedToRoom(
+        if ($ticket->calledRoomId !== null) {
+            abort_unless(
+                $queueingApi->userAssignedToRoom(
                     $context->tenantId(),
                     $ticket->facilityId,
                     $ticket->queueId,
                     $ticket->calledRoomId,
                     (string) $user->getAuthIdentifier(),
                 ),
-            403,
-            'You are not assigned to this procedure room.',
-        );
+                403,
+                'You are not assigned to this procedure location.',
+            );
+        }
     }
 }

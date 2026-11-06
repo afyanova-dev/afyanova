@@ -52,6 +52,6 @@ final class RecordEncounterTriageController
             return back()->withErrors(['occurred_at' => $exception->getMessage()]);
         }
 
-        return back();
+        return back()->with('status', 'Triage assessment recorded.');
     }
 }

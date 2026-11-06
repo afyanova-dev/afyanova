@@ -16,9 +16,9 @@ use InvalidArgumentException;
  *
  * The `#[ProtectedQuery]` gate is the COARSE tenant + `clinical.triage.read`
  * check (`TriageAssessmentPolicy::view`, class-level).
- * `GetEncounterTriageAssessmentsHandler` resolves the caller's in-scope
- * facilities and returns only assessments whose ORIGINATING facility is among
- * them (ADR-145 D-P — originating-facility-only visibility).
+ * `GetEncounterTriageAssessmentsHandler` resolves facilities authorized in
+ * the current context and returns only assessments whose ORIGINATING facility
+ * is among them (ADR-145 D-P — originating-facility-only visibility).
  *
  * `$currentOnly` (default false) returns every assessment for the encounter
  * (the re-triage chain, including superseded ones); true returns only

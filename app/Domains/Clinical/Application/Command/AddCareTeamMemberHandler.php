@@ -167,10 +167,11 @@ final class AddCareTeamMemberHandler
             throw new RuntimeException('AddCareTeamMember dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.care_team.record',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(CareTeamMembership::class, $membershipId);
         }

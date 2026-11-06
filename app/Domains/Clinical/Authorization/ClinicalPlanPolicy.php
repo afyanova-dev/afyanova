@@ -48,10 +48,11 @@ final class ClinicalPlanPolicy extends BasePolicy
     private function recordAtOriginatingFacility(User $user, ClinicalPlan $plan): bool
     {
         return $this->sameTenant($user, (string) $plan->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $plan->facility_id,
                 'clinical.plans.record',
-                $this->scope->effectivePermissions($user, (string) $plan->facility_id),
-                true,
             );
     }
 }

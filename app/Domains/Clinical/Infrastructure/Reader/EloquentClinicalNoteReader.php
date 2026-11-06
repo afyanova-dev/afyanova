@@ -21,6 +21,29 @@ final class EloquentClinicalNoteReader implements ClinicalNoteReader
         $note = ClinicalNote::query()->whereKey($clinicalNoteId)->first()
             ?? throw NotFound::aggregate(ClinicalNote::class, $clinicalNoteId);
 
+        return $this->toSummary($note);
+    }
+
+    public function forEncounter(string $encounterId, array $inScopeFacilityIds): array
+    {
+        if ($inScopeFacilityIds === []) {
+            return [];
+        }
+
+        $notes = ClinicalNote::query()
+            ->where('encounter_id', $encounterId)
+            ->whereIn('facility_id', $inScopeFacilityIds)
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->get();
+
+        return array_values($notes
+            ->map(fn (ClinicalNote $note): ClinicalNoteSummary => $this->toSummary($note))
+            ->all());
+    }
+
+    private function toSummary(ClinicalNote $note): ClinicalNoteSummary
+    {
         return new ClinicalNoteSummary(
             clinicalNoteId: (string) $note->id,
             patientId: (string) $note->patient_id,

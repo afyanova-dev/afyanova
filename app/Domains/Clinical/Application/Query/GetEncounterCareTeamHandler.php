@@ -8,6 +8,7 @@ use App\Domains\Clinical\Contracts\Dto\CareTeamMembershipSummary;
 use App\Domains\Clinical\Domain\CareTeamMembershipReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -16,17 +17,16 @@ use RuntimeException;
  * transaction — the QueryBus runs inside the request tenant scope (IC §6.1). No
  * audit, no event, no state mutation.
  *
- * Flow (the `GetPatientProblemsHandler` originating-facility-refinement shape):
+ * Flow:
  *   1. resolve the authenticated actor (from `Auth`, never a query field).
- *   2. compute the caller's ORIGINATING-facility whitelist — every facility the
- *      actor may select where they effectively hold `clinical.care_team.read`
- *      (`ScopeChecker::selectableFacilities` + `effectivePermissions`).
+ *   2. compute facilities authorized in the current context: the active
+ *      facility, or explicitly authorized targets in General.
  *   3. `CareTeamMembershipReader::forEncounter()` returns only that encounter's
- *      memberships whose originating `facility_id` is in the whitelist,
+ *      memberships whose originating `facility_id` is in that context scope,
  *      deterministically ordered (`is_provider_of_record` DESC, `team_role`,
  *      `active_from`, `id`), NO pagination. `$includeEnded` controls whether
- *      ENDED rows are included. An empty whitelist yields an empty list — never
- *      an authorization disclosure (ADR-142 D-M — originating-facility-only).
+ *      ENDED rows are included. An empty context scope yields an empty list —
+ *      never an authorization disclosure (ADR-142 D-M — originating-facility-only).
  *
  * NO cross-domain call.
  *
@@ -37,6 +37,7 @@ final class GetEncounterCareTeamHandler
     public function __construct(
         private readonly CareTeamMembershipReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -50,14 +51,11 @@ final class GetEncounterCareTeamHandler
             throw new RuntimeException('GetEncounterCareTeam dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        $inScopeFacilityIds = array_values(array_filter(
-            $this->scope->selectableFacilities($user),
-            fn (string $facilityId): bool => in_array(
-                'clinical.care_team.read',
-                $this->scope->effectivePermissions($user, $facilityId),
-                true,
-            ),
-        ));
+        $inScopeFacilityIds = $this->scope->facilityIdsWithPermissionInContext(
+            $user,
+            $this->context,
+            'clinical.care_team.read',
+        );
 
         return $this->reader->forEncounter($query->encounterId, $inScopeFacilityIds, $query->includeEnded);
     }

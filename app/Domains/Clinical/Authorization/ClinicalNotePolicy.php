@@ -67,10 +67,11 @@ final class ClinicalNotePolicy extends BasePolicy
     public function sign(User $user, ClinicalNote $note, ?SignClinicalNote $command = null): bool
     {
         return $this->sameTenant($user, (string) $note->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $note->facility_id,
                 'clinical.notes.sign',
-                $this->scope->effectivePermissions($user, (string) $note->facility_id),
-                true,
             );
     }
 
@@ -83,10 +84,11 @@ final class ClinicalNotePolicy extends BasePolicy
     public function cancel(User $user, ClinicalNote $note, ?CancelClinicalNote $command = null): bool
     {
         return $this->sameTenant($user, (string) $note->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $note->facility_id,
                 'clinical.notes.amend',
-                $this->scope->effectivePermissions($user, (string) $note->facility_id),
-                true,
             );
     }
 
@@ -100,10 +102,11 @@ final class ClinicalNotePolicy extends BasePolicy
     public function amend(User $user, ClinicalNote $note, ?AmendClinicalNote $command = null): bool
     {
         return $this->sameTenant($user, (string) $note->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $note->facility_id,
                 'clinical.notes.amend',
-                $this->scope->effectivePermissions($user, (string) $note->facility_id),
-                true,
             );
     }
 }

@@ -8,6 +8,7 @@ use App\Domains\Clinical\Contracts\Dto\VitalSignsObservationSummary;
 use App\Domains\Clinical\Domain\VitalSignsObservationReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -17,7 +18,8 @@ use RuntimeException;
  * no state mutation.
  *
  * Flow (the `GetPatientProblems` precedent, ADR-133):
- *   1. Resolve the caller's in-scope facilities holding `clinical.vitals.read`.
+ *   1. Resolve facilities authorized in the current context for
+ *      `clinical.vitals.read`.
  *   2. `VitalSignsObservationReader::forPatient()` — RLS-scoped, newest first.
  */
 final class GetPatientVitalSignsHandler
@@ -25,6 +27,7 @@ final class GetPatientVitalSignsHandler
     public function __construct(
         private readonly VitalSignsObservationReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -37,14 +40,11 @@ final class GetPatientVitalSignsHandler
             throw new RuntimeException('GetPatientVitalSigns dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        $inScopeFacilityIds = array_values(array_filter(
-            $this->scope->selectableFacilities($user),
-            fn (string $facilityId): bool => in_array(
-                'clinical.vitals.read',
-                $this->scope->effectivePermissions($user, $facilityId),
-                true,
-            ),
-        ));
+        $inScopeFacilityIds = $this->scope->facilityIdsWithPermissionInContext(
+            $user,
+            $this->context,
+            'clinical.vitals.read',
+        );
 
         return $this->reader->forPatient($query->patientId, $inScopeFacilityIds);
     }

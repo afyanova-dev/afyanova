@@ -53,11 +53,16 @@ test('DiagnosisSummary exposes exactly the ratified fields — ids + own fields 
     expect($r->isFinal())->toBeTrue()->and($r->isReadOnly())->toBeTrue()->and($r->getAttributes())->toBe([]);
 });
 
-test('it is the only query in the Clinical diagnoses query set (no list / current / encounter / trend — ADR-139 D12)', function () {
+test('Clinical diagnoses expose only single-diagnosis and encounter read queries (ADR-139 D12)', function () {
     $queries = array_map(
         static fn (string $f): string => basename($f, '.php'),
         glob(base_path('app/Domains/Clinical/Application/Query/*Diagnos*.php')) ?: [],
     );
 
-    expect($queries)->toEqualCanonicalizing(['GetDiagnosis', 'GetDiagnosisHandler']);
+    expect($queries)->toEqualCanonicalizing([
+        'GetDiagnosis',
+        'GetDiagnosisHandler',
+        'GetEncounterDiagnoses',
+        'GetEncounterDiagnosesHandler',
+    ]);
 });

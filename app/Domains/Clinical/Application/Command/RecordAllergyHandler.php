@@ -145,10 +145,11 @@ final class RecordAllergyHandler
             throw new RuntimeException('RecordAllergy dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.allergies.record',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(Allergy::class, $allergyId);
         }

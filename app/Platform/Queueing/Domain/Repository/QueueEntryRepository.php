@@ -27,6 +27,19 @@ interface QueueEntryRepository
 
     public function findActiveByEncounterAndQueue(string $encounterId, string $queueId): ?QueueEntry;
 
+    public function findLatestByEncounterAndCapability(
+        string $facilityId,
+        string $encounterId,
+        string $serviceCapability,
+    ): ?QueueEntry;
+
+    public function hasOpenForEncounterAndCapability(
+        string $tenantId,
+        string $facilityId,
+        string $encounterId,
+        string $serviceCapability,
+    ): bool;
+
     public function findBySourceOrderRef(string $sourceOrderRef, string $orderType): ?QueueEntry;
 
     /**

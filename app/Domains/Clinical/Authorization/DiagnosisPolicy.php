@@ -69,10 +69,11 @@ final class DiagnosisPolicy extends BasePolicy
     public function correct(User $user, Diagnosis $diagnosis, ?CorrectDiagnosis $command = null): bool
     {
         return $this->sameTenant($user, (string) $diagnosis->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $diagnosis->facility_id,
                 'clinical.diagnoses.record',
-                $this->scope->effectivePermissions($user, (string) $diagnosis->facility_id),
-                true,
             );
     }
 }

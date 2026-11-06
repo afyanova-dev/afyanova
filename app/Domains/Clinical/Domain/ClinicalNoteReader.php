@@ -28,4 +28,13 @@ interface ClinicalNoteReader
      * pattern).
      */
     public function summary(string $clinicalNoteId): ClinicalNoteSummary;
+
+    /**
+     * One encounter's notes whose originating facility is in the caller's
+     * current scope, newest first.
+     *
+     * @param  list<string>  $inScopeFacilityIds
+     * @return list<ClinicalNoteSummary>
+     */
+    public function forEncounter(string $encounterId, array $inScopeFacilityIds): array;
 }

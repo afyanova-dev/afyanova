@@ -18,10 +18,26 @@ use App\Domains\Clinical\Contracts\Dto\DiagnosisSummary;
 interface DiagnosisReader
 {
     /**
+     * Active catalogue entries for clinical order and documentation workflows.
+     *
+     * @return list<array{id: string, code: string, codeSystem: string, name: string, aliases: string, category: string}>
+     */
+    public function activeCatalog(): array;
+
+    /**
      * Throws `App\Shared\Domain\NotFound` if the diagnosis does not exist in the
      * current tenant scope (RLS). No facility-scope check here — that is
      * `GetDiagnosisHandler`'s per-caller refinement (ADR-139 D12 / the E.12 R-1
      * pattern).
      */
     public function summary(string $diagnosisId): DiagnosisSummary;
+
+    /**
+     * One encounter's current (not superseded) diagnoses whose originating
+     * facility is in the caller's current scope, newest first.
+     *
+     * @param  list<string>  $inScopeFacilityIds
+     * @return list<DiagnosisSummary>
+     */
+    public function forEncounter(string $encounterId, array $inScopeFacilityIds): array;
 }

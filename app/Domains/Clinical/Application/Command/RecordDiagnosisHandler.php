@@ -134,10 +134,11 @@ final class RecordDiagnosisHandler
             throw new RuntimeException('RecordDiagnosis dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.diagnoses.record',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(Diagnosis::class, $diagnosisId);
         }

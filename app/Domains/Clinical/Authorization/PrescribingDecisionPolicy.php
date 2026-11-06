@@ -48,10 +48,11 @@ final class PrescribingDecisionPolicy extends BasePolicy
     private function recordAtOriginatingFacility(User $user, PrescribingDecision $decision): bool
     {
         return $this->sameTenant($user, (string) $decision->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $decision->facility_id,
                 'clinical.prescribing.record',
-                $this->scope->effectivePermissions($user, (string) $decision->facility_id),
-                true,
             );
     }
 }

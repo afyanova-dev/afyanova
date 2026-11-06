@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\Model\CareTeamMembership;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -23,8 +24,8 @@ use RuntimeException;
  *      when the membership is missing or in another tenant.
  *   2. ADR-142 D-N originating-facility refinement — the authenticated actor
  *      (from `Auth`, never a query field) must hold `clinical.care_team.read`
- *      at THIS membership's ORIGINATING facility
- *      (`ScopeChecker::effectivePermissions`). Otherwise `NotFound` — an
+ *      in the active context for THIS membership's ORIGINATING facility.
+ *      Otherwise `NotFound` — an
  *      out-of-scope membership is indistinguishable from an absent one
  *      (ADR-142 D-M — originating-facility-only visibility).
  */
@@ -33,6 +34,7 @@ final class GetCareTeamMembershipHandler
     public function __construct(
         private readonly CareTeamMembershipReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetCareTeamMembership $query): CareTeamMembershipSummary
@@ -45,10 +47,11 @@ final class GetCareTeamMembershipHandler
             throw new RuntimeException('GetCareTeamMembership dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.care_team.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(CareTeamMembership::class, $query->careTeamMembershipId);
         }

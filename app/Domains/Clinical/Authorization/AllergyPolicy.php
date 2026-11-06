@@ -102,10 +102,11 @@ final class AllergyPolicy extends BasePolicy
     private function recordAtOriginatingFacility(User $user, Allergy $allergy): bool
     {
         return $this->sameTenant($user, (string) $allergy->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $allergy->facility_id,
                 'clinical.allergies.record',
-                $this->scope->effectivePermissions($user, (string) $allergy->facility_id),
-                true,
             );
     }
 }

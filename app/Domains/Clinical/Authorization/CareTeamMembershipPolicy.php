@@ -94,10 +94,11 @@ final class CareTeamMembershipPolicy extends BasePolicy
     private function recordAtOriginatingFacility(User $user, CareTeamMembership $membership): bool
     {
         return $this->sameTenant($user, (string) $membership->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $membership->facility_id,
                 'clinical.care_team.record',
-                $this->scope->effectivePermissions($user, (string) $membership->facility_id),
-                true,
             );
     }
 }

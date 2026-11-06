@@ -15,9 +15,9 @@ use InvalidArgumentException;
  * originating-facility-scoped.
  *
  * The `#[ProtectedQuery]` gate is the COARSE tenant + `clinical.procedures.read`
- * check. `GetEncounterProceduresHandler` resolves the caller's in-scope
- * facilities and returns only procedures whose ORIGINATING facility is among
- * them (the `GetEncounterTriageAssessments` precedent). NO pagination (a
+ * check. `GetEncounterProceduresHandler` resolves facilities authorized in
+ * the current context and returns only procedures whose ORIGINATING facility
+ * is among them (the `GetEncounterTriageAssessments` precedent). NO pagination (a
  * bounded, deterministically-ordered `list<ProcedureSummary>`). NOT
  * encounter-state-gated.
  */

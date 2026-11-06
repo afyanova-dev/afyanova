@@ -7,6 +7,7 @@ use App\Domains\Clinical\Application\Query\GetDiagnosis;
 use App\Domains\Clinical\Contracts\Dto\DiagnosisSummary;
 use App\Domains\Clinical\Domain\Model\Diagnosis;
 use App\Domains\Clinical\Domain\ValueObject\DiagnosisCode;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Domain\NotFound;
@@ -109,6 +110,33 @@ test('facility refinement: a reader holding clinical.diagnoses.read at facility 
         ->forTenant((string) $tenant->id)->atFacility((string) Str::uuid7())->create()->id);
 
     expect(fn () => dispatchGetDiagnosis((string) $tenant->id, (string) $facilityA->id, $id))->toThrow(NotFound::class);
+});
+
+test('a reader assigned to facilities A and B cannot read an A diagnosis while B is active', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = clinicalFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user, $roleId): Facility {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $facility;
+    });
+    $diagnosisId = TenantContextScope::run($tenantId, null, fn () => (string) Diagnosis::factory()
+        ->forTenant($tenantId)->atFacility($facilityAId)->authoredBy((string) $user->id)->create()->id);
+
+    expect(fn () => dispatchGetDiagnosis($tenantId, (string) $facilityB->id, $diagnosisId))
+        ->toThrow(NotFound::class);
 });
 
 test('a missing / cross-tenant diagnosis -> NotFound', function () {

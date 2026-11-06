@@ -15,14 +15,14 @@ final readonly class EloquentProcedureProtocolApprovalReader implements Procedur
 
     public function activeForFacility(string $facilityId): array
     {
-        return DB::table('clin_procedure_protocol_approvals')
+        return array_values(DB::table('clin_procedure_protocol_approvals')
             ->where('tenant_id', $this->context->tenantId())
             ->where('facility_id', $facilityId)
             ->whereNull('revoked_at')
             ->orderBy('procedure_definition_id')
             ->get()
-            ->map(fn (object $row): ProcedureProtocolApprovalSummary => $this->toSummary($row))
-            ->all();
+            ->map(fn (\stdClass $row): ProcedureProtocolApprovalSummary => $this->toSummary($row))
+            ->all());
     }
 
     public function activeForDefinition(string $facilityId, string $definitionId): ?ProcedureProtocolApprovalSummary
@@ -37,7 +37,7 @@ final readonly class EloquentProcedureProtocolApprovalReader implements Procedur
         return $row === null ? null : $this->toSummary($row);
     }
 
-    private function toSummary(object $row): ProcedureProtocolApprovalSummary
+    private function toSummary(\stdClass $row): ProcedureProtocolApprovalSummary
     {
         return new ProcedureProtocolApprovalSummary(
             approvalId: (string) $row->id,

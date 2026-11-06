@@ -35,6 +35,7 @@ use App\Platform\Queueing\Application\Query\ListFacilityQueuesQuery;
 use App\Platform\Queueing\Contracts\DTO\CallingBoardDto;
 use App\Platform\Queueing\Contracts\DTO\CallNextDto;
 use App\Platform\Queueing\Contracts\DTO\CallTicketDto;
+use App\Platform\Queueing\Contracts\DTO\EncounterQueueEntrySummary;
 use App\Platform\Queueing\Contracts\DTO\OperationalLocationDto;
 use App\Platform\Queueing\Contracts\DTO\PatientMovementDto;
 use App\Platform\Queueing\Contracts\DTO\PlaceInQueueDto;
@@ -45,6 +46,7 @@ use App\Platform\Queueing\Contracts\DTO\RecallTicketDto;
 use App\Platform\Queueing\Contracts\DTO\TransferQueueDto;
 use App\Platform\Queueing\Contracts\QueueingApi;
 use App\Platform\Queueing\Domain\Enum\ServiceCapability;
+use App\Platform\Queueing\Domain\Repository\QueueEntryRepository;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\TenantContext;
@@ -56,6 +58,7 @@ final readonly class QueueingApiService implements QueueingApi
         private CommandBus $commandBus,
         private QueryBus $queryBus,
         private TenantContext $context,
+        private QueueEntryRepository $queueEntries,
     ) {}
 
     public function place(PlaceInQueueDto $dto): QueueEntryDto
@@ -224,6 +227,36 @@ final readonly class QueueingApiService implements QueueingApi
         return $this->queryBus->dispatch(new GetEncounterActiveQueueEntryQuery($encounterId));
     }
 
+    public function latestEncounterQueueEntryForCapability(
+        string $facilityId,
+        string $encounterId,
+        string $serviceCapability,
+    ): ?EncounterQueueEntrySummary {
+        $entry = $this->queueEntries->findLatestByEncounterAndCapability(
+            $facilityId,
+            $encounterId,
+            $serviceCapability,
+        );
+
+        return $entry === null ? null : new EncounterQueueEntrySummary(
+            patientId: $entry->patient_id,
+            status: $entry->status->value,
+        );
+    }
+
+    public function hasPendingConsultationForEncounter(
+        string $tenantId,
+        string $facilityId,
+        string $encounterId,
+    ): bool {
+        return $this->queueEntries->hasOpenForEncounterAndCapability(
+            $tenantId,
+            $facilityId,
+            $encounterId,
+            ServiceCapability::CONSULTATION->value,
+        );
+    }
+
     public function getEntry(string $entryId): ?QueueEntryDto
     {
         /** @var QueueEntryDto|null */
@@ -243,13 +276,14 @@ final readonly class QueueingApiService implements QueueingApi
         string $roomId,
         string $userId,
     ): bool {
-        return DB::table('qms_queue_room_staff')
+        $staffAssignments = DB::table('qms_queue_room_staff')
             ->where('tenant_id', $tenantId)
             ->where('facility_id', $facilityId)
             ->where('queue_id', $queueId)
-            ->where('room_id', $roomId)
-            ->where('user_id', $userId)
-            ->exists();
+            ->where('room_id', $roomId);
+
+        return ! (clone $staffAssignments)->exists()
+            || (clone $staffAssignments)->where('user_id', $userId)->exists();
     }
 
     public function getCallingBoard(string $facilityId, ?string $queueId = null): CallingBoardDto

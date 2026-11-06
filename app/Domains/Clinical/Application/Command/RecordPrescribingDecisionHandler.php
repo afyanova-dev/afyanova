@@ -145,10 +145,11 @@ final class RecordPrescribingDecisionHandler
             throw new RuntimeException('RecordPrescribingDecision dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.prescribing.record',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(PrescribingDecision::class, $prescribingDecisionId);
         }

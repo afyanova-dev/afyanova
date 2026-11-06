@@ -17,9 +17,9 @@ use InvalidArgumentException;
  *
  * The `#[ProtectedQuery]` gate is the COARSE tenant + `clinical.care_team.read`
  * check (`CareTeamMembershipPolicy::view`, class-level — the QueryBus never
- * loads a subject). `GetEncounterCareTeamHandler` resolves the caller's
- * in-scope facilities and returns only memberships whose ORIGINATING facility
- * is among them.
+ * loads a subject). `GetEncounterCareTeamHandler` resolves facilities
+ * authorized in the current context and returns only memberships whose
+ * ORIGINATING facility is among them.
  *
  * `$includeEnded` (default false) returns only ACTIVE memberships; true also
  * returns ENDED memberships (the "everyone who was ever on this team" read —

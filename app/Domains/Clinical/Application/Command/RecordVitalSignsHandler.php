@@ -131,10 +131,11 @@ final class RecordVitalSignsHandler
             throw new RuntimeException('RecordVitalSigns dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.vitals.record',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(VitalSignsObservation::class, $observationId);
         }

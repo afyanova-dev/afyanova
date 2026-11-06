@@ -8,6 +8,7 @@ use App\Domains\Clinical\Contracts\Dto\ClinicalPlanSummary;
 use App\Domains\Clinical\Domain\ClinicalPlanReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -16,6 +17,7 @@ final class GetPatientClinicalPlansHandler
     public function __construct(
         private readonly ClinicalPlanReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -28,14 +30,11 @@ final class GetPatientClinicalPlansHandler
             throw new RuntimeException('GetPatientClinicalPlans dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        $inScopeFacilityIds = array_values(array_filter(
-            $this->scope->selectableFacilities($user),
-            fn (string $facilityId): bool => in_array(
-                'clinical.plans.read',
-                $this->scope->effectivePermissions($user, $facilityId),
-                true,
-            ),
-        ));
+        $inScopeFacilityIds = $this->scope->facilityIdsWithPermissionInContext(
+            $user,
+            $this->context,
+            'clinical.plans.read',
+        );
 
         return $this->reader->forPatient($query->patientId, $query->status, $inScopeFacilityIds);
     }

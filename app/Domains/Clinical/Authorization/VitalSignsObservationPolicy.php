@@ -69,10 +69,11 @@ final class VitalSignsObservationPolicy extends BasePolicy
     public function correct(User $user, VitalSignsObservation $observation, ?CorrectVitalSignsObservation $command = null): bool
     {
         return $this->sameTenant($user, (string) $observation->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $observation->facility_id,
                 'clinical.vitals.record',
-                $this->scope->effectivePermissions($user, (string) $observation->facility_id),
-                true,
             );
     }
 }

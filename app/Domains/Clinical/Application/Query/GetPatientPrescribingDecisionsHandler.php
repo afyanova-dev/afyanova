@@ -8,6 +8,7 @@ use App\Domains\Clinical\Contracts\Dto\PrescribingDecisionSummary;
 use App\Domains\Clinical\Domain\PrescribingDecisionReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -16,6 +17,7 @@ final class GetPatientPrescribingDecisionsHandler
     public function __construct(
         private readonly PrescribingDecisionReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -28,14 +30,11 @@ final class GetPatientPrescribingDecisionsHandler
             throw new RuntimeException('GetPatientPrescribingDecisions dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        $inScopeFacilityIds = array_values(array_filter(
-            $this->scope->selectableFacilities($user),
-            fn (string $facilityId): bool => in_array(
-                'clinical.prescribing.read',
-                $this->scope->effectivePermissions($user, $facilityId),
-                true,
-            ),
-        ));
+        $inScopeFacilityIds = $this->scope->facilityIdsWithPermissionInContext(
+            $user,
+            $this->context,
+            'clinical.prescribing.read',
+        );
 
         return $this->reader->forPatient($query->patientId, $query->status, $inScopeFacilityIds);
     }

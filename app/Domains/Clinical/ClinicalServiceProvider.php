@@ -93,6 +93,10 @@ use App\Domains\Clinical\Application\Query\GetDiagnosis;
 use App\Domains\Clinical\Application\Query\GetDiagnosisHandler;
 use App\Domains\Clinical\Application\Query\GetEncounterCareTeam;
 use App\Domains\Clinical\Application\Query\GetEncounterCareTeamHandler;
+use App\Domains\Clinical\Application\Query\GetEncounterClinicalNotes;
+use App\Domains\Clinical\Application\Query\GetEncounterClinicalNotesHandler;
+use App\Domains\Clinical\Application\Query\GetEncounterDiagnoses;
+use App\Domains\Clinical\Application\Query\GetEncounterDiagnosesHandler;
 use App\Domains\Clinical\Application\Query\GetEncounterProcedures;
 use App\Domains\Clinical\Application\Query\GetEncounterProceduresHandler;
 use App\Domains\Clinical\Application\Query\GetEncounterTriageAssessments;
@@ -527,6 +531,8 @@ final class ClinicalServiceProvider extends ServiceProvider
             GetAllergy::class => GetAllergyHandler::class,
             GetPatientAllergies::class => GetPatientAllergiesHandler::class,
             GetEncounterCareTeam::class => GetEncounterCareTeamHandler::class,
+            GetEncounterClinicalNotes::class => GetEncounterClinicalNotesHandler::class,
+            GetEncounterDiagnoses::class => GetEncounterDiagnosesHandler::class,
             GetCareTeamMembership::class => GetCareTeamMembershipHandler::class,
             GetClinicalPlan::class => GetClinicalPlanHandler::class,
             GetPatientClinicalPlans::class => GetPatientClinicalPlansHandler::class,

@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\Model\ClinicalNote;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -22,8 +23,8 @@ use RuntimeException;
  *   1. `ClinicalNoteReader::summary()` — RLS-scoped; `NotFound` (404) when the
  *      note is missing or in another tenant.
  *   2. ADR-133 facility refinement — the authenticated actor (from `Auth`,
- *      never a query field) must hold `clinical.notes.read` at THIS note's
- *      facility (`ScopeChecker::effectivePermissions`). Otherwise `NotFound` —
+ *      never a query field) must hold `clinical.notes.read` in the active
+ *      context for THIS note's facility. Otherwise `NotFound` —
  *      §88 / Invariant 24/25: facility selection does not grant clinical-record
  *      access; an out-of-scope note is indistinguishable from an absent one.
  *
@@ -37,6 +38,7 @@ final class GetClinicalNoteHandler
     public function __construct(
         private readonly ClinicalNoteReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetClinicalNote $query): ClinicalNoteSummary
@@ -48,10 +50,11 @@ final class GetClinicalNoteHandler
             throw new RuntimeException('GetClinicalNote dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.notes.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(ClinicalNote::class, $query->clinicalNoteId);
         }

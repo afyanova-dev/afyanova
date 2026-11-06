@@ -15,9 +15,9 @@ use InvalidArgumentException;
  * procedures are protected clinical data and originating-facility-scoped.
  *
  * The `#[ProtectedQuery]` gate is the COARSE tenant + `clinical.procedures.read`
- * check. `GetPatientProceduresHandler` resolves the caller's in-scope
- * facilities and returns only procedures whose ORIGINATING facility is among
- * them (the `GetPatientProblems` precedent). NO pagination.
+ * check. `GetPatientProceduresHandler` resolves facilities authorized in the
+ * current context and returns only procedures whose ORIGINATING facility is
+ * among them (the `GetPatientProblems` precedent). NO pagination.
  */
 #[ProtectedQuery(ability: 'view', subjectType: ClinicalProcedure::class)]
 final readonly class GetPatientProcedures

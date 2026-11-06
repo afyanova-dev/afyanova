@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\TriageAssessmentReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -22,8 +23,8 @@ use RuntimeException;
  *   1. `TriageAssessmentReader::summary()` — RLS-scoped; `NotFound` (404) when
  *      the assessment is missing or in another tenant.
  *   2. ADR-145 facility refinement — the authenticated actor (from `Auth`,
- *      never a query field) must hold `clinical.triage.read` at THIS
- *      assessment's facility (`ScopeChecker::effectivePermissions`). Otherwise
+ *      never a query field) must hold `clinical.triage.read` in the active
+ *      context for THIS assessment's facility. Otherwise
  *      `NotFound` — §88 / Invariant 24/25: an out-of-scope assessment is
  *      indistinguishable from an absent one.
  *
@@ -36,6 +37,7 @@ final class GetTriageAssessmentHandler
     public function __construct(
         private readonly TriageAssessmentReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetTriageAssessment $query): TriageAssessmentSummary
@@ -47,10 +49,11 @@ final class GetTriageAssessmentHandler
             throw new RuntimeException('GetTriageAssessment dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.triage.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(TriageAssessment::class, $query->triageAssessmentId);
         }

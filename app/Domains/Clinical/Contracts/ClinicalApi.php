@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace App\Domains\Clinical\Contracts;
 
 use App\Domains\Clinical\Contracts\Dto\AllergySummary;
+use App\Domains\Clinical\Contracts\Dto\ClinicalNoteSummary;
+use App\Domains\Clinical\Contracts\Dto\ClinicalPlanSummary;
+use App\Domains\Clinical\Contracts\Dto\DiagnosisSummary;
 use App\Domains\Clinical\Contracts\Dto\EncounterDocumentationStatus;
 use App\Domains\Clinical\Contracts\Dto\PrescribingDecisionSummary;
+use App\Domains\Clinical\Contracts\Dto\ProblemSummary;
 use App\Domains\Clinical\Contracts\Dto\ProcedureDefinitionSummary;
 use App\Domains\Clinical\Contracts\Dto\ProcedureProtocolApprovalSummary;
+use App\Domains\Clinical\Contracts\Dto\ProcedureSummary;
+use App\Domains\Clinical\Contracts\Dto\TriageAssessmentSummary;
+use App\Domains\Clinical\Contracts\Dto\VitalSignsObservationSummary;
 
 /**
  * The ONLY Clinical surface other modules may import (IC §2.1; ADR-131).
@@ -37,6 +44,31 @@ interface ClinicalApi
      */
     public function getPrescribingDecision(string $prescribingDecisionId): PrescribingDecisionSummary;
 
+    /** @return list<ClinicalNoteSummary> */
+    public function getEncounterClinicalNotes(string $encounterId): array;
+
+    /** @return list<DiagnosisSummary> */
+    public function getEncounterDiagnoses(string $encounterId): array;
+
+    /** @return list<PrescribingDecisionSummary> */
+    public function getPatientPrescribingDecisions(string $patientId): array;
+
+    /**
+     * @return list<array{id: string, code: string, codeSystem: string, name: string, aliases: string, category: string}>
+     */
+    public function getActiveDiagnosisCatalog(): array;
+
+    /**
+     * @return array{values: array<string, mixed>, savedAt: string, expiresAt: string}|null
+     */
+    public function getDocumentationDraft(
+        string $tenantId,
+        string $facilityId,
+        string $userId,
+        string $encounterId,
+        string $section,
+    ): ?array;
+
     /**
      * Read a patient's allergies through the protected Clinical query.
      *
@@ -47,6 +79,28 @@ interface ClinicalApi
         ?string $clinicalStatus = null,
         ?string $verificationStatus = null,
     ): array;
+
+    /** @return list<ProblemSummary> */
+    public function getPatientProblems(string $patientId, ?string $status = null): array;
+
+    /** @return list<ProcedureSummary> */
+    public function getPatientProcedures(string $patientId): array;
+
+    /** @return list<ClinicalPlanSummary> */
+    public function getPatientClinicalPlans(string $patientId): array;
+
+    /** @return list<VitalSignsObservationSummary> */
+    public function getPatientVitalSigns(string $patientId): array;
+
+    /**
+     * @return list<TriageAssessmentSummary>
+     */
+    public function getEncounterTriageAssessments(string $encounterId, bool $currentOnly = false): array;
+
+    /**
+     * @return list<ProcedureSummary>
+     */
+    public function getEncounterProcedures(string $encounterId): array;
 
     public function requestProtocolProcedure(
         string $procedureId,

@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\Model\Diagnosis;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -22,8 +23,8 @@ use RuntimeException;
  *   1. `DiagnosisReader::summary()` — RLS-scoped; `NotFound` (404) when the
  *      diagnosis is missing or in another tenant.
  *   2. ADR-139 facility refinement — the authenticated actor (from `Auth`,
- *      never a query field) must hold `clinical.diagnoses.read` at THIS
- *      diagnosis's facility (`ScopeChecker::effectivePermissions`). Otherwise
+ *      never a query field) must hold `clinical.diagnoses.read` in the active
+ *      context for THIS diagnosis's facility. Otherwise
  *      `NotFound` — §88 / Invariant 24/25: facility selection does not grant
  *      clinical-record access; an out-of-scope diagnosis is indistinguishable
  *      from an absent one.
@@ -37,6 +38,7 @@ final class GetDiagnosisHandler
     public function __construct(
         private readonly DiagnosisReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetDiagnosis $query): DiagnosisSummary
@@ -48,10 +50,11 @@ final class GetDiagnosisHandler
             throw new RuntimeException('GetDiagnosis dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.diagnoses.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(Diagnosis::class, $query->diagnosisId);
         }

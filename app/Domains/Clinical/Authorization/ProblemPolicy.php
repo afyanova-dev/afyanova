@@ -87,10 +87,11 @@ final class ProblemPolicy extends BasePolicy
     private function recordAtOriginatingFacility(User $user, Problem $problem): bool
     {
         return $this->sameTenant($user, (string) $problem->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $problem->facility_id,
                 'clinical.problems.record',
-                $this->scope->effectivePermissions($user, (string) $problem->facility_id),
-                true,
             );
     }
 }

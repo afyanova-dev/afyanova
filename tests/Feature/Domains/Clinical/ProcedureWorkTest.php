@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Domains\Clinical;
 
 use App\Domains\Clinical\Application\Command\AuthorizeProcedure;
+use App\Models\User;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -77,14 +78,32 @@ test('procedure queue staff can perform and document an authorized procedure', f
     $this->actingAs($fixture['user'])
         ->withSession(['active_facility_id' => $facilityId])
         ->get(route('clinical.procedure-work.show', $entryId))
+        ->assertOk();
+
+    queueAssignRoomStaff($tenantId, $facilityId, $queueId, $roomId, $actorId);
+    $otherUser = User::factory()->for($fixture['tenant'])->create();
+    TenantContextScope::run($tenantId, $facilityId, function () use ($tenantId, $facilityId, $otherUser, $fixture): void {
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'facility_id' => $facilityId,
+            'user_id' => $otherUser->id,
+            'role_id' => $fixture['role_id'],
+            'status' => 'ACTIVE',
+            'is_primary' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+    $this->actingAs($otherUser)
+        ->withSession(['active_facility_id' => $facilityId])
+        ->get(route('clinical.procedure-work.show', $entryId))
         ->assertForbidden();
 
-    $this->actingAs($fixture['user'])
+    $this->actingAs($otherUser)
         ->withSession(['active_facility_id' => $facilityId])
         ->post(route('clinical.procedure-work.update', $entryId), ['workflow_action' => 'ready'])
         ->assertForbidden();
-
-    queueAssignRoomStaff($tenantId, $facilityId, $queueId, $roomId, $actorId);
 
     $this->actingAs($fixture['user'])
         ->withSession(['active_facility_id' => $facilityId])

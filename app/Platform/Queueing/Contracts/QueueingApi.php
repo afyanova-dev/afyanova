@@ -7,6 +7,7 @@ namespace App\Platform\Queueing\Contracts;
 use App\Platform\Queueing\Contracts\DTO\CallingBoardDto;
 use App\Platform\Queueing\Contracts\DTO\CallNextDto;
 use App\Platform\Queueing\Contracts\DTO\CallTicketDto;
+use App\Platform\Queueing\Contracts\DTO\EncounterQueueEntrySummary;
 use App\Platform\Queueing\Contracts\DTO\OperationalLocationDto;
 use App\Platform\Queueing\Contracts\DTO\PatientMovementDto;
 use App\Platform\Queueing\Contracts\DTO\PlaceInQueueDto;
@@ -53,6 +54,18 @@ interface QueueingApi
     public function cancelForEncounter(string $encounterId, string $reason): int;
 
     public function getActiveForEncounter(string $encounterId): ?QueueEntryDto;
+
+    public function latestEncounterQueueEntryForCapability(
+        string $facilityId,
+        string $encounterId,
+        string $serviceCapability,
+    ): ?EncounterQueueEntrySummary;
+
+    public function hasPendingConsultationForEncounter(
+        string $tenantId,
+        string $facilityId,
+        string $encounterId,
+    ): bool;
 
     public function getEntry(string $entryId): ?QueueEntryDto;
 

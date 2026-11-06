@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\Model\CareTeamMembership;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
@@ -57,6 +58,7 @@ final class ChangeProviderOfRecordHandler
     public function __construct(
         private readonly CareTeamMembershipRepository $memberships,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(ChangeProviderOfRecord $command): void
@@ -75,10 +77,11 @@ final class ChangeProviderOfRecordHandler
 
         $facilityId = (string) $active[0]->facility_id;
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $facilityId,
             'clinical.care_team.record',
-            $this->scope->effectivePermissions($user, $facilityId),
-            true,
         )) {
             throw NotFound::aggregate(CareTeamMembership::class, $command->encounterId);
         }

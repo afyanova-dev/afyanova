@@ -74,6 +74,42 @@ final class EloquentQueueEntryRepository extends EloquentRepository implements Q
             ->first();
     }
 
+    public function findLatestByEncounterAndCapability(
+        string $facilityId,
+        string $encounterId,
+        string $serviceCapability,
+    ): ?QueueEntry {
+        /** @var QueueEntry|null */
+        return QueueEntry::query()
+            ->where('facility_id', $facilityId)
+            ->where('encounter_id', $encounterId)
+            ->whereHas('queue', static fn ($query) => $query->where('service_capability', $serviceCapability))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function hasOpenForEncounterAndCapability(
+        string $tenantId,
+        string $facilityId,
+        string $encounterId,
+        string $serviceCapability,
+    ): bool {
+        return QueueEntry::query()
+            ->where('tenant_id', $tenantId)
+            ->where('facility_id', $facilityId)
+            ->where('encounter_id', $encounterId)
+            ->whereIn('status', [
+                QueueStatus::WAITING->value,
+                QueueStatus::CALLED->value,
+                QueueStatus::HOLD->value,
+                QueueStatus::NO_RESPONSE->value,
+                QueueStatus::SKIPPED->value,
+            ])
+            ->whereHas('queue', static fn ($query) => $query->where('service_capability', $serviceCapability))
+            ->exists();
+    }
+
     public function findBySourceOrderRef(string $sourceOrderRef, string $orderType): ?QueueEntry
     {
         /** @var QueueEntry|null */

@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\VitalSignsObservationReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -22,8 +23,8 @@ use RuntimeException;
  *   1. `VitalSignsObservationReader::summary()` — RLS-scoped; `NotFound` (404)
  *      when the observation is missing or in another tenant.
  *   2. ADR-133 facility refinement — the authenticated actor (from `Auth`, never
- *      a query field) must hold `clinical.vitals.read` at THIS observation's
- *      facility (`ScopeChecker::effectivePermissions`). Otherwise `NotFound` —
+ *      a query field) must hold `clinical.vitals.read` in the active context
+ *      for THIS observation's facility. Otherwise `NotFound` —
  *      §88 / Invariant 24/25: facility selection does not grant clinical-record
  *      access; an out-of-scope observation is indistinguishable from an absent
  *      one.
@@ -37,6 +38,7 @@ final class GetVitalSignsObservationHandler
     public function __construct(
         private readonly VitalSignsObservationReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetVitalSignsObservation $query): VitalSignsObservationSummary
@@ -48,10 +50,11 @@ final class GetVitalSignsObservationHandler
             throw new RuntimeException('GetVitalSignsObservation dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.vitals.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(VitalSignsObservation::class, $query->vitalSignsObservationId);
         }

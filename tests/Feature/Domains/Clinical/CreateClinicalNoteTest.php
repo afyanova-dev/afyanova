@@ -9,8 +9,10 @@ use App\Domains\Clinical\Contracts\Event\ClinicalNoteCreated;
 use App\Domains\Clinical\Domain\Exception\ClinicalNoteContextMismatch;
 use App\Domains\Clinical\Domain\Exception\EncounterNotEligibleForClinicalRecord;
 use App\Domains\Clinical\Domain\Exception\PatientNotEligibleForClinicalRecord;
+use App\Domains\Clinical\Domain\Model\ClinicalNote;
 use App\Domains\Encounter\Domain\Enum\EncounterStatus;
 use App\Domains\Encounter\Domain\Model\Encounter;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Bus\CommandBus;
 use App\Shared\Domain\NotFound;
 use App\Shared\Tenancy\Tenancy;
@@ -85,6 +87,34 @@ test('an active encounter -> DRAFT note: context copied, times set, version 0, C
         ->and($audit->facility_id)->toBe((string) $facility->id)
         ->and($audit->reason)->toBeNull()
         ->and(json_decode((string) $audit->metadata, true))->toBe([]);
+});
+
+test('amending a clinical note is denied when another assigned facility is active', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = clinicalFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user, $roleId): Facility {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $facility;
+    });
+    $noteId = TenantContextScope::run($tenantId, null, fn () => (string) ClinicalNote::factory()
+        ->forTenant($tenantId)->atFacility($facilityAId)->authoredBy((string) $user->id)->create()->id);
+
+    expect(fn () => TenantContextScope::run($tenantId, (string) $facilityB->id, fn () => app(CommandBus::class)->dispatch(
+        new AmendClinicalNote($noteId, (string) $user->id, 'ADDENDUM', 'correction', 'context test'),
+    )))->toThrow(AuthorizationException::class);
 });
 
 // ── nursing note (ADR-144 — increment C.8) ─────────────────────────

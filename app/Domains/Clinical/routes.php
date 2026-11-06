@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Domains\Clinical\Presentation\Http\Controller\AmendClinicalNoteController;
 use App\Domains\Clinical\Presentation\Http\Controller\AuthorizeEncounterProcedureController;
+use App\Domains\Clinical\Presentation\Http\Controller\ClinicalDocumentationDraftController;
 use App\Domains\Clinical\Presentation\Http\Controller\CreateClinicianPlanController;
 use App\Domains\Clinical\Presentation\Http\Controller\ManageProcedureProtocolApprovalsController;
 use App\Domains\Clinical\Presentation\Http\Controller\ProcedureWorkController;
@@ -10,7 +12,9 @@ use App\Domains\Clinical\Presentation\Http\Controller\RecordClinicianDiagnosisCo
 use App\Domains\Clinical\Presentation\Http\Controller\RecordClinicianNoteController;
 use App\Domains\Clinical\Presentation\Http\Controller\RecordEncounterTriageController;
 use App\Domains\Clinical\Presentation\Http\Controller\RecordEncounterVitalsController;
+use App\Domains\Clinical\Presentation\Http\Controller\RecordPrescribingDecisionController;
 use App\Domains\Clinical\Presentation\Http\Controller\RequestEncounterProcedureController;
+use App\Domains\Clinical\Presentation\Http\Controller\SignClinicalNoteController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth', 'verified'])->prefix('/workspaces/clinical/encounters/{encounter}')
@@ -18,13 +22,26 @@ Route::middleware(['web', 'auth', 'verified'])->prefix('/workspaces/clinical/enc
     ->group(function (): void {
         Route::post('/vitals', RecordEncounterVitalsController::class)->name('clinical.encounters.vitals.record');
         Route::post('/triage', RecordEncounterTriageController::class)->name('clinical.encounters.triage.record');
+        Route::post('/documentation-drafts', [ClinicalDocumentationDraftController::class, 'save'])
+            ->name('clinical.encounters.documentation-drafts.save');
+        Route::delete('/documentation-drafts/{section}', [ClinicalDocumentationDraftController::class, 'destroy'])
+            ->whereIn('section', ['NOTE', 'DIAGNOSIS', 'PLAN'])
+            ->name('clinical.encounters.documentation-drafts.destroy');
         Route::post('/notes', RecordClinicianNoteController::class)->name('clinical.encounters.notes.record');
         Route::post('/diagnoses', RecordClinicianDiagnosisController::class)->name('clinical.encounters.diagnoses.record');
         Route::post('/plans', CreateClinicianPlanController::class)->name('clinical.encounters.plans.create');
+        Route::post('/medications', RecordPrescribingDecisionController::class)->name('clinical.encounters.medications.record');
         Route::post('/procedures', RequestEncounterProcedureController::class)->name('clinical.encounters.procedures.request');
         Route::post('/procedures/{procedure}/authorize', AuthorizeEncounterProcedureController::class)
             ->whereUuid('procedure')
             ->name('clinical.procedures.authorize');
+    });
+
+Route::middleware(['web', 'auth', 'verified'])->prefix('/workspaces/clinical/notes/{note}')
+    ->whereUuid('note')
+    ->group(function (): void {
+        Route::post('/sign', SignClinicalNoteController::class)->name('clinical.notes.sign');
+        Route::post('/amendments', AmendClinicalNoteController::class)->name('clinical.notes.amend');
     });
 
 Route::middleware(['web', 'auth', 'verified'])->prefix('/workspaces/clinical/procedure-tickets/{entry}')

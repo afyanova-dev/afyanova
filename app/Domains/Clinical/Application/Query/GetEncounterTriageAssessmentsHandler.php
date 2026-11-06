@@ -8,6 +8,7 @@ use App\Domains\Clinical\Contracts\Dto\TriageAssessmentSummary;
 use App\Domains\Clinical\Domain\TriageAssessmentReader;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -16,17 +17,15 @@ use RuntimeException;
  * No transaction — the QueryBus runs inside the request tenant scope (IC §6.1).
  * No audit, no event, no state mutation.
  *
- * Flow (the `GetEncounterCareTeamHandler` originating-facility-refinement
- * shape):
+ * Flow:
  *   1. resolve the authenticated actor (from `Auth`, never a query field).
- *   2. compute the caller's ORIGINATING-facility whitelist — every facility the
- *      actor may select where they effectively hold `clinical.triage.read`
- *      (`ScopeChecker::selectableFacilities` + `effectivePermissions`).
+ *   2. compute facilities authorized in the current context: the active
+ *      facility, or explicitly authorized targets in General.
  *   3. `TriageAssessmentReader::forEncounter()` returns only that encounter's
- *      assessments whose originating `facility_id` is in the whitelist,
+ *      assessments whose originating `facility_id` is in that context scope,
  *      deterministically ordered (`occurred_at`, then `id`), NO pagination.
  *      `$currentOnly` controls whether superseded assessments are included. An
- *      empty whitelist yields an empty list — never an authorization disclosure
+ *      empty context scope yields an empty list — never an authorization disclosure
  *      (ADR-145 D-P).
  *
  * NO cross-domain call. The `chiefComplaint` / `acuity` / `consciousness` ARE
@@ -40,6 +39,7 @@ final class GetEncounterTriageAssessmentsHandler
     public function __construct(
         private readonly TriageAssessmentReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     /**
@@ -53,14 +53,11 @@ final class GetEncounterTriageAssessmentsHandler
             throw new RuntimeException('GetEncounterTriageAssessments dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        $inScopeFacilityIds = array_values(array_filter(
-            $this->scope->selectableFacilities($user),
-            fn (string $facilityId): bool => in_array(
-                'clinical.triage.read',
-                $this->scope->effectivePermissions($user, $facilityId),
-                true,
-            ),
-        ));
+        $inScopeFacilityIds = $this->scope->facilityIdsWithPermissionInContext(
+            $user,
+            $this->context,
+            'clinical.triage.read',
+        );
 
         return $this->reader->forEncounter($query->encounterId, $inScopeFacilityIds, $query->currentOnly);
     }

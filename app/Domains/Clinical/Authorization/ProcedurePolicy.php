@@ -163,6 +163,11 @@ final class ProcedurePolicy extends BasePolicy
     private function scopedTo(User $user, ClinicalProcedure $procedure, string $key): bool
     {
         return $this->sameTenant($user, (string) $procedure->tenant_id)
-            && in_array($key, $this->scope->effectivePermissions($user, (string) $procedure->facility_id), true);
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $procedure->facility_id,
+                $key,
+            );
     }
 }

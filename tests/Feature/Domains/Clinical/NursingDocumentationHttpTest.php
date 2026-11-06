@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Shared\Tenancy\Tenancy;
+use App\Shared\Tenancy\TenantContextScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -47,7 +48,7 @@ test('nursing triage endpoint records coded priority with server-assigned NURSIN
         'authored_context' => 'CLINICIAN',
     ]);
 
-    $response->assertRedirect()->assertSessionHasNoErrors()->assertSessionMissing('status');
+    $response->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('status', 'Triage assessment recorded.');
     $row = Tenancy::run((string) $tenant->id, fn () => DB::table('clin_triage_assessments')->first());
     expect($row)->not->toBeNull()
         ->and($row->authored_context)->toBe('NURSING')
@@ -92,6 +93,41 @@ test('nursing documentation rejects a patient and encounter mismatch', function 
     ])->assertRedirect('/workspaces/service-queues')->assertSessionHasErrors('vitals_error');
 
     expect(Tenancy::run((string) $tenant->id, fn () => DB::table('clin_vital_sign_observations')->count()))->toBe(0);
+});
+
+test('nursing documentation returns an error without a selected facility', function (): void {
+    $fixture = clinicalFixture();
+    $tenantId = (string) $fixture['tenant']->id;
+    $facilityId = (string) $fixture['facility']->id;
+    [$patientId, $encounterId] = clinicalPatientWithEncounter(
+        $tenantId,
+        $facilityId,
+        (string) $fixture['user']->id,
+    );
+
+    TenantContextScope::run($tenantId, null, function () use ($fixture): void {
+        DB::table('idn_roles')
+            ->where('id', $fixture['role_id'])
+            ->update(['scope_type' => 'ORG']);
+        DB::table('idn_access_assignments')
+            ->where('user_id', $fixture['user']->id)
+            ->where('role_id', $fixture['role_id'])
+            ->update([
+                'facility_id' => null,
+                'organization_id' => $fixture['organization']->id,
+            ]);
+    });
+
+    $this->actingAs($fixture['user'])
+        ->withSession(['facility_context_mode' => 'general'])
+        ->post(route('clinical.encounters.vitals.record', $encounterId), [
+            'patient_id' => $patientId,
+            'temperature' => '37.1',
+        ])
+        ->assertSessionHasErrors('vitals_error');
+
+    expect(Tenancy::run($tenantId, fn (): int => DB::table('clin_vital_sign_observations')->count()))
+        ->toBe(0);
 });
 
 test('nursing documentation requires the specific record permission', function () {

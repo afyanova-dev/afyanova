@@ -221,10 +221,11 @@ final class RequestProcedureHandler
         $permission = $protocolRequest
             ? 'clinical.procedures.protocol_request'
             : 'clinical.procedures.request';
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             $permission,
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(ClinicalProcedure::class, $procedureId);
         }

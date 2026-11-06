@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\Model\ClinicalProcedure;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -22,14 +23,15 @@ use RuntimeException;
  *   1. `ClinicalProcedureReader::summary()` — RLS-scoped; `NotFound` (404) when
  *      the procedure is missing or in another tenant.
  *   2. facility refinement — the authenticated actor (from `Auth`, never a
- *      query field) must hold `clinical.procedures.read` at THIS procedure's
- *      facility (`ScopeChecker::effectivePermissions`). Otherwise `NotFound`.
+ *      query field) must hold `clinical.procedures.read` in the active context
+ *      for THIS procedure's facility. Otherwise `NotFound`.
  */
 final class GetProcedureHandler
 {
     public function __construct(
         private readonly ClinicalProcedureReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetProcedure $query): ProcedureSummary
@@ -41,10 +43,11 @@ final class GetProcedureHandler
             throw new RuntimeException('GetProcedure dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.procedures.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(ClinicalProcedure::class, $query->procedureId);
         }

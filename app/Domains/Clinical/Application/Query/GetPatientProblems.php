@@ -17,9 +17,9 @@ use InvalidArgumentException;
  *
  * The `#[ProtectedQuery]` gate is the COARSE tenant + `clinical.problems.read`
  * check (`ProblemPolicy::view`, class-level). `GetPatientProblemsHandler`
- * resolves the caller's in-scope facilities and returns only problems whose
- * ORIGINATING facility is among them (ADR-140 D-B — originating-facility-only
- * visibility).
+ * resolves facilities authorized in the current context and returns only
+ * problems whose ORIGINATING facility is among them (ADR-140 D-B —
+ * originating-facility-only visibility).
  *
  * `$status` (optional) narrows to `ACTIVE` or `RESOLVED`. There is NO
  * pagination in C.4 (ADR-140 D-L / clarification lock Decision 3) — the result

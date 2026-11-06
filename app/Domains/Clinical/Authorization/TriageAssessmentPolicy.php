@@ -72,10 +72,11 @@ final class TriageAssessmentPolicy extends BasePolicy
     public function correct(User $user, TriageAssessment $assessment, ?CorrectTriageAssessment $command = null): bool
     {
         return $this->sameTenant($user, (string) $assessment->tenant_id)
-            && in_array(
+            && $this->scope->hasFacilityPermissionInContext(
+                $user,
+                $this->context,
+                (string) $assessment->facility_id,
                 'clinical.triage.record',
-                $this->scope->effectivePermissions($user, (string) $assessment->facility_id),
-                true,
             );
     }
 }

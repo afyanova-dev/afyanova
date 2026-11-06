@@ -147,10 +147,11 @@ final class CreateClinicalNoteHandler
             throw new RuntimeException('CreateClinicalNote dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.notes.create',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(ClinicalNote::class, $clinicalNoteId);
         }

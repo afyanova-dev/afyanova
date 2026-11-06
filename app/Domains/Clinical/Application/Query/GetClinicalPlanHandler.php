@@ -10,6 +10,7 @@ use App\Domains\Clinical\Domain\Model\ClinicalPlan;
 use App\Models\User;
 use App\Shared\Authorization\ScopeChecker;
 use App\Shared\Domain\NotFound;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ final class GetClinicalPlanHandler
     public function __construct(
         private readonly ClinicalPlanReader $reader,
         private readonly ScopeChecker $scope,
+        private readonly TenantContext $context,
     ) {}
 
     public function __invoke(GetClinicalPlan $query): ClinicalPlanSummary
@@ -29,10 +31,11 @@ final class GetClinicalPlanHandler
             throw new RuntimeException('GetClinicalPlan dispatched without an authenticated user (IC §6.1/§6.2).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $summary->facilityId,
             'clinical.plans.read',
-            $this->scope->effectivePermissions($user, $summary->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(ClinicalPlan::class, $query->planId);
         }

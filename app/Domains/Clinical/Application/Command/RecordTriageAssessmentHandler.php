@@ -160,10 +160,11 @@ final class RecordTriageAssessmentHandler
             throw new RuntimeException('RecordTriageAssessment dispatched without an authenticated user (IC §5).');
         }
 
-        if (! in_array(
+        if (! $this->scope->hasFacilityPermissionInContext(
+            $user,
+            $this->context,
+            $encounter->facilityId,
             'clinical.triage.record',
-            $this->scope->effectivePermissions($user, $encounter->facilityId),
-            true,
         )) {
             throw NotFound::aggregate(TriageAssessment::class, $triageAssessmentId);
         }

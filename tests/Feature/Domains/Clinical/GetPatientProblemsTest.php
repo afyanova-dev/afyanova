@@ -6,6 +6,7 @@ use App\Domains\Clinical\Application\Query\GetPatientProblems;
 use App\Domains\Clinical\Contracts\Dto\ProblemSummary;
 use App\Domains\Clinical\Domain\Model\Problem;
 use App\Domains\Clinical\Domain\ValueObject\ProblemStatus;
+use App\Domains\Organization\Domain\Model\Facility;
 use App\Shared\Bus\QueryBus;
 use App\Shared\Tenancy\Tenancy;
 use App\Shared\Tenancy\TenantContextScope;
@@ -81,6 +82,33 @@ test('originating-facility scope: problems originated at a facility the caller i
 
     $list = dispatchGetPatientProblems((string) $tenant->id, (string) $facilityA->id, $patientId);
     expect($list)->toHaveCount(1)->and($list[0]->description)->toBe('at facility A');
+});
+
+test('patient problem history is limited to the active facility when the caller has multiple assignments', function () {
+    ['tenant' => $tenant, 'organization' => $organization, 'facility' => $facilityA, 'user' => $user, 'role_id' => $roleId] = problemFixture();
+    $tenantId = (string) $tenant->id;
+    $facilityAId = (string) $facilityA->id;
+    $facilityB = TenantContextScope::run($tenantId, null, function () use ($tenantId, $organization, $user, $roleId): Facility {
+        $facility = Facility::factory()->forTenant($tenantId, (string) $organization->id)->create();
+        DB::table('idn_access_assignments')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => (string) $user->id,
+            'role_id' => $roleId,
+            'facility_id' => (string) $facility->id,
+            'status' => 'ACTIVE',
+            'is_primary' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $facility;
+    });
+    $patientId = (string) Str::uuid7();
+    TenantContextScope::run($tenantId, null, fn () => Problem::factory()
+        ->forTenant($tenantId)->atFacility($facilityAId)->forPatient($patientId)->create(['description' => 'facility A']));
+
+    expect(dispatchGetPatientProblems($tenantId, (string) $facilityB->id, $patientId))->toBe([]);
 });
 
 test('a patient with no problems -> empty list', function () {

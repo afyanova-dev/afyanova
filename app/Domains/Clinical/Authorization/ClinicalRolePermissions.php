@@ -38,6 +38,8 @@ final class ClinicalRolePermissions
                 'clinical.diagnoses.record',
                 'clinical.plans.read',
                 'clinical.plans.record',
+                'clinical.prescribing.read',
+                'clinical.prescribing.record',
                 'clinical.consultations.read',
                 'clinical.consultations.create',
                 'clinical.procedures.request',
